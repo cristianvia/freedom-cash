@@ -6,6 +6,7 @@ import { EconomyEngine, WIN_IE } from './engine/EconomyEngine.js';
 import { IsoCity } from './engine/IsoCity.js';
 import { takeBotTurn } from './engine/BotAI.js';
 import { Tutorial } from './ui/tutorial.js';
+import { computeScore, submitScore, topScores } from './engine/Leaderboard.js';
 
 const $ = (id) => document.getElementById(id);
 const euro = (n) => `${Math.round(n).toLocaleString('es-ES')} €`;
@@ -506,6 +507,18 @@ function endModal(title, html, win) {
   clearSave();
   const st = computeEndStats();
   const rankTxt = ['🥇 1º', '🥈 2º', '🥉 3º'][st.rank - 1] || `${st.rank}º`;
+  const s = engine.status();
+
+  // puntúa y envía a la liga (clasificación persistente)
+  const score = computeScore({
+    won: win, months: st.months, netWorth: st.netWorth, ie: st.ie,
+    happiness: s.happiness, energy: s.energy, rank: st.rank, profileId: engine.profile.id,
+  });
+  const lb = submitScore({
+    name: 'Tú', emoji: engine.profile.emoji, profile: engine.profile.id,
+    score, months: st.months,
+  });
+
   const ov = document.createElement('div');
   ov.className = 'overlay';
   ov.innerHTML = `
@@ -513,18 +526,53 @@ function endModal(title, html, win) {
       <div style="font-size:60px;text-align:center">${win ? '🏆' : '💥'}</div>
       <h2 style="text-align:center">${title}</h2>
       <p class="lead" style="text-align:center">${html}</p>
+      <div class="score-banner">
+        <div><span>Puntuación</span><b>${score.toLocaleString('es-ES')}</b></div>
+        <div><span>Puesto en la liga</span><b>#${lb.rank} <small>de ${lb.total}</small></b></div>
+      </div>
       <div class="end-stats">
         <div><span>Meses jugados</span><b>${st.months}</b></div>
         <div><span>IE final</span><b>${st.ie}%</b></div>
         <div><span>Renta pasiva</span><b>${euro(st.passive)}/mes</b></div>
         <div><span>Activos</span><b>${st.assets}</b></div>
         <div><span>Patrimonio</span><b>${euro(st.netWorth)}</b></div>
-        <div><span>Puesto final</span><b>${rankTxt} de ${st.total}</b></div>
+        <div><span>Puesto en la carrera</span><b>${rankTxt} de ${st.total}</b></div>
       </div>
-      <button class="btn-primary" id="btn-again">Jugar otra vez</button>
+      <div class="end-actions">
+        <button class="btn-ghost" id="btn-lb">🏆 Ver clasificación</button>
+        <button class="btn-primary" id="btn-again" style="flex:1">Jugar otra vez</button>
+      </div>
     </div>`;
   document.body.appendChild(ov);
   ov.querySelector('#btn-again').onclick = () => { clearSave(); location.href = location.pathname; };
+  ov.querySelector('#btn-lb').onclick = () => showLeaderboard();
+}
+
+/* --------------------------- LIGA / RANKING ----------------------- */
+function showLeaderboard() {
+  const rows = topScores(20);
+  const profName = { corporate: '💼', freelance: '🧑‍💻', investor: '🌱' };
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="modal lb-modal">
+      <h2>🏆 Clasificación · Liga</h2>
+      <p class="lead">Cada partida puntúa y escala en la liga. Compite contra otros aspirantes
+        a la libertad financiera. La liga no termina: supera tu mejor marca.</p>
+      <div class="lb-list">
+        ${rows.map((r, i) => `
+          <div class="lb-row ${r.me ? 'me' : ''}">
+            <span class="lb-rank">${['🥇', '🥈', '🥉'][i] || (i + 1)}</span>
+            <span class="lb-name">${r.emoji} ${r.name}${r.me ? ' <small>(tú)</small>' : ''}</span>
+            <span class="lb-prof">${profName[r.profile] || ''}</span>
+            <span class="lb-mo">${r.months ? r.months + ' m' : '—'}</span>
+            <span class="lb-score">${r.score.toLocaleString('es-ES')}</span>
+          </div>`).join('')}
+      </div>
+      <button class="btn-primary" id="lb-close" style="width:100%;margin-top:14px">Cerrar</button>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#lb-close').onclick = () => ov.remove();
 }
 
 /* ------------------ ACCIONES DEUDA (liquidez) --------------------- */
@@ -895,11 +943,13 @@ function toast(title, desc, tone = 'neutral') {
   $('btn-endturn').onclick = endTurn;
   $('btn-help').onclick = () => startTutorial();
   $('btn-view').onclick = toggleView;
+  $('btn-leaderboard').onclick = () => showLeaderboard();
   wireDebtButtons();
 
   // Arranque rápido para demos/test:  index.html?auto=corporate|freelance|investor
   const params = new URLSearchParams(location.search);
   const auto = params.get('auto');
+  if (params.get('lb')) showLeaderboard(); // hook de test
   AUTO_MODE = !!auto;
 
   // oferta de continuar partida guardada
