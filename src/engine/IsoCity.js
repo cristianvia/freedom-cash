@@ -149,8 +149,15 @@ export class IsoCity {
     if (g) { g.building = null; this.draw(); }
   }
 
+  /** Fija los datos de la vista global (o null para volver a "mi ciudad"). */
+  setViewData(players, pools) {
+    this.globalPlayers = players || null;
+    this.globalPools = pools || null;
+  }
+
   /** Monedas ascendentes desde cada edificio (feedback al cobrar). */
   emitCoins() {
+    if (this.globalPlayers) return; // en vista global no hay monedas
     for (let r = 0; r < this.rows; r++)
       for (let c = 0; c < this.cols; c++)
         if (this.grid[r][c].building) {
@@ -178,6 +185,8 @@ export class IsoCity {
   }
 
   draw() {
+    // en modo global, todo el dibujado se enruta a las mini-ciudades
+    if (this.globalPlayers) { this.drawMiniCities(this.globalPlayers, this.globalPools); return; }
     const ctx = this.ctx;
     ctx.save();
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
@@ -219,6 +228,85 @@ export class IsoCity {
     if (!img) return;
     const w = img.width * s, hgt = img.height * s;
     this.ctx.drawImage(img, Math.round(x - w / 2), Math.round(y - hgt), Math.round(w), Math.round(hgt));
+  }
+
+  /* ----------------------- VISTA GLOBAL ----------------------------- */
+  /**
+   * Dibuja una mini-ciudad por jugador (tú + rivales) para ver a todos evolucionar.
+   * @param {Array<{name,emoji,me,ie,count,list}>} players
+   * @param {object} pools  BUILDING_POOLS por categoría
+   */
+  drawMiniCities(players, pools) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const w = this.canvas.width / this.dpr, h = this.canvas.height / this.dpr;
+    ctx.clearRect(0, 0, w, h);
+    const n = Math.max(1, players.length);
+    const colW = w / n;
+
+    const topY = 92; // deja hueco para los chips del HUD
+    players.forEach((p, i) => {
+      const cx = colW * (i + 0.5);
+      // panel de fondo del rival
+      if (p.me) {
+        ctx.fillStyle = 'rgba(46,230,160,.06)';
+        ctx.fillRect(colW * i + 6, topY - 16, colW - 12, h - topY);
+      }
+      // cabecera
+      ctx.textAlign = 'center';
+      ctx.fillStyle = p.me ? '#2ee6a0' : '#e7ecf4';
+      ctx.font = 'bold 15px system-ui';
+      ctx.fillText(`${p.emoji} ${p.name}`, cx, topY);
+      ctx.fillStyle = '#8a97ad'; ctx.font = '12px system-ui';
+      ctx.fillText(`IE ${p.ie.toFixed(0)}%  ·  ${p.count} activos`, cx, topY + 20);
+      // barra de IE
+      const bw = Math.min(180, colW * 0.55), bx = cx - bw / 2, by = topY + 32;
+      ctx.fillStyle = '#0d1320'; ctx.fillRect(bx, by, bw, 6);
+      ctx.fillStyle = p.won ? '#ffb23e' : '#2ee6a0';
+      ctx.fillRect(bx, by, bw * Math.min(1, p.ie / 120), 6);
+      // mini-ciudad
+      this._miniCity(ctx, cx, h * 0.52, p, pools);
+    });
+    ctx.restore();
+  }
+
+  _miniCity(ctx, ox, oy, player, pools) {
+    const scale = Math.min(0.55, 0.5);
+    const TW = 132 * scale, TH = 66 * scale, HW = TW / 2, HH = TH / 2;
+    const N = 3;
+    const cells = [];
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) cells.push({ r, c });
+    cells.sort((a, b) => (a.r + a.c) - (b.r + b.c));
+    const gx = ox, gy = oy - N * HH;
+    // suelo
+    for (const { r, c } of cells) {
+      this._blitScaled(ctx, 't_ground', gx + (c - r) * HW, gy + (c + r) * HH, scale);
+    }
+    // edificios (de fondo a frente)
+    const queue = (player.list || []).slice(0, 9).map(a =>
+      a.citySprite || this._poolPick(pools, a.category, a.instanceId));
+    let qi = 0;
+    for (const { r, c } of cells) {
+      if (qi >= queue.length) break;
+      const key = queue[qi++];
+      if (key) this._blitScaled(ctx, key, gx + (c - r) * HW, gy + (c + r) * HH, scale);
+    }
+  }
+
+  _blitScaled(ctx, key, x, y, s) {
+    const img = this.sprites[key];
+    if (!img) return;
+    const w = img.width * s, hgt = img.height * s;
+    ctx.drawImage(img, Math.round(x - w / 2), Math.round(y - hgt), Math.round(w), Math.round(hgt));
+  }
+
+  _poolPick(pools, category, seed) {
+    const pool = (pools && pools[category]) || [];
+    if (!pool.length) return null;
+    let h = 0; const s = String(seed || '');
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return pool[h % pool.length];
   }
 }
 

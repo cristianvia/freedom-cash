@@ -60,6 +60,7 @@ let p2pSeq = 0;             // contador de instancias compradas por P2P
 let ended = false;          // evita disparar el fin de partida dos veces
 let activityLog = [];       // feed de actividad (jugador + rivales)
 let AUTO_MODE = false;      // demos/test: resuelve dilemas automáticamente
+let globalView = false;     // alterna entre "mi ciudad" y "vista global"
 const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
@@ -613,7 +614,31 @@ function render() {
   renderVehicle(s);
   renderActivity();
   drawSparkline();
+  refreshView();
   saveGame();
+}
+
+/* ---------------------- VISTA (ciudad / global) ------------------- */
+function refreshView() {
+  if (!city) return;
+  if (globalView) {
+    const players = [
+      { name: 'Tú', emoji: engine.profile.emoji, me: true, ie: engine.emancipationIndex(),
+        count: engine.ownedAssets.length, won: engine.hasWon(), list: engine.ownedAssets },
+      ...bots.map(b => ({ name: b.name, emoji: b.emoji, me: false, ie: b.engine.emancipationIndex(),
+        count: b.engine.ownedAssets.length, won: b.engine.hasWon(), list: b.engine.ownedAssets })),
+    ];
+    city.setViewData(players, BUILDING_POOLS);
+  } else {
+    city.setViewData(null, null);
+  }
+  city.draw();
+}
+
+function toggleView() {
+  globalView = !globalView;
+  $('btn-view').textContent = globalView ? '🏙️ Mi ciudad' : '🌍 Vista global';
+  refreshView();
 }
 
 /* ---------------------------- VEHÍCULO ---------------------------- */
@@ -839,6 +864,7 @@ function toast(title, desc, tone = 'neutral') {
   renderProfiles();
   $('btn-endturn').onclick = endTurn;
   $('btn-help').onclick = () => startTutorial();
+  $('btn-view').onclick = toggleView;
   wireDebtButtons();
 
   // Arranque rápido para demos/test:  index.html?auto=corporate|freelance|investor
@@ -870,6 +896,8 @@ function toast(title, desc, tone = 'neutral') {
     }
     // hook de test: ?veh=1 abre el selector de vehículo
     if (params.get('veh')) showVehicleChooser();
+    // hook de test: ?view=global abre la vista global
+    if (params.get('view') === 'global') toggleView();
     if (params.get('demo')) {
       // compra oportunidades asequibles y pasa varios meses (solo test/demo)
       const turns = parseInt(params.get('demo'), 10) || 1;
