@@ -24,11 +24,22 @@ export class EconomyEngine {
 
     this.month = 1;
     this.cash = profile.starting_cash;
-    this.ownedAssets = [];   // { ...asset, financing:'cash'|'leverage', instanceId }
+    this.ownedAssets = [];   // { ...asset, financing:'cash'|'leverage', instanceId, refinanced? }
     this.redDebts = [];      // { id, label, balance, monthly_payment }
     this.mortgageModifier = 1; // acumulado por subidas/bajadas de tipos (deuda verde)
     this.history = [];       // snapshots de IE por mes (para la gráfica)
     this._seq = 0;
+
+    // --- Vehículo fiscal (persona física vs sociedad) ---
+    this.taxVehicle = 'personal';
+    this.TAX_THRESHOLD = 2000;  // renta pasiva/mes exenta de recargo (persona física)
+    this.PERSONAL_TAX = 0.25;   // recargo sobre el exceso de renta pasiva (persona física)
+    this.COMPANY_SETUP = 4000;  // coste único de constituir la sociedad
+    this.COMPANY_MONTHLY = 220; // gestoría/impuestos fijos de la sociedad
+
+    // --- Refinanciación de hipotecas ---
+    this.REFI_FEE_PCT = 0.03;   // comisión (sobre la hipoteca) por refinanciar
+    this.REFI_REDUCTION = 0.25; // reducción de la cuota tras refinanciar
 
     this.recordSnapshot();
   }
@@ -43,21 +54,38 @@ export class EconomyEngine {
     return Math.round(salary_base + delta);
   }
 
-  /** Renta pasiva neta de un activo según su forma de financiación. */
-  assetNetIncome(a) {
-    const f = a.financials;
-    if (a.financing === 'leverage') {
-      // cuota afectada por el modificador de tipos acumulado
-      const mortgage = f.monthly_mortgage_cost * this.mortgageModifier;
-      return f.gross_monthly_income - f.maintenance_and_taxes - mortgage;
-    }
-    // pagado al contado: no hay hipoteca
-    return f.gross_monthly_income - f.maintenance_and_taxes;
+  /** Cuota hipotecaria efectiva de un activo (tipos + refinanciación). */
+  mortgageCostOf(a) {
+    if (a.financing !== 'leverage') return 0;
+    // un activo refinanciado fija su tipo (inmune a subidas) y baja la cuota
+    const rate = a.rateLocked ? 1 : this.mortgageModifier;
+    return a.financials.monthly_mortgage_cost * rate * (a.refiFactor ?? 1);
   }
 
-  /** Suma de rentas pasivas netas de todo el portfolio. */
+  /** Renta pasiva neta de un activo (bruto - mantenimiento - hipoteca efectiva). */
+  assetNetIncome(a) {
+    const f = a.financials;
+    return f.gross_monthly_income - f.maintenance_and_taxes - this.mortgageCostOf(a);
+  }
+
+  /** Suma de rentas pasivas netas de todo el portfolio (antes de impuestos). */
   totalPassiveIncome() {
     return this.ownedAssets.reduce((s, a) => s + this.assetNetIncome(a), 0);
+  }
+
+  /* --------------------------- FISCALIDAD --------------------------- */
+
+  /** Coste fiscal mensual según el vehículo (persona física vs sociedad). */
+  taxCost() {
+    if (this.taxVehicle === 'company') return this.COMPANY_MONTHLY;
+    // persona física: recargo sobre el exceso de renta pasiva
+    const excess = Math.max(0, this.totalPassiveIncome() - this.TAX_THRESHOLD);
+    return excess * this.PERSONAL_TAX;
+  }
+
+  /** Renta pasiva DESPUÉS de impuestos: lo que de verdad cuenta para el IE. */
+  netPassiveIncome() {
+    return this.totalPassiveIncome() - this.taxCost();
   }
 
   /* ---------------------------- DEUDAS ------------------------------ */
@@ -65,7 +93,7 @@ export class EconomyEngine {
   totalGreenDebtPayment() {
     return this.ownedAssets
       .filter(a => a.financing === 'leverage')
-      .reduce((s, a) => s + a.financials.monthly_mortgage_cost * this.mortgageModifier, 0);
+      .reduce((s, a) => s + this.mortgageCostOf(a), 0);
   }
 
   totalRedDebtPayment() {
@@ -82,19 +110,18 @@ export class EconomyEngine {
     return this.profile.fixed_expenses;
   }
 
-  /** Indicador de Emancipación (%). Deuda roja penaliza el denominador. */
+  /** Indicador de Emancipación (%). Usa renta pasiva tras impuestos. */
   emancipationIndex() {
     const denom = this.fixedExpenses() + this.totalRedDebtPayment();
     if (denom <= 0) return 0;
-    return (this.totalPassiveIncome() / denom) * 100;
+    return (this.netPassiveIncome() / denom) * 100;
   }
 
   /** Cashflow neto del mes (lo que entra realmente a caja). */
   netMonthlyCashflow(salary) {
-    // IMPORTANTE: totalPassiveIncome() YA descuenta las cuotas de hipoteca
-    // (deuda verde) dentro de assetNetIncome(); por eso NO se vuelven a restar
-    // aquí. Solo restamos gastos fijos y cuotas de deuda roja (consumo).
-    const income = salary + this.totalPassiveIncome();
+    // netPassiveIncome() YA descuenta hipotecas (dentro de assetNetIncome) e
+    // impuestos (taxCost). Solo restamos gastos fijos y cuotas de deuda roja.
+    const income = salary + this.netPassiveIncome();
     const outflow = this.fixedExpenses() + this.totalRedDebtPayment();
     return income - outflow;
   }
@@ -187,6 +214,55 @@ export class EconomyEngine {
     if (this.cash < d.balance) return { ok: false, reason: 'Liquidez insuficiente' };
     this.cash -= d.balance;
     this.redDebts.splice(idx, 1);
+    return { ok: true };
+  }
+
+  /* ---------------------- REFINANCIACIÓN ---------------------------- */
+
+  refiFee(a) {
+    return Math.round(a.financials.mortgage_available * this.REFI_FEE_PCT);
+  }
+
+  canRefinance(instanceId) {
+    const a = this.ownedAssets.find(x => x.instanceId === instanceId);
+    if (!a || a.financing !== 'leverage') return { ok: false, reason: 'No es una hipoteca' };
+    if (a.refinanced) return { ok: false, reason: 'Ya refinanciada' };
+    const fee = this.refiFee(a);
+    return { ok: this.cash >= fee, reason: 'Liquidez insuficiente', fee };
+  }
+
+  /** Refinancia: paga comisión, baja la cuota y fija el tipo (inmune a subidas). */
+  refinanceAsset(instanceId) {
+    const c = this.canRefinance(instanceId);
+    if (!c.ok) return { ok: false, reason: c.reason };
+    const a = this.ownedAssets.find(x => x.instanceId === instanceId);
+    this.cash -= c.fee;
+    a.refinanced = true;
+    a.rateLocked = true;
+    a.refiFactor = 1 - this.REFI_REDUCTION;
+    return { ok: true, fee: c.fee };
+  }
+
+  /* ------------------------- SOCIEDAD ------------------------------- */
+
+  /** Ahorro fiscal mensual estimado al pasar a sociedad (para decidir). */
+  incorporationBenefit() {
+    if (this.taxVehicle === 'company') return 0;
+    const excess = Math.max(0, this.totalPassiveIncome() - this.TAX_THRESHOLD);
+    return excess * this.PERSONAL_TAX - this.COMPANY_MONTHLY;
+  }
+
+  canIncorporate() {
+    if (this.taxVehicle === 'company') return { ok: false, reason: 'Ya eres sociedad' };
+    return { ok: this.cash >= this.COMPANY_SETUP, reason: 'Liquidez insuficiente', cost: this.COMPANY_SETUP };
+  }
+
+  /** Constituye una sociedad: coste único, cambia el régimen fiscal. */
+  incorporate() {
+    const c = this.canIncorporate();
+    if (!c.ok) return { ok: false, reason: c.reason };
+    this.cash -= this.COMPANY_SETUP;
+    this.taxVehicle = 'company';
     return { ok: true };
   }
 
@@ -290,6 +366,9 @@ export class EconomyEngine {
       month: this.month,
       cash: Math.round(this.cash),
       passiveIncome: Math.round(this.totalPassiveIncome()),
+      netPassiveIncome: Math.round(this.netPassiveIncome()),
+      taxCost: Math.round(this.taxCost()),
+      taxVehicle: this.taxVehicle,
       fixedExpenses: this.fixedExpenses(),
       greenDebt: Math.round(this.totalGreenDebtPayment()),
       redDebt: Math.round(this.totalRedDebtPayment()),

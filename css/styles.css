@@ -154,6 +154,13 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .badge.cash { background: rgba(74,168,255,.15); color: var(--blue); }
 .empty { color: var(--txt-dim); font-size: 13px; text-align: center; padding: 20px 0; }
 
+/* ---------- Hints / fiscalidad ---------- */
+.hint { font-size: 11px; color: var(--txt-dim); margin-top: 8px; line-height: 1.4; text-align: center; }
+.hint.good { color: var(--green); }
+#btn-incorporate.hot { background: linear-gradient(135deg, var(--green-dim), var(--green)); color: #04140d; border: none; }
+.badge.refi { background: rgba(74,168,255,.15); color: var(--blue); }
+.pf-actions { display: flex; gap: 5px; }
+
 /* ---------- Standings / ranking ---------- */
 .rank-row { display: grid; grid-template-columns: 18px 1fr 60px 40px; align-items: center;
   gap: 8px; padding: 7px 0; border-bottom: 1px dashed var(--line); font-size: 13px; }

@@ -188,8 +188,14 @@ function renderPortfolio() {
   wrap.innerHTML = '';
   engine.ownedAssets.forEach(a => {
     const cf = engine.assetNetIncome(a);
-    const badge = a.financing === 'leverage'
+    let badge = a.financing === 'leverage'
       ? '<span class="badge green">VERDE</span>' : '<span class="badge cash">CONTADO</span>';
+    if (a.refinanced) badge += '<span class="badge refi">REFI</span>';
+    // botón de refinanciar solo en hipotecas no refinanciadas
+    const canRefi = a.financing === 'leverage' && !a.refinanced;
+    const refiBtn = canRefi
+      ? `<button class="btn-ghost btn-sm" data-refi="${a.instanceId}" title="Baja la cuota un 25% y fija el tipo · comisión ${euro(engine.refiFee(a))}">Refi</button>`
+      : '';
     const el = document.createElement('div');
     el.className = 'pf-item';
     el.innerHTML = `
@@ -197,8 +203,18 @@ function renderPortfolio() {
       <div class="pf-t">${a.title} ${badge}</div>
       <div class="pf-cf" style="color:${cf >= 0 ? 'var(--green)' : 'var(--red)'}">
         ${cf >= 0 ? '+' : ''}${euro(cf)}</div>
-      <button class="btn-ghost btn-sm" data-sell="${a.instanceId}">Vender</button>`;
+      <div class="pf-actions">
+        ${refiBtn}
+        <button class="btn-ghost btn-sm" data-sell="${a.instanceId}">Vender</button>
+      </div>`;
     wrap.appendChild(el);
+  });
+  wrap.querySelectorAll('button[data-refi]').forEach(btn => {
+    btn.onclick = () => {
+      const r = engine.refinanceAsset(btn.dataset.refi);
+      if (r.ok) { toast('🔧 Hipoteca refinanciada', `Comisión ${euro(r.fee)}. Cuota −25% y tipo fijado (inmune a subidas).`, 'good'); render(); }
+      else toast('No se pudo refinanciar', r.reason, 'bad');
+    };
   });
   wrap.querySelectorAll('button[data-sell]').forEach(btn => {
     btn.onclick = () => {
@@ -311,6 +327,11 @@ function wireDebtButtons() {
     if (r.ok) { toast('Deuda roja amortizada', 'Has cancelado un préstamo de consumo.', 'good'); render(); }
     else toast('No se pudo amortizar', r.reason, 'bad');
   };
+  $('btn-incorporate').onclick = () => {
+    const r = engine.incorporate();
+    if (r.ok) { toast('🏢 Sociedad constituida', 'A partir de ahora tributas como sociedad: impuestos fijos en lugar de recargo por renta alta.', 'good'); render(); }
+    else toast('No se pudo constituir', r.reason, 'bad');
+  };
 }
 
 /* ---------------------------- RENDER ------------------------------ */
@@ -333,9 +354,30 @@ function render() {
 
   // Flujo mensual (la suma cuadra con el cashflow neto)
   $('salary').textContent = '+' + euro(salary);
-  $('passive').textContent = '+' + euro(s.passiveIncome);
+  $('passive').textContent = '+' + euro(s.netPassiveIncome);
   $('expenses').textContent = '−' + euro(s.fixedExpenses);
   $('flow-red').textContent = '−' + euro(s.redDebt);
+
+  // Régimen fiscal
+  $('tax-vehicle').textContent = s.taxVehicle === 'company' ? '🏢 Sociedad' : '👤 Persona física';
+  $('tax-cost').textContent = '−' + euro(s.taxCost);
+  const incBtn = $('btn-incorporate');
+  const hint = $('tax-hint');
+  if (s.taxVehicle === 'company') {
+    incBtn.style.display = 'none';
+    hint.className = 'hint good';
+    hint.textContent = '✓ Estructura optimizada. Impuestos fijos de sociedad.';
+  } else {
+    incBtn.style.display = '';
+    const benefit = Math.round(engine.incorporationBenefit());
+    const affordable = engine.cash >= engine.COMPANY_SETUP;
+    incBtn.disabled = !affordable;
+    incBtn.classList.toggle('hot', benefit > 0 && affordable);
+    hint.className = 'hint' + (benefit > 0 ? ' good' : '');
+    hint.textContent = benefit > 0
+      ? `Como sociedad ahorrarías ~${euro(benefit)}/mes en impuestos.`
+      : 'Con renta pasiva alta, la sociedad reduce impuestos. Aún no compensa.';
+  }
   const netEl = $('flow-net');
   netEl.textContent = (cf >= 0 ? '+' : '−') + euro(Math.abs(cf));
   netEl.className = 'val ' + (cf >= 0 ? 'green' : 'red');
@@ -434,6 +476,13 @@ function toast(title, desc, tone = 'neutral') {
                     : engine.canBuy(a, 'cash').ok ? 'cash' : null;
           if (fin) doBuy(a.id, fin);
         });
+        // ejercita fiscalidad y refinanciación en la demo
+        if (engine.taxVehicle === 'personal' && engine.incorporationBenefit() > 0 &&
+            engine.cash > engine.COMPANY_SETUP + engine.fixedExpenses() * 2) engine.incorporate();
+        if (engine.mortgageModifier > 1.05) {
+          const tg = engine.ownedAssets.find(a => a.financing === 'leverage' && !a.refinanced);
+          if (tg && engine.canRefinance(tg.instanceId).ok) engine.refinanceAsset(tg.instanceId);
+        }
         if (!ended) endTurn();
       }
     }

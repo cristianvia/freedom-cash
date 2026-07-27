@@ -15,6 +15,21 @@ export function takeBotTurn(engine, assets, aggressiveness = 0.6) {
   const buys = [];
   let attempts = 2;
 
+  // 1) Optimización fiscal: constituir sociedad cuando compensa
+  if (engine.taxVehicle === 'personal' &&
+      engine.incorporationBenefit() > 40 &&
+      engine.cash > engine.COMPANY_SETUP + engine.fixedExpenses() * 2) {
+    engine.incorporate();
+  }
+
+  // 2) Refinanciar una hipoteca si los tipos han subido
+  if (engine.mortgageModifier > 1.05) {
+    const target = engine.ownedAssets.find(a => a.financing === 'leverage' && !a.refinanced);
+    if (target && engine.canRefinance(target.instanceId).ok) {
+      engine.refinanceAsset(target.instanceId);
+    }
+  }
+
   while (attempts-- > 0) {
     if (Math.random() > aggressiveness) break;
 
