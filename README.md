@@ -105,6 +105,8 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 - [x] **Bienestar (Felicidad + Energía):** decisiones de estilo de vida, eventos de vida,
       dilemas con elección, burnout y abandono. El equilibrio dinero–vida es ahora el core.
 - [x] **Feed de actividad** en vivo de los rivales.
+- [x] **Vehículos:** decisión de coche (contado/financiar), coste mensual que sube tu
+      listón de libertad y enseña que "un coche es un pasivo". Más variedad de edificios por distrito.
 - [ ] Fase 2: sindicación de compras (comprar activos a medias entre jugadores).
 - [ ] Fase 3: multijugador en tiempo real.
 

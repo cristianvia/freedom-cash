@@ -51,6 +51,10 @@ export class EconomyEngine {
     this.BURNOUT_ENERGY = 25;          // por debajo → burnout (penaliza el sueldo)
     this.BURNOUT_SALARY_MULT = 0.65;   // multiplicador de sueldo en burnout
 
+    // --- Vehículo (un coche es un pasivo: sube tus gastos fijos) ---
+    this.vehicle = null;         // null = transporte público por defecto
+    this.NO_CAR_TRANSPORT = 45;  // abono de transporte si no tienes coche
+
     // --- Coste de arranque (fianza + mudanza): el principio pesa ---
     this.cash -= Math.round(profile.fixed_expenses * 1.5);
 
@@ -85,6 +89,34 @@ export class EconomyEngine {
   _clampWellbeing() {
     this.happiness = Math.max(0, Math.min(100, this.happiness));
     this.energy = Math.max(0, Math.min(100, this.energy));
+  }
+
+  /* ---------------------------- VEHÍCULO ---------------------------- */
+
+  vehicleMonthlyCost() {
+    return this.vehicle ? this.vehicle.monthly : this.NO_CAR_TRANSPORT;
+  }
+
+  /** Elige/compra un vehículo. financing: 'cash' | 'loan' (loan = deuda roja). */
+  chooseVehicle(v, financing = 'cash') {
+    if (v.id === 'none') { this.vehicle = null; return { ok: true }; }
+    const upfront = (financing === 'loan' && v.financeable) ? Math.round(v.price * 0.15) : v.price;
+    if (this.cash < upfront) return { ok: false, reason: 'Liquidez insuficiente' };
+    this.cash -= upfront;
+    if (financing === 'loan' && v.financeable && v.price > upfront) {
+      const financed = v.price - upfront;
+      const monthly = Math.round(financed * 1.18 / 48); // 18% total a 48 meses → DEUDA ROJA
+      this.redDebts.push({
+        id: `car#${++this._seq}`,
+        label: `Préstamo coche`,
+        balance: Math.round(financed * 1.18),
+        monthly_payment: monthly,
+      });
+    }
+    this.vehicle = { id: v.id, label: v.label, emoji: v.emoji, sprite: v.sprite, monthly: v.monthly };
+    this.happiness += v.happiness || 0;
+    this._clampWellbeing();
+    return { ok: true };
   }
 
   /** Ejecuta una acción de estilo de vida (cuesta dinero, ajusta bienestar). */
@@ -156,9 +188,9 @@ export class EconomyEngine {
     return this.profile.fixed_expenses;
   }
 
-  /** Indicador de Emancipación (%). Usa renta pasiva tras impuestos. */
+  /** Indicador de Emancipación (%). El coste del coche sube tu listón de libertad. */
   emancipationIndex() {
-    const denom = this.fixedExpenses() + this.totalRedDebtPayment();
+    const denom = this.fixedExpenses() + this.vehicleMonthlyCost() + this.totalRedDebtPayment();
     if (denom <= 0) return 0;
     return (this.netPassiveIncome() / denom) * 100;
   }
@@ -166,9 +198,9 @@ export class EconomyEngine {
   /** Cashflow neto del mes (lo que entra realmente a caja). */
   netMonthlyCashflow(salary) {
     // netPassiveIncome() YA descuenta hipotecas (dentro de assetNetIncome) e
-    // impuestos (taxCost). Solo restamos gastos fijos y cuotas de deuda roja.
+    // impuestos (taxCost). Restamos gastos fijos, coste del coche y deuda roja.
     const income = salary + this.netPassiveIncome();
-    const outflow = this.fixedExpenses() + this.totalRedDebtPayment();
+    const outflow = this.fixedExpenses() + this.vehicleMonthlyCost() + this.totalRedDebtPayment();
     return income - outflow;
   }
 
@@ -442,6 +474,7 @@ export class EconomyEngine {
     if (this.cashCushionMonths() < 1) happyDelta -= 4;          // estrés por falta de colchón
     if (this.totalRedDebtPayment() > 0) happyDelta -= 2;        // agobio de la deuda roja
     if (this.emancipationIndex() >= 100) happyDelta += 3;       // motiva ver la meta cerca
+    if (this.profile.needs_car && !this.vehicle) this.energy -= 3; // trabajo que exige coche
     this.happiness += happyDelta;
     this._clampWellbeing();
   }
@@ -502,6 +535,8 @@ export class EconomyEngine {
       energy: Math.round(this.energy),
       burnout: this.isBurnout(),
       salaryBoost: Math.round((this.salaryBoost - 1) * 100),
+      vehicle: this.vehicle,
+      vehicleCost: this.vehicleMonthlyCost(),
       won: this.hasWon(),
       lost: this.hasLost(),
       lossReason: this.lossReason(),
@@ -535,6 +570,7 @@ export class EconomyEngine {
       happiness: this.happiness,
       energy: this.energy,
       salaryBoost: this.salaryBoost,
+      vehicle: this.vehicle,
       lifestyleUsed: [...this.lifestyleUsed],
       history: this.history,
       _seq: this._seq,
@@ -553,6 +589,7 @@ export class EconomyEngine {
     e.happiness = data.happiness ?? 70;
     e.energy = data.energy ?? 80;
     e.salaryBoost = data.salaryBoost ?? 1;
+    e.vehicle = data.vehicle ?? null;
     e.lifestyleUsed = new Set(data.lifestyleUsed || []);
     e.history = data.history || [];
     e._seq = data._seq || 0;

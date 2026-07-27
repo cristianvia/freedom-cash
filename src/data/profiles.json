@@ -24,6 +24,7 @@
       "salary_variance": 1250,
       "fixed_expenses": 1650,
       "starting_cash": 20000,
+      "needs_car": true,
       "credit_rating": "B",
       "credit_limit": 90000
     },

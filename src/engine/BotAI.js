@@ -11,9 +11,16 @@
  * @param {number} aggressiveness  0..1  probabilidad de seguir comprando
  * @returns {string[]} títulos de los activos comprados este turno
  */
-export function takeBotTurn(engine, assets, lifestyle = [], aggressiveness = 0.6) {
+export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggressiveness = 0.6) {
   const buys = [];
   let attempts = 2;
+
+  // 0b) Vehículo: compra un coche usado modesto al contado cuando puede (evita la deuda roja del coche)
+  if (vehicles && vehicles.length && !engine.vehicle &&
+      engine.cash > 4500 + engine.fixedExpenses() * 3) {
+    const used = vehicles.find(v => v.id === 'used');
+    if (used) engine.chooseVehicle(used, 'cash');
+  }
 
   // 0) Cuidar el bienestar (si no, se abandona por felicidad 0 o cae en burnout)
   if (lifestyle && lifestyle.length) {

@@ -227,6 +227,25 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .life-txt b { font-size: 13px; } .life-txt small { font-size: 11px; color: var(--txt-dim); }
 .life-cost { font-size: 12px; font-weight: 700; color: var(--txt-dim); white-space: nowrap; }
 
+/* ---------- Vehículo ---------- */
+.veh-current { display: flex; align-items: center; gap: 12px; }
+.veh-current .veh-img { width: 52px; height: 40px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }
+.veh-current .veh-emoji { font-size: 34px; width: 52px; text-align: center; }
+.veh-info { display: flex; flex-direction: column; line-height: 1.3; }
+.veh-info b { font-size: 14px; } .veh-info small { font-size: 11px; color: var(--txt-dim); }
+.veh-modal { max-width: 560px; }
+.veh-list { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.veh-opt { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel-2); }
+.veh-opt.active { border-color: var(--green); box-shadow: 0 0 0 1px var(--green-dim) inset; }
+.veh-opt-top { display: flex; align-items: center; gap: 12px; }
+.veh-opt-top img { width: 54px; height: 42px; object-fit: contain; }
+.veh-opt-top .veh-emoji { font-size: 34px; width: 54px; text-align: center; }
+.veh-opt-top b { font-size: 15px; }
+.veh-desc { font-size: 12px; color: var(--txt-dim); margin-top: 2px; }
+.veh-nums { font-size: 12px; color: var(--txt-dim); margin: 8px 0; font-variant-numeric: tabular-nums; }
+.veh-actions { display: flex; gap: 8px; }
+.veh-actions button { flex: 1; }
+
 /* ---------- Feed de actividad ---------- */
 #panel-activity #activity { max-height: 220px; overflow-y: auto; }
 .act-item { font-size: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); color: var(--txt); }

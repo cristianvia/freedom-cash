@@ -64,28 +64,36 @@ const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
 async function loadData() {
-  const [a, p, e, l] = await Promise.all([
+  const [a, p, e, l, v] = await Promise.all([
     fetch('src/data/assets_database.json').then(r => r.json()),
     fetch('src/data/profiles.json').then(r => r.json()),
     fetch('src/data/events.json').then(r => r.json()),
     fetch('src/data/lifestyle.json').then(r => r.json()),
+    fetch('src/data/vehicles.json').then(r => r.json()),
   ]);
   DATA.assets = a.assets;
   DATA.profiles = p.profiles;
   DATA.events = e.events;
   DATA.lifestyle = l.actions;
+  DATA.vehicles = v.vehicles;
 
-  // sprites de suelo/decoración + todos los edificios del catálogo
-  Object.assign(spriteMap, {
-    t_ground: 'assets/sprites/t_ground.png',
-    t_grass: 'assets/sprites/t_grass.png',
-    t_plaza: 'assets/sprites/t_plaza.png',
-    t_tree: 'assets/sprites/t_tree.png',
-    t_water: 'assets/sprites/t_water.png',
-    t_road: 'assets/sprites/t_road.png',
-  });
-  DATA.assets.forEach(as => { spriteMap[as.id] = as.sprite; });
+  // todos los sprites (suelo, decoración, edificios y coches) por su clave
+  const TILE_KEYS = ['t_ground', 't_grass', 't_plaza', 't_tree', 't_water', 't_road'];
+  const BUILDING_KEYS = [
+    'b_home', 'b_apartment', 'b_vacation', 'b_house', 'b_shop', 'b_cafe',
+    'b_office', 'b_coworking', 'b_bank', 'b_tower', 'b_startup', 'b_retail2',
+    'b_res1', 'b_res2', 'b_res3', 'b_biz1', 'b_biz2', 'b_biz3', 'b_fin1', 'b_fin2',
+    'b_shop2', 'b_shop3',
+  ];
+  [...TILE_KEYS, ...BUILDING_KEYS].forEach(k => { spriteMap[k] = `assets/sprites/${k}.png`; });
 }
+
+// Pools de sprites por distrito: dan variedad visual a la ciudad
+const BUILDING_POOLS = {
+  real_estate: ['b_apartment', 'b_house', 'b_vacation', 'b_res1', 'b_res2', 'b_res3', 'b_shop', 'b_shop2', 'b_shop3'],
+  digital_business: ['b_office', 'b_coworking', 'b_startup', 'b_biz1', 'b_biz2', 'b_biz3'],
+  financial: ['b_bank', 'b_tower', 'b_fin1', 'b_fin2', 'b_retail2'],
+};
 
 /* ------------------------- SELECCIÓN PERFIL ----------------------- */
 function renderProfiles() {
@@ -132,6 +140,7 @@ async function startGame(profile) {
   const canvas = $('city');
   city = new IsoCity(canvas, 6, 6);
   await city.loadSprites(spriteMap);
+  city.setBuildingPools(BUILDING_POOLS);
   window.addEventListener('resize', () => city.resize());
   city.resize();
   city.buildDistricts();
@@ -209,9 +218,9 @@ function doBuy(assetId, financing) {
   const res = engine.buyAsset(asset, financing);
   if (!res.ok) { toast('No se pudo comprar', res.reason, 'bad'); return; }
 
-  // aparece el edificio en su distrito (guardamos la celda para poder retirarlo al vender)
-  const cell = city.placeBuilding(assetId, asset.category);
-  if (cell) { res.instance.cell = cell; city.emitCoins(); }
+  // aparece el edificio en su distrito (sprite variado; guardamos celda y sprite)
+  const placed = city.placeBuilding(asset.category);
+  if (placed) { res.instance.cell = placed.cell; res.instance.citySprite = placed.key; city.emitCoins(); }
 
   // reemplaza la tarjeta comprada por otra nueva del pool
   const idx = market.findIndex(m => m.id === assetId);
@@ -309,7 +318,7 @@ function resolveTurn(ev, choiceIndex) {
 
   // turno de los oponentes IA (compran, se cuidan y resuelven sus eventos)
   bots.forEach(b => {
-    const bought = takeBotTurn(b.engine, DATA.assets, DATA.lifestyle, b.aggr) || [];
+    const bought = takeBotTurn(b.engine, DATA.assets, DATA.lifestyle, DATA.vehicles, b.aggr) || [];
     b.engine.endTurn();
     bought.forEach(t => logActivity(`${b.emoji} ${b.name} compró ${t}`, 'neutral'));
     if (b.engine.hasLost()) logActivity(`${b.emoji} ${b.name} abandonó la partida 💥`, 'bad');
@@ -391,10 +400,10 @@ function buyP2P(idx) {
   o.bot.engine.ownedAssets = o.bot.engine.ownedAssets.filter(x => x.instanceId !== o.instanceId);
 
   const inst = { ...o.asset, financing: o.financing, instanceId: `${o.asset.id}#p2p${++p2pSeq}`, purchasedMonth: engine.month };
-  delete inst.cell;
+  delete inst.cell; delete inst.citySprite;
   engine.ownedAssets.push(inst);
-  const cell = city.placeBuilding(o.asset.id, o.asset.category);
-  if (cell) { inst.cell = cell; city.emitCoins(); }
+  const placed = city.placeBuilding(o.asset.category);
+  if (placed) { inst.cell = placed.cell; inst.citySprite = placed.key; city.emitCoins(); }
 
   p2pOffers.splice(idx, 1);
   toast('🤝 Trato P2P cerrado',
@@ -533,6 +542,7 @@ function wireDebtButtons() {
     if (r.ok) { toast('🏢 Sociedad constituida', 'A partir de ahora tributas como sociedad: impuestos fijos en lugar de recargo por renta alta.', 'good'); render(); }
     else toast('No se pudo constituir', r.reason, 'bad');
   };
+  $('btn-vehicle').onclick = showVehicleChooser;
 }
 
 /* ---------------------------- RENDER ------------------------------ */
@@ -557,6 +567,7 @@ function render() {
   $('salary').textContent = '+' + euro(salary);
   $('passive').textContent = '+' + euro(s.netPassiveIncome);
   $('expenses').textContent = '−' + euro(s.fixedExpenses);
+  $('flow-vehicle').textContent = '−' + euro(s.vehicleCost);
   $('flow-red').textContent = '−' + euro(s.redDebt);
 
   // Régimen fiscal
@@ -599,9 +610,66 @@ function render() {
   renderP2P();
   renderWellbeing(s);
   renderLifestyle();
+  renderVehicle(s);
   renderActivity();
   drawSparkline();
   saveGame();
+}
+
+/* ---------------------------- VEHÍCULO ---------------------------- */
+function renderVehicle(s) {
+  const wrap = $('veh-current');
+  if (!wrap) return;
+  const v = s.vehicle;
+  wrap.innerHTML = v
+    ? `<img src="${v.sprite}" class="veh-img" alt="">
+       <div class="veh-info"><b>${v.emoji} ${v.label}</b><small>${euro(v.monthly)}/mes</small></div>`
+    : `<span class="veh-emoji">🚶</span>
+       <div class="veh-info"><b>Sin coche</b><small>Transporte público · ${euro(s.vehicleCost)}/mes</small></div>`;
+}
+
+function showVehicleChooser() {
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="modal veh-modal">
+      <h2>Elige tu vehículo</h2>
+      <p class="lead">Un coche sube tu felicidad… pero es un <b>pasivo</b>: su coste mensual eleva tu
+        listón de libertad (entra en el IE). Financiarlo genera <b style="color:var(--red)">deuda roja</b>.</p>
+      <div class="veh-list">
+        ${DATA.vehicles.map(v => {
+          const active = (engine.vehicle && engine.vehicle.id === v.id) || (!engine.vehicle && v.id === 'none');
+          const acts = v.id === 'none'
+            ? `<button class="btn-cash" data-veh="none" data-fin="cash" style="flex:1">Ir sin coche</button>`
+            : `<button class="btn-cash" data-veh="${v.id}" data-fin="cash" ${engine.cash < v.price ? 'disabled' : ''}>Contado ${euro(v.price)}</button>
+               ${v.financeable ? `<button class="btn-lever" data-veh="${v.id}" data-fin="loan" ${engine.cash < Math.round(v.price * 0.15) ? 'disabled' : ''}>Financiar</button>` : ''}`;
+          return `<div class="veh-opt ${active ? 'active' : ''}">
+              <div class="veh-opt-top">
+                ${v.sprite ? `<img src="${v.sprite}" alt="">` : `<span class="veh-emoji">${v.emoji}</span>`}
+                <div><b>${v.label}</b><div class="veh-desc">${v.desc}</div></div>
+              </div>
+              <div class="veh-nums">${v.price ? `Compra ${euro(v.price)} · ` : ''}${euro(v.monthly)}/mes${v.happiness ? ` · +${v.happiness}😊` : ''}</div>
+              <div class="veh-actions">${acts}</div>
+            </div>`;
+        }).join('')}
+      </div>
+      <button class="btn-ghost" id="veh-close" style="width:100%;margin-top:12px">Cerrar</button>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#veh-close').onclick = () => ov.remove();
+  ov.querySelectorAll('button[data-veh]').forEach(btn => {
+    btn.onclick = () => {
+      const v = DATA.vehicles.find(x => x.id === btn.dataset.veh);
+      const r = engine.chooseVehicle(v, btn.dataset.fin);
+      if (r.ok) {
+        ov.remove();
+        toast(`${v.emoji} ${v.label}`,
+          btn.dataset.fin === 'loan' ? 'Financiado: genera deuda roja que penaliza tu IE.' : 'Elección aplicada.', 'good');
+        logActivity(v.id === 'none' ? '🫵 Prescindes del coche' : `🫵 Coche: ${v.label}`, 'neutral');
+        render();
+      } else toast('No se pudo', r.reason, 'bad');
+    };
+  });
 }
 
 /* ------------------------- BIENESTAR / VIDA ----------------------- */
@@ -689,13 +757,14 @@ async function resumeGame(save) {
   const canvas = $('city');
   city = new IsoCity(canvas, 6, 6);
   await city.loadSprites(spriteMap);
+  city.setBuildingPools(BUILDING_POOLS);
   window.addEventListener('resize', () => city.resize());
   city.resize();
   city.buildDistricts();
-  // re-colocar los edificios de los activos ya comprados
+  // re-colocar los edificios de los activos ya comprados (con su sprite guardado)
   engine.ownedAssets.forEach(a => {
     if (a.cell && city.grid[a.cell.row] && city.grid[a.cell.row][a.cell.col]) {
-      city.grid[a.cell.row][a.cell.col].building = a.id;
+      city.grid[a.cell.row][a.cell.col].building = a.citySprite || city.pickBuildingSprite(a.category);
       city.grid[a.cell.row][a.cell.col].decor = null;
     }
   });
@@ -799,6 +868,8 @@ function toast(title, desc, tone = 'neutral') {
       const dev = DATA.events.find(e => e.type === 'dilemma');
       if (dev) showDilemma(dev, () => {});
     }
+    // hook de test: ?veh=1 abre el selector de vehículo
+    if (params.get('veh')) showVehicleChooser();
     if (params.get('demo')) {
       // compra oportunidades asequibles y pasa varios meses (solo test/demo)
       const turns = parseInt(params.get('demo'), 10) || 1;
@@ -811,6 +882,10 @@ function toast(title, desc, tone = 'neutral') {
         // cuida el bienestar en la demo (si no, abandona)
         if (engine.energy < 40) { const r = DATA.lifestyle.find(l => l.id === 'rest'); if (r) engine.doLifestyle(r); }
         if (engine.happiness < 48) { const d = DATA.lifestyle.find(l => l.id === 'dinner'); if (d) engine.doLifestyle(d); }
+        // compra un coche usado en la demo
+        if (!engine.vehicle && engine.cash > 4500 + engine.fixedExpenses() * 3) {
+          const used = DATA.vehicles.find(v => v.id === 'used'); if (used) engine.chooseVehicle(used, 'cash');
+        }
         // ejercita fiscalidad y refinanciación en la demo
         if (engine.taxVehicle === 'personal' && engine.incorporationBenefit() > 0 &&
             engine.cash > engine.COMPANY_SETUP + engine.fixedExpenses() * 2) engine.incorporate();

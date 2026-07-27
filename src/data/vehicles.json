@@ -1,0 +1,29 @@
+{
+  "$schema_note": "Decisiones de vehículo. price=compra, monthly=coste fijo mensual (seguro+combustible+mantenimiento), happiness=efecto único al comprarlo, financeable=puede comprarse a plazos (genera DEUDA ROJA). El coste mensual sube tu listón de libertad (entra en el denominador del IE): un coche es un pasivo.",
+  "vehicles": [
+    {
+      "id": "none", "emoji": "🚶", "sprite": null,
+      "label": "Sin coche (transporte público)",
+      "desc": "Lo más barato. Algo de tiempo perdido en desplazamientos.",
+      "price": 0, "monthly": 45, "happiness": 0, "financeable": false
+    },
+    {
+      "id": "used", "emoji": "🚗", "sprite": "assets/sprites/veh_used.png",
+      "label": "Coche de segunda mano",
+      "desc": "Barato de comprar, pero más averías y mantenimiento.",
+      "price": 4500, "monthly": 190, "happiness": 6, "financeable": true
+    },
+    {
+      "id": "new", "emoji": "🚙", "sprite": "assets/sprites/veh_new.png",
+      "label": "Coche nuevo",
+      "desc": "Fiable y cómodo. Sube tu ánimo… y tus gastos fijos.",
+      "price": 22000, "monthly": 250, "happiness": 14, "financeable": true
+    },
+    {
+      "id": "premium", "emoji": "🏎️", "sprite": "assets/sprites/veh_premium.png",
+      "label": "Coche premium",
+      "desc": "Puro estatus. Mucha felicidad, pero un pasivo caro que sube tu listón de libertad.",
+      "price": 42000, "monthly": 360, "happiness": 24, "financeable": true
+    }
+  ]
+}

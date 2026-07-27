@@ -118,15 +118,28 @@ export class IsoCity {
     return null;
   }
 
-  /** Coloca el edificio de un activo en su distrito, con animación de construcción. */
-  placeBuilding(spriteKey, category) {
-    const cell = this.freeCellInDistrict(category);
-    if (!cell) return null;
-    this.grid[cell.row][cell.col].building = spriteKey;
-    this.grid[cell.row][cell.col].decor = null;
-    this.placeAnims[`${cell.row},${cell.col}`] = { t: 0 };
+  /** Define los pools de sprites por categoría (variedad visual por distrito). */
+  setBuildingPools(pools) { this.buildingPools = pools || {}; }
+
+  /** Elige un sprite de edificio aleatorio del pool de la categoría. */
+  pickBuildingSprite(category) {
+    const pool = (this.buildingPools && this.buildingPools[category]) || [];
+    return pool.length ? pool[Math.floor(Math.random() * pool.length)] : category;
+  }
+
+  /**
+   * Coloca un edificio (sprite variado del distrito) con animación de construcción.
+   * @returns {{cell, key}|null}
+   */
+  placeBuilding(category, cell = null, forcedKey = null) {
+    const target = cell || this.freeCellInDistrict(category);
+    if (!target) return null;
+    const key = forcedKey || this.pickBuildingSprite(category);
+    this.grid[target.row][target.col].building = key;
+    this.grid[target.row][target.col].decor = null;
+    this.placeAnims[`${target.row},${target.col}`] = { t: 0 };
     this.animate();
-    return cell;
+    return { cell: target, key };
   }
 
   /** Retira el edificio de una celda (al vender el activo). */
