@@ -9,8 +9,8 @@
       "description": "Sueldo alto y estable, pero un tren de vida caro te come el margen.",
       "salary_base": 3500,
       "salary_variance": 0,
-      "fixed_expenses": 2800,
-      "starting_cash": 8000,
+      "fixed_expenses": 2500,
+      "starting_cash": 28000,
       "credit_rating": "A+",
       "credit_limit": 150000
     },
@@ -22,8 +22,8 @@
       "description": "Ingresos variables (1.500–4.000 €) y gastos medios. Libertad con incertidumbre.",
       "salary_base": 2750,
       "salary_variance": 1250,
-      "fixed_expenses": 1600,
-      "starting_cash": 6000,
+      "fixed_expenses": 1650,
+      "starting_cash": 20000,
       "credit_rating": "B",
       "credit_limit": 90000
     },
@@ -35,8 +35,8 @@
       "description": "Sueldo bajo pero gastos contenidos y buena liquidez inicial para arrancar.",
       "salary_base": 1400,
       "salary_variance": 0,
-      "fixed_expenses": 900,
-      "starting_cash": 12000,
+      "fixed_expenses": 1150,
+      "starting_cash": 22000,
       "credit_rating": "C",
       "credit_limit": 45000
     }
