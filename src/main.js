@@ -5,10 +5,46 @@
 import { EconomyEngine, WIN_IE } from './engine/EconomyEngine.js';
 import { IsoCity } from './engine/IsoCity.js';
 import { takeBotTurn } from './engine/BotAI.js';
+import { Tutorial } from './ui/tutorial.js';
 
 const $ = (id) => document.getElementById(id);
 const euro = (n) => `${Math.round(n).toLocaleString('es-ES')} €`;
 const SAVE_KEY = 'freedomcash.save.v1';
+const TUT_KEY = 'freedomcash.tutorialDone.v1';
+
+/* Pasos del walk-through guiado (spotlight sobre cada panel). */
+const TUTORIAL_STEPS = [
+  { title: '👋 Bienvenido a Freedom Cash',
+    text: 'Tu meta: que tus rentas pasivas cubran el <b>120% de tus gastos</b> (el Indicador de Emancipación) con 6 meses de colchón en caja… y llegar antes que tus rivales. Te enseño en 30 segundos.' },
+  { sel: '.panel.freedom', title: 'Indicador de Emancipación (IE)',
+    text: 'Este es tu marcador principal y su evolución en el tiempo. Cuando la barra llegue al 120%, la libertad financiera está a un paso.' },
+  { sel: '#panel-cash', title: 'Tu tesorería',
+    text: 'Tu caja disponible y el cashflow neto de cada mes. El <b>colchón</b> mide cuántos meses aguantarías sin ingresos: necesitas 6 para ganar.' },
+  { sel: '#panel-market', title: 'Marketplace de activos',
+    text: 'Aquí compras activos que generan renta. <b>Al contado</b> pagas el precio completo; con <b>Hipoteca</b> solo pagas la entrada y asumes una cuota mensual (apalancamiento).' },
+  { sel: '#city', title: 'Tu ciudad crece contigo',
+    text: 'Cada activo que compras aparece construido aquí, organizado por distritos: 🏠 inmuebles, 💻 negocios y 📈 financiero.' },
+  { sel: '#panel-debt', title: 'Deuda verde vs roja',
+    text: 'La <b style="color:#2ee6a0">deuda verde</b> (hipotecas de activos) se autopaga: es buena. La <b style="color:#ff5d6c">deuda roja</b> (préstamos de consumo) resta liquidez y penaliza tu IE.' },
+  { sel: '#panel-tax', title: 'Estrategia: fiscalidad y refi',
+    text: 'Con renta pasiva alta, constituir una <b>sociedad</b> baja tus impuestos. Y desde tu portfolio puedes <b>refinanciar</b> hipotecas para reducir cuotas.' },
+  { sel: '#panel-rank', title: 'La carrera por la libertad',
+    text: 'No juegas solo: compites contra bots rivales. Quien alcance la libertad financiera <b>primero</b>, gana la partida.' },
+  { sel: '#btn-endturn', title: 'Pasa de mes y cobra',
+    text: 'Cuando termines tus jugadas del mes, pulsa aquí para cobrar, avanzar el calendario y afrontar un evento económico aleatorio. ¡Mucha suerte! 🚀' },
+];
+
+function startTutorial(startIndex = 0) {
+  const t = new Tutorial(TUTORIAL_STEPS, () => { try { localStorage.setItem(TUT_KEY, '1'); } catch (e) {} });
+  if (typeof startIndex === 'number' && startIndex > 0) { t.i = Math.min(startIndex, TUTORIAL_STEPS.length - 1); t.render(); }
+  return t;
+}
+function maybeTutorial() {
+  if (new URLSearchParams(location.search).get('auto')) return; // no en demos
+  let done = false;
+  try { done = localStorage.getItem(TUT_KEY) === '1'; } catch (e) {}
+  if (!done) startTutorial();
+}
 
 let engine = null;
 let city = null;
@@ -94,6 +130,7 @@ async function startGame(profile) {
 
   refreshMarket();
   render();
+  maybeTutorial();
 }
 
 /* -------------------------- MARKETPLACE --------------------------- */
@@ -541,6 +578,7 @@ async function resumeGame(save) {
   if (market.length) renderMarket(); else refreshMarket();
   p2pOffers = [];
   render();
+  maybeTutorial();
 }
 
 /* ------------------------ SPARKLINE DE IE ------------------------- */
@@ -604,6 +642,7 @@ function toast(title, desc, tone = 'neutral') {
   await loadData();
   renderProfiles();
   $('btn-endturn').onclick = endTurn;
+  $('btn-help').onclick = () => startTutorial();
   wireDebtButtons();
 
   // Arranque rápido para demos/test:  index.html?auto=corporate|freelance|investor
@@ -624,6 +663,9 @@ function toast(title, desc, tone = 'neutral') {
   if (auto) {
     const p = DATA.profiles.find(x => x.id === auto) || DATA.profiles[0];
     await startGame(p);
+    // hook de test: ?tut=N muestra el tutorial en el paso N
+    const tut = params.get('tut');
+    if (tut !== null) startTutorial(parseInt(tut, 10) || 0);
     if (params.get('demo')) {
       // compra oportunidades asequibles y pasa varios meses (solo test/demo)
       const turns = parseInt(params.get('demo'), 10) || 1;

@@ -27,7 +27,7 @@
         <canvas id="ie-spark" class="spark" height="52"></canvas>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="panel-cash">
         <h2>Tesorería</h2>
         <div class="stat">
           <span class="label"><span class="dot green"></span>Caja disponible</span>
@@ -62,7 +62,7 @@
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="panel-debt">
         <h2>Deuda: Verde vs Roja</h2>
         <div class="debtbar"><span class="g" id="db-green"></span><span class="r" id="db-red"></span></div>
         <div class="stat" style="margin-top:8px">
@@ -79,7 +79,7 @@
         </div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="panel-tax">
         <h2>Régimen fiscal</h2>
         <div class="stat">
           <span class="label">Estructura</span><span class="val" id="tax-vehicle">Persona física</span>
@@ -92,7 +92,7 @@
         <div class="hint" id="tax-hint"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="panel-rank">
         <h2>Ranking · Carrera a la Libertad</h2>
         <div id="standings"></div>
       </div>
@@ -105,6 +105,7 @@
         <div class="chip"><span class="k">Mes</span><span id="hud-month">1</span></div>
         <div class="chip"><span class="k">Perfil</span><span id="hud-profile">—</span></div>
         <div class="chip"><span class="k">Activos</span><span id="hud-assets">0</span></div>
+        <button class="chip chip-btn" id="btn-help">❓ Cómo jugar</button>
       </div>
       <div class="event-toast" id="toast">
         <div class="et" id="toast-title"></div>
@@ -114,7 +115,7 @@
 
     <!-- ===== DERECHA: Marketplace + Portfolio + Turno ===== -->
     <aside class="col right">
-      <div class="panel">
+      <div class="panel" id="panel-market">
         <h2>Marketplace · Oportunidades</h2>
         <div id="market"></div>
       </div>

@@ -101,6 +101,7 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 - [x] **Estrategia avanzada:** refinanciación de hipotecas y régimen fiscal (persona física vs. sociedad).
 - [x] **Negociación P2P:** compra activos a rivales que necesitan liquidez.
 - [x] **Persistencia** (localStorage) y **pantalla de fin** con estadísticas.
+- [x] **Tutorial guiado** (walk-through con spotlight) para nuevos jugadores.
 - [ ] Fase 2: sindicación de compras (comprar activos a medias entre jugadores).
 - [ ] Fase 3: multijugador en tiempo real.
 

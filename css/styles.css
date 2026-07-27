@@ -206,6 +206,29 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .profile .rating { display: inline-block; margin-top: 8px; font-weight: 800; font-size: 12px;
   padding: 2px 10px; border-radius: 20px; background: rgba(74,168,255,.15); color: var(--blue); }
 
+/* ---------- Tutorial / coach-marks ---------- */
+.tut-block { position: fixed; inset: 0; z-index: 60; }
+.tut-mask {
+  position: fixed; z-index: 61; border-radius: 14px; border: 2px solid var(--green);
+  box-shadow: 0 0 0 9999px rgba(6, 9, 15, .80), 0 0 24px rgba(46, 230, 160, .55);
+  pointer-events: none; transition: left .28s cubic-bezier(.2,.8,.2,1),
+    top .28s cubic-bezier(.2,.8,.2,1), width .28s, height .28s;
+}
+.tut-pop {
+  position: fixed; z-index: 62; width: 320px; max-width: calc(100vw - 24px);
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--shadow);
+  transition: left .28s cubic-bezier(.2,.8,.2,1), top .28s cubic-bezier(.2,.8,.2,1);
+}
+.tut-pop h3 { font-size: 17px; margin: 6px 0 8px; }
+.tut-pop p { font-size: 13px; color: var(--txt-dim); line-height: 1.55; }
+.tut-step { font-size: 11px; color: var(--green); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+.tut-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.tut-skip { background: transparent; color: var(--txt-dim); border: 1px solid var(--line); }
+.tut-next { background: linear-gradient(135deg, var(--green-dim), var(--green)); color: #04140d; }
+.chip.chip-btn { cursor: pointer; }
+.chip.chip-btn:hover { border-color: var(--green); color: var(--green); }
+
 /* ---------- End-game stats ---------- */
 .modal.end { max-width: 540px; }
 .end-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 22px 0; }
