@@ -392,4 +392,35 @@ export class EconomyEngine {
   status() {
     return this._metrics();
   }
+
+  /* ------------------------ PERSISTENCIA ---------------------------- */
+
+  /** Serializa el estado dinámico (para guardar la partida). */
+  toJSON() {
+    return {
+      profileId: this.profile.id,
+      month: this.month,
+      cash: this.cash,
+      ownedAssets: this.ownedAssets,
+      redDebts: this.redDebts,
+      mortgageModifier: this.mortgageModifier,
+      taxVehicle: this.taxVehicle,
+      history: this.history,
+      _seq: this._seq,
+    };
+  }
+
+  /** Reconstruye un motor a partir de un estado guardado. */
+  static fromJSON(data, profile, events) {
+    const e = new EconomyEngine(profile, events);
+    e.month = data.month;
+    e.cash = data.cash;
+    e.ownedAssets = data.ownedAssets || [];
+    e.redDebts = data.redDebts || [];
+    e.mortgageModifier = data.mortgageModifier ?? 1;
+    e.taxVehicle = data.taxVehicle || 'personal';
+    e.history = data.history || [];
+    e._seq = data._seq || 0;
+    return e;
+  }
 }

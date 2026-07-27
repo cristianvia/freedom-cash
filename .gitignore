@@ -10,3 +10,8 @@ dist/
 
 # Claude Code local
 .claude/settings.local.json
+
+# Perfiles de Chrome y capturas de verificación (headless)
+.chrome-profile/
+.chrome-save/
+_*.png

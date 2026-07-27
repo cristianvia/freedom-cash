@@ -8,6 +8,7 @@ import { takeBotTurn } from './engine/BotAI.js';
 
 const $ = (id) => document.getElementById(id);
 const euro = (n) => `${Math.round(n).toLocaleString('es-ES')} €`;
+const SAVE_KEY = 'freedomcash.save.v1';
 
 let engine = null;
 let city = null;
@@ -358,17 +359,48 @@ function checkEnd() {
   }
 }
 
+function computeEndStats() {
+  const equity = engine.ownedAssets.reduce((s, a) =>
+    s + (a.financing === 'leverage' ? a.financials.down_payment_required : a.financials.total_price), 0);
+  // ranking consciente de la victoria: quien ha ganado va primero, luego por IE
+  const players = [{ won: engine.hasWon(), ie: engine.emancipationIndex(), me: true },
+    ...bots.map(b => ({ won: b.engine.hasWon(), ie: b.engine.emancipationIndex() }))]
+    .sort((a, b) => (b.won - a.won) || (b.ie - a.ie));
+  return {
+    months: engine.month - 1,
+    ie: engine.status().ie,
+    assets: engine.ownedAssets.length,
+    netWorth: Math.round(engine.cash + equity),
+    passive: Math.round(engine.netPassiveIncome()),
+    vehicle: engine.taxVehicle === 'company' ? 'Sociedad' : 'Persona física',
+    rank: players.findIndex(p => p.me) + 1,
+    total: players.length,
+  };
+}
+
 function endModal(title, html, win) {
+  clearSave();
+  const st = computeEndStats();
+  const rankTxt = ['🥇 1º', '🥈 2º', '🥉 3º'][st.rank - 1] || `${st.rank}º`;
   const ov = document.createElement('div');
   ov.className = 'overlay';
   ov.innerHTML = `
-    <div class="modal" style="text-align:center;max-width:520px">
-      <div style="font-size:64px">${win ? '🏆' : '💥'}</div>
-      <h2>${title}</h2>
-      <p class="lead">${html}</p>
-      <button class="btn-primary" onclick="location.reload()">Jugar otra vez</button>
+    <div class="modal end">
+      <div style="font-size:60px;text-align:center">${win ? '🏆' : '💥'}</div>
+      <h2 style="text-align:center">${title}</h2>
+      <p class="lead" style="text-align:center">${html}</p>
+      <div class="end-stats">
+        <div><span>Meses jugados</span><b>${st.months}</b></div>
+        <div><span>IE final</span><b>${st.ie}%</b></div>
+        <div><span>Renta pasiva</span><b>${euro(st.passive)}/mes</b></div>
+        <div><span>Activos</span><b>${st.assets}</b></div>
+        <div><span>Patrimonio</span><b>${euro(st.netWorth)}</b></div>
+        <div><span>Puesto final</span><b>${rankTxt} de ${st.total}</b></div>
+      </div>
+      <button class="btn-primary" id="btn-again">Jugar otra vez</button>
     </div>`;
   document.body.appendChild(ov);
+  ov.querySelector('#btn-again').onclick = () => { clearSave(); location.href = location.pathname; };
 }
 
 /* ------------------ ACCIONES DEUDA (liquidez) --------------------- */
@@ -454,6 +486,61 @@ function render() {
   renderStandings();
   renderP2P();
   drawSparkline();
+  saveGame();
+}
+
+/* --------------------------- PERSISTENCIA ------------------------- */
+function saveGame() {
+  if (!engine || ended) return;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      engine: engine.toJSON(),
+      bots: bots.map(b => ({ name: b.name, emoji: b.emoji, aggr: b.aggr,
+        profileId: b.engine.profile.id, engine: b.engine.toJSON() })),
+      market: market.map(a => a.id),
+      ts: Date.now(),
+    }));
+  } catch (e) { /* almacenamiento no disponible */ }
+}
+function loadSave() {
+  try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; }
+  catch (e) { return null; }
+}
+function clearSave() {
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* noop */ }
+}
+
+async function resumeGame(save) {
+  const profile = DATA.profiles.find(x => x.id === save.engine.profileId) || DATA.profiles[0];
+  engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events);
+  ended = false;
+  $('profile-overlay').style.display = 'none';
+  $('hud-profile').textContent = profile.emoji + ' ' + profile.name.split(' ')[0];
+
+  bots = (save.bots || []).map(bs => ({
+    name: bs.name, emoji: bs.emoji, aggr: bs.aggr,
+    engine: EconomyEngine.fromJSON(bs.engine, DATA.profiles.find(x => x.id === bs.profileId) || DATA.profiles[0], DATA.events),
+  }));
+
+  const canvas = $('city');
+  city = new IsoCity(canvas, 6, 6);
+  await city.loadSprites(spriteMap);
+  window.addEventListener('resize', () => city.resize());
+  city.resize();
+  city.buildDistricts();
+  // re-colocar los edificios de los activos ya comprados
+  engine.ownedAssets.forEach(a => {
+    if (a.cell && city.grid[a.cell.row] && city.grid[a.cell.row][a.cell.col]) {
+      city.grid[a.cell.row][a.cell.col].building = a.id;
+      city.grid[a.cell.row][a.cell.col].decor = null;
+    }
+  });
+  city.draw();
+
+  market = (save.market || []).map(id => DATA.assets.find(a => a.id === id)).filter(Boolean);
+  if (market.length) renderMarket(); else refreshMarket();
+  p2pOffers = [];
+  render();
 }
 
 /* ------------------------ SPARKLINE DE IE ------------------------- */
@@ -522,6 +609,18 @@ function toast(title, desc, tone = 'neutral') {
   // Arranque rápido para demos/test:  index.html?auto=corporate|freelance|investor
   const params = new URLSearchParams(location.search);
   const auto = params.get('auto');
+
+  // oferta de continuar partida guardada
+  const save = loadSave();
+  if (save && save.engine && !auto) {
+    const p = DATA.profiles.find(x => x.id === save.engine.profileId);
+    $('resume-slot').innerHTML = `
+      <button class="btn-primary" id="btn-resume" style="margin-bottom:14px">
+        ▸ Continuar partida — ${p ? p.emoji : ''} ${p ? p.name : ''} · Mes ${save.engine.month}</button>
+      <div class="hint" style="margin-bottom:18px">o empieza una ficha nueva abajo (reemplaza la guardada)</div>`;
+    $('btn-resume').onclick = () => resumeGame(save);
+  }
+
   if (auto) {
     const p = DATA.profiles.find(x => x.id === auto) || DATA.profiles[0];
     await startGame(p);
