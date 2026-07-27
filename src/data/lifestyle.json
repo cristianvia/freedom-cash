@@ -1,0 +1,51 @@
+{
+  "$schema_note": "Acciones de estilo de vida. Cuestan dinero y ajustan bienestar. Cada una usable una vez por mes. salaryBoost es permanente (fracción, 0.04 = +4%).",
+  "actions": [
+    {
+      "id": "dinner",
+      "emoji": "🍽️",
+      "label": "Cena con amigos",
+      "desc": "Una noche de desconexión con los tuyos.",
+      "cost": 80,
+      "happiness": 10,
+      "energy": -4
+    },
+    {
+      "id": "trip",
+      "emoji": "✈️",
+      "label": "Escapada de fin de semana",
+      "desc": "Recargas de verdad, pero pesa en la cartera.",
+      "cost": 320,
+      "happiness": 26,
+      "energy": -8
+    },
+    {
+      "id": "rest",
+      "emoji": "🛋️",
+      "label": "Desconectar y descansar",
+      "desc": "Un mes tranquilo para recuperar energía.",
+      "cost": 0,
+      "happiness": 4,
+      "energy": 24
+    },
+    {
+      "id": "gym",
+      "emoji": "🏋️",
+      "label": "Deporte / gimnasio",
+      "desc": "Cuerpo sano, mente sana.",
+      "cost": 60,
+      "happiness": 6,
+      "energy": 14
+    },
+    {
+      "id": "course",
+      "emoji": "📚",
+      "label": "Formación / curso",
+      "desc": "Inviertes en ti: cansa ahora, pero sube tu sueldo para siempre.",
+      "cost": 260,
+      "happiness": -4,
+      "energy": -10,
+      "salaryBoost": 0.04
+    }
+  ]
+}

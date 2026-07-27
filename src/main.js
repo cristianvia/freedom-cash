@@ -20,6 +20,10 @@ const TUTORIAL_STEPS = [
     text: 'Este es tu marcador principal y su evolución en el tiempo. Cuando la barra llegue al 120%, la libertad financiera está a un paso.' },
   { sel: '#panel-cash', title: 'Tu tesorería',
     text: 'Tu caja disponible y el cashflow neto de cada mes. El <b>colchón</b> mide cuántos meses aguantarías sin ingresos: necesitas 6 para ganar.' },
+  { sel: '#panel-wellbeing', title: 'No todo es dinero: tu bienestar',
+    text: 'Tu <b>😊 Felicidad</b> y <b>⚡ Energía</b> bajan con el tiempo. Si la felicidad llega a 0, <b>abandonas</b>; sin energía sufres <b>burnout</b> y tu sueldo cae. Gasta en vivir (abajo, Estilo de vida) para recargarte.' },
+  { sel: '#panel-lifestyle', title: 'Estilo de vida',
+    text: 'Cenas, viajes, deporte o formación: cuestan dinero pero recargan tu bienestar (y la formación sube tu sueldo). Equilibrar dinero y vida es la clave del juego.' },
   { sel: '#panel-market', title: 'Marketplace de activos',
     text: 'Aquí compras activos que generan renta. <b>Al contado</b> pagas el precio completo; con <b>Hipoteca</b> solo pagas la entrada y asumes una cuota mensual (apalancamiento).' },
   { sel: '#city', title: 'Tu ciudad crece contigo',
@@ -54,18 +58,22 @@ let market = [];            // oportunidades visibles este turno
 let p2pOffers = [];         // activos que los rivales ponen a la venta
 let p2pSeq = 0;             // contador de instancias compradas por P2P
 let ended = false;          // evita disparar el fin de partida dos veces
+let activityLog = [];       // feed de actividad (jugador + rivales)
+let AUTO_MODE = false;      // demos/test: resuelve dilemas automáticamente
 const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
 async function loadData() {
-  const [a, p, e] = await Promise.all([
+  const [a, p, e, l] = await Promise.all([
     fetch('src/data/assets_database.json').then(r => r.json()),
     fetch('src/data/profiles.json').then(r => r.json()),
     fetch('src/data/events.json').then(r => r.json()),
+    fetch('src/data/lifestyle.json').then(r => r.json()),
   ]);
   DATA.assets = a.assets;
   DATA.profiles = p.profiles;
   DATA.events = e.events;
+  DATA.lifestyle = l.actions;
 
   // sprites de suelo/decoración + todos los edificios del catálogo
   Object.assign(spriteMap, {
@@ -214,6 +222,7 @@ function doBuy(assetId, financing) {
   toast('✅ Activo adquirido',
     `${asset.title} · ${financing === 'leverage' ? 'financiado con hipoteca (deuda verde)' : 'pagado al contado'}`,
     'good');
+  logActivity(`🫵 Compraste ${asset.title}`, 'good');
   renderMarket();
   render();
 }
@@ -272,11 +281,23 @@ function renderPortfolio() {
 
 /* ---------------------------- TURNO ------------------------------- */
 function endTurn() {
-  const snap = engine.endTurn();
-  const ev = snap.event;
+  if (ended) return;
+  // el evento del jugador se elige ANTES: si es un dilema, hay que decidir
+  const ev = engine.pickEvent();
+  if (engine.isDilemma(ev)) {
+    if (AUTO_MODE) resolveTurn(ev, engine.autoDilemmaChoice(ev));
+    else showDilemma(ev, (choiceIndex) => resolveTurn(ev, choiceIndex));
+  } else {
+    resolveTurn(ev, null);
+  }
+}
+
+function resolveTurn(ev, choiceIndex) {
+  const snap = engine.endTurn(ev, choiceIndex);
   const tone = ev ? ev.tone : 'neutral';
   let desc = ev ? ev.description : '';
   if (snap.adj && snap.adj._vacancyAsset) desc += ` (${snap.adj._vacancyAsset})`;
+  if (snap.adj && snap.adj._choice) desc += ` → ${snap.adj._choice}`;
 
   city.emitCoins();
   $('hud-month').textContent = engine.month;
@@ -284,17 +305,65 @@ function endTurn() {
   const sign = snap.cashflow >= 0 ? '+' : '';
   toast(`📅 Mes ${engine.month - 1} · ${ev ? ev.title : 'Liquidación'}`,
     `${desc}  ·  Cashflow del mes: ${sign}${euro(snap.cashflow)}`, tone);
+  if (ev && ev.title) logActivity(`📅 ${ev.title}`, tone);
 
-  // turno de los oponentes IA
+  // turno de los oponentes IA (compran, se cuidan y resuelven sus eventos)
   bots.forEach(b => {
-    takeBotTurn(b.engine, DATA.assets, b.aggr);
+    const bought = takeBotTurn(b.engine, DATA.assets, DATA.lifestyle, b.aggr) || [];
     b.engine.endTurn();
+    bought.forEach(t => logActivity(`${b.emoji} ${b.name} compró ${t}`, 'neutral'));
+    if (b.engine.hasLost()) logActivity(`${b.emoji} ${b.name} abandonó la partida 💥`, 'bad');
   });
 
   refreshMarket();
   refreshP2P();
   render();
   checkEnd();
+}
+
+/* ------------------------ DILEMA (elección) ----------------------- */
+function showDilemma(ev, cb) {
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="modal dilemma">
+      <div class="dil-tag">🤔 Decisión del mes</div>
+      <h2>${ev.title}</h2>
+      <p class="lead">${ev.description}</p>
+      <div class="dil-choices">
+        ${ev.choices.map((c, i) => `
+          <button class="dil-choice" data-i="${i}">
+            <span class="dil-label">${c.label}</span>
+            <span class="dil-fx">${dilemmaEffects(c)}</span>
+          </button>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelectorAll('.dil-choice').forEach(btn => {
+    btn.onclick = () => { ov.remove(); cb(parseInt(btn.dataset.i, 10)); };
+  });
+}
+
+function dilemmaEffects(c) {
+  const parts = [];
+  if (c.cash) parts.push(`<b class="${c.cash < 0 ? 'red' : 'green'}">${c.cash < 0 ? '' : '+'}${euro(c.cash)}</b>`);
+  if (c.happiness) parts.push(`<b class="${c.happiness < 0 ? 'red' : 'green'}">${c.happiness < 0 ? '' : '+'}${c.happiness} 😊</b>`);
+  if (c.energy) parts.push(`<b class="${c.energy < 0 ? 'red' : 'green'}">${c.energy < 0 ? '' : '+'}${c.energy} ⚡</b>`);
+  if (c.salaryBoost) parts.push(`<b class="green">+${Math.round(c.salaryBoost * 100)}% sueldo</b>`);
+  return parts.join(' · ');
+}
+
+/* ------------------------- FEED DE ACTIVIDAD ---------------------- */
+function logActivity(text, tone = 'neutral') {
+  activityLog.unshift({ text, tone, month: engine.month });
+  if (activityLog.length > 12) activityLog.pop();
+}
+function renderActivity() {
+  const wrap = $('activity');
+  if (!wrap) return;
+  if (!activityLog.length) { wrap.innerHTML = '<div class="empty">Aún no hay movimientos.</div>'; return; }
+  wrap.innerHTML = activityLog.map(a =>
+    `<div class="act-item ${a.tone}"><span class="act-m">m${a.month}</span> ${a.text}</div>`).join('');
 }
 
 /* --------------------------- MERCADO P2P -------------------------- */
@@ -382,9 +451,15 @@ function checkEnd() {
   }
   if (s.lost) {
     ended = true;
-    endModal('💥 Insolvencia',
-      `Tu caja cayó a ${euro(s.cash)}. El exceso de deuda o los imprevistos ahogaron tu tesorería.
-       Vuelve a intentarlo ajustando el apalancamiento.`, false);
+    if (s.lossReason === 'abandono') {
+      endModal('😔 Tiraste la toalla',
+        `Tu felicidad llegó a 0: te quemaste por el camino y abandonaste el sueño.
+         Recuerda: construir libertad sin cuidar tu bienestar no es sostenible. Descansa y disfruta también.`, false);
+    } else {
+      endModal('💥 Insolvencia',
+        `Tu caja cayó a ${euro(s.cash)}. El exceso de deuda o los imprevistos ahogaron tu tesorería.
+         Vuelve a intentarlo ajustando el apalancamiento.`, false);
+    }
     return;
   }
   const botWinner = bots.find(b => b.engine.hasWon());
@@ -463,7 +538,7 @@ function wireDebtButtons() {
 /* ---------------------------- RENDER ------------------------------ */
 function render() {
   const s = engine.status();
-  const salary = engine.profile.salary_base;
+  const salary = engine.effectiveSalaryBase();
 
   // Barra de libertad
   $('ie-value').textContent = `${s.ie}%`;
@@ -522,8 +597,60 @@ function render() {
   renderPortfolio();
   renderStandings();
   renderP2P();
+  renderWellbeing(s);
+  renderLifestyle();
+  renderActivity();
   drawSparkline();
   saveGame();
+}
+
+/* ------------------------- BIENESTAR / VIDA ----------------------- */
+function renderWellbeing(s) {
+  const hp = $('wb-happy'), en = $('wb-energy');
+  if (!hp) return;
+  hp.style.width = s.happiness + '%';
+  en.style.width = s.energy + '%';
+  hp.className = s.happiness < 25 ? 'danger' : s.happiness < 50 ? 'warn' : '';
+  en.className = s.energy < 25 ? 'danger' : s.energy < 40 ? 'warn' : '';
+  $('wb-happy-v').textContent = s.happiness;
+  $('wb-energy-v').textContent = s.energy;
+  const hint = $('wb-hint');
+  const notes = [];
+  if (s.burnout) notes.push('⚠️ <b style="color:var(--red)">Burnout</b>: tu sueldo cae. ¡Descansa!');
+  if (s.happiness < 25) notes.push('😟 Felicidad crítica: si llega a 0, abandonas.');
+  if (s.salaryBoost > 0) notes.push(`📈 +${s.salaryBoost}% de sueldo por formación/ascensos.`);
+  hint.innerHTML = notes.join('<br>');
+  hint.className = 'hint' + (s.burnout || s.happiness < 25 ? '' : ' good');
+}
+
+function renderLifestyle() {
+  const wrap = $('lifestyle');
+  if (!wrap || !DATA.lifestyle) return;
+  wrap.innerHTML = DATA.lifestyle.map(a => {
+    const used = engine.lifestyleUsed.has(a.id);
+    const afford = engine.cash >= a.cost;
+    const fx = [];
+    if (a.happiness) fx.push(`${a.happiness > 0 ? '+' : ''}${a.happiness}😊`);
+    if (a.energy) fx.push(`${a.energy > 0 ? '+' : ''}${a.energy}⚡`);
+    if (a.salaryBoost) fx.push(`+${Math.round(a.salaryBoost * 100)}%💼`);
+    return `<button class="life-btn" data-life="${a.id}" ${used || !afford ? 'disabled' : ''}
+        title="${a.desc}">
+        <span class="life-em">${a.emoji}</span>
+        <span class="life-txt"><b>${a.label}</b><small>${fx.join(' · ')}</small></span>
+        <span class="life-cost">${a.cost ? euro(a.cost) : 'gratis'}${used ? ' ✓' : ''}</span>
+      </button>`;
+  }).join('');
+  wrap.querySelectorAll('button[data-life]').forEach(btn => {
+    btn.onclick = () => {
+      const action = DATA.lifestyle.find(x => x.id === btn.dataset.life);
+      const r = engine.doLifestyle(action);
+      if (r.ok) {
+        toast(`${action.emoji} ${action.label}`, action.desc, 'good');
+        logActivity(`${action.emoji} ${action.label}`, 'good');
+        render();
+      } else toast('No disponible', r.reason, 'bad');
+    };
+  });
 }
 
 /* --------------------------- PERSISTENCIA ------------------------- */
@@ -648,6 +775,7 @@ function toast(title, desc, tone = 'neutral') {
   // Arranque rápido para demos/test:  index.html?auto=corporate|freelance|investor
   const params = new URLSearchParams(location.search);
   const auto = params.get('auto');
+  AUTO_MODE = !!auto;
 
   // oferta de continuar partida guardada
   const save = loadSave();
@@ -666,6 +794,11 @@ function toast(title, desc, tone = 'neutral') {
     // hook de test: ?tut=N muestra el tutorial en el paso N
     const tut = params.get('tut');
     if (tut !== null) startTutorial(parseInt(tut, 10) || 0);
+    // hook de test: ?dilemma=1 muestra un dilema de ejemplo
+    if (params.get('dilemma')) {
+      const dev = DATA.events.find(e => e.type === 'dilemma');
+      if (dev) showDilemma(dev, () => {});
+    }
     if (params.get('demo')) {
       // compra oportunidades asequibles y pasa varios meses (solo test/demo)
       const turns = parseInt(params.get('demo'), 10) || 1;
@@ -675,6 +808,9 @@ function toast(title, desc, tone = 'neutral') {
                     : engine.canBuy(a, 'cash').ok ? 'cash' : null;
           if (fin) doBuy(a.id, fin);
         });
+        // cuida el bienestar en la demo (si no, abandona)
+        if (engine.energy < 40) { const r = DATA.lifestyle.find(l => l.id === 'rest'); if (r) engine.doLifestyle(r); }
+        if (engine.happiness < 48) { const d = DATA.lifestyle.find(l => l.id === 'dinner'); if (d) engine.doLifestyle(d); }
         // ejercita fiscalidad y refinanciación en la demo
         if (engine.taxVehicle === 'personal' && engine.incorporationBenefit() > 0 &&
             engine.cash > engine.COMPANY_SETUP + engine.fixedExpenses() * 2) engine.incorporate();

@@ -11,9 +11,28 @@
  * @param {number} aggressiveness  0..1  probabilidad de seguir comprando
  * @returns {string[]} títulos de los activos comprados este turno
  */
-export function takeBotTurn(engine, assets, aggressiveness = 0.6) {
+export function takeBotTurn(engine, assets, lifestyle = [], aggressiveness = 0.6) {
   const buys = [];
   let attempts = 2;
+
+  // 0) Cuidar el bienestar (si no, se abandona por felicidad 0 o cae en burnout)
+  if (lifestyle && lifestyle.length) {
+    if (engine.energy < 40) {
+      const rest = lifestyle.find(l => l.id === 'rest');
+      if (rest) engine.doLifestyle(rest);
+    }
+    if (engine.happiness < 48) {
+      const opts = lifestyle
+        .filter(l => (l.happiness || 0) > 0 && engine.cash > l.cost + engine.fixedExpenses())
+        .sort((a, b) => (b.happiness / (b.cost + 1)) - (a.happiness / (a.cost + 1)));
+      if (opts[0]) engine.doLifestyle(opts[0]);
+    }
+    // formación ocasional cuando va sobrado de energía y liquidez
+    if (engine.energy > 62 && engine.cash > 15000 && Math.random() < 0.2) {
+      const course = lifestyle.find(l => l.id === 'course');
+      if (course) engine.doLifestyle(course);
+    }
+  }
 
   // 1) Optimización fiscal: constituir sociedad cuando compensa
   if (engine.taxVehicle === 'personal' &&

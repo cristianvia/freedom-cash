@@ -102,6 +102,9 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 - [x] **Negociación P2P:** compra activos a rivales que necesitan liquidez.
 - [x] **Persistencia** (localStorage) y **pantalla de fin** con estadísticas.
 - [x] **Tutorial guiado** (walk-through con spotlight) para nuevos jugadores.
+- [x] **Bienestar (Felicidad + Energía):** decisiones de estilo de vida, eventos de vida,
+      dilemas con elección, burnout y abandono. El equilibrio dinero–vida es ahora el core.
+- [x] **Feed de actividad** en vivo de los rivales.
 - [ ] Fase 2: sindicación de compras (comprar activos a medias entre jugadores).
 - [ ] Fase 3: multijugador en tiempo real.
 

@@ -206,6 +206,45 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .profile .rating { display: inline-block; margin-top: 8px; font-weight: 800; font-size: 12px;
   padding: 2px 10px; border-radius: 20px; background: rgba(74,168,255,.15); color: var(--blue); }
 
+/* ---------- Bienestar (Felicidad / Energía) ---------- */
+.wb-row { display: grid; grid-template-columns: 92px 1fr 34px; align-items: center; gap: 8px; margin: 8px 0; }
+.wb-label { font-size: 12px; color: var(--txt-dim); }
+.wb-bar { height: 10px; background: #0d1320; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.wb-bar > i { display: block; height: 100%; width: 70%; border-radius: 8px;
+  background: linear-gradient(90deg, var(--green-dim), var(--green)); transition: width .4s; }
+.wb-bar > i.warn { background: linear-gradient(90deg, #8a6a1f, var(--amber)); }
+.wb-bar > i.danger { background: linear-gradient(90deg, #7a2530, var(--red)); }
+.wb-val { font-size: 13px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- Estilo de vida ---------- */
+.life-btn { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px; margin-bottom: 7px; color: var(--txt); }
+.life-btn:hover:not(:disabled) { border-color: var(--green-dim); filter: brightness(1.12); }
+.life-btn:disabled { opacity: .45; cursor: not-allowed; }
+.life-em { font-size: 20px; flex-shrink: 0; }
+.life-txt { flex: 1; display: flex; flex-direction: column; line-height: 1.25; }
+.life-txt b { font-size: 13px; } .life-txt small { font-size: 11px; color: var(--txt-dim); }
+.life-cost { font-size: 12px; font-weight: 700; color: var(--txt-dim); white-space: nowrap; }
+
+/* ---------- Feed de actividad ---------- */
+#panel-activity #activity { max-height: 220px; overflow-y: auto; }
+.act-item { font-size: 12px; padding: 6px 0; border-bottom: 1px dashed var(--line); color: var(--txt); }
+.act-item:last-child { border-bottom: 0; }
+.act-item .act-m { color: var(--txt-dim); font-size: 10px; font-weight: 700; margin-right: 6px; }
+.act-item.good { color: var(--green); } .act-item.bad { color: var(--red); }
+
+/* ---------- Dilema (elección de evento) ---------- */
+.modal.dilemma { max-width: 500px; }
+.dil-tag { font-size: 11px; color: var(--amber); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+.dil-choices { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.dil-choice { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; color: var(--txt); }
+.dil-choice:hover { border-color: var(--green); transform: translateY(-2px); }
+.dil-label { font-size: 14px; font-weight: 700; }
+.dil-fx { font-size: 12px; color: var(--txt-dim); }
+.dil-fx .green { color: var(--green); } .dil-fx .red { color: var(--red); }
+
 /* ---------- Tutorial / coach-marks ---------- */
 .tut-block { position: fixed; inset: 0; z-index: 60; }
 .tut-mask {

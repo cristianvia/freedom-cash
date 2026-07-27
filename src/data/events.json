@@ -1,86 +1,122 @@
 {
-  "$schema_note": "Eventos macro e imprevistos aplicados al pasar turno. type define cómo lo interpreta el EconomyEngine.",
+  "$schema_note": "Eventos del mes. type define el efecto. Campos opcionales happiness/energy (bienestar) y salaryBoost (permanente) se aplican en cualquier evento. 'life': value en cash (negativo=coste). 'dilemma': choices[] con {label, cash?, happiness?, energy?, salaryBoost?}.",
   "events": [
     {
       "id": "calm",
       "title": "Mes tranquilo",
-      "description": "Sin sobresaltos. Los mercados se mueven de lado y todo fluye.",
+      "description": "Sin sobresaltos. Todo fluye con normalidad.",
       "type": "neutral",
       "tone": "neutral",
-      "weight": 24
+      "weight": 14
     },
-    {
-      "id": "rate_hike",
-      "title": "Subida de tipos de interés",
+
+    { "id": "rate_hike", "title": "Subida de tipos de interés",
       "description": "El banco central sube tipos: tus hipotecas se encarecen un 12%.",
-      "type": "mortgage_cost_pct",
-      "value": 0.12,
-      "tone": "bad",
-      "weight": 10
-    },
-    {
-      "id": "rate_cut",
-      "title": "Bajada de tipos de interés",
-      "description": "Política monetaria expansiva: tus hipotecas se abaratan un 8%.",
-      "type": "mortgage_cost_pct",
-      "value": -0.08,
-      "tone": "good",
-      "weight": 8
-    },
-    {
-      "id": "vacancy",
-      "title": "Vacancia de inquilinos",
+      "type": "mortgage_cost_pct", "value": 0.12, "tone": "bad", "weight": 8 },
+    { "id": "rate_cut", "title": "Bajada de tipos de interés",
+      "description": "Política expansiva: tus hipotecas se abaratan un 8%.",
+      "type": "mortgage_cost_pct", "value": -0.08, "tone": "good", "weight": 6 },
+    { "id": "vacancy", "title": "Vacancia de inquilinos",
       "description": "Un inmueble se queda sin inquilino este mes. Pierdes su renta bruta.",
-      "type": "vacancy_real_estate",
-      "tone": "bad",
-      "weight": 10
-    },
-    {
-      "id": "repair",
-      "title": "Imprevisto de mantenimiento",
-      "description": "Una avería inesperada golpea tu caja con un gasto puntual.",
-      "type": "one_time_expense",
-      "value": 1200,
-      "tone": "bad",
-      "weight": 10
-    },
-    {
-      "id": "tourism_boom",
-      "title": "Boom turístico",
-      "description": "Temporada récord: tus inmuebles vacacionales rinden +30% este mes.",
-      "type": "sector_bonus",
-      "sector": "real_estate",
-      "value": 0.30,
-      "tone": "good",
-      "weight": 8
-    },
-    {
-      "id": "tech_boom",
-      "title": "Boom tecnológico",
+      "type": "vacancy_real_estate", "tone": "bad", "weight": 8 },
+    { "id": "tourism_boom", "title": "Boom turístico",
+      "description": "Temporada récord: tus inmuebles rinden +30% este mes.",
+      "type": "sector_bonus", "sector": "real_estate", "value": 0.30, "tone": "good", "weight": 6, "happiness": 3 },
+    { "id": "tech_boom", "title": "Boom tecnológico",
       "description": "Auge del sector digital: tus negocios online rinden +40% este mes.",
-      "type": "sector_bonus",
-      "sector": "digital_business",
-      "value": 0.40,
-      "tone": "good",
-      "weight": 8
-    },
-    {
-      "id": "crypto_crash",
-      "title": "Corrección del mercado",
+      "type": "sector_bonus", "sector": "digital_business", "value": 0.40, "tone": "good", "weight": 6, "happiness": 3 },
+    { "id": "crypto_crash", "title": "Corrección del mercado",
       "description": "Pánico vendedor: tus activos financieros no reparten nada este mes.",
-      "type": "sector_zero",
-      "sector": "financial",
-      "tone": "bad",
-      "weight": 7
-    },
-    {
-      "id": "bonus",
-      "title": "Extra inesperado",
-      "description": "Cobras una paga extra o un bonus. Entra dinero fresco a caja.",
-      "type": "one_time_income",
-      "value": 1500,
-      "tone": "good",
-      "weight": 7
-    }
+      "type": "sector_zero", "sector": "financial", "tone": "bad", "weight": 6, "happiness": -3 },
+
+    { "id": "car_repair", "title": "Avería del coche",
+      "description": "El taller no perdona: reparación inesperada y un día horrible.",
+      "type": "life", "value": -600, "energy": -8, "happiness": -5, "tone": "bad", "weight": 7 },
+    { "id": "wedding", "title": "Boda de un amigo",
+      "description": "Regalo, traje y viaje… pero te lo pasas genial.",
+      "type": "life", "value": -280, "happiness": 6, "energy": -3, "tone": "bad", "weight": 6 },
+    { "id": "health", "title": "Problema de salud",
+      "description": "Un susto médico te pasa factura económica y anímica.",
+      "type": "life", "value": -750, "energy": -14, "happiness": -8, "tone": "bad", "weight": 5 },
+    { "id": "traffic_fine", "title": "Multa de tráfico",
+      "description": "Un radar te caza. Rabia y cartera más ligera.",
+      "type": "life", "value": -220, "happiness": -6, "tone": "bad", "weight": 5 },
+    { "id": "flu", "title": "Te pones malo",
+      "description": "Una gripe te deja KO una semana. Adiós energía.",
+      "type": "life", "value": -120, "energy": -16, "happiness": -6, "tone": "bad", "weight": 5 },
+    { "id": "dentist", "title": "Visita al dentista",
+      "description": "Una endodoncia inesperada. Ni el seguro la cubre.",
+      "type": "life", "value": -350, "happiness": -4, "energy": -3, "tone": "bad", "weight": 5 },
+    { "id": "subscriptions", "title": "Suscripciones fantasma",
+      "description": "Revisas el banco: pagabas servicios que no usabas.",
+      "type": "life", "value": -140, "happiness": -2, "tone": "bad", "weight": 5 },
+    { "id": "company_dinner", "title": "Cena de empresa",
+      "description": "Obligatoria, pero te ríes un rato con el equipo.",
+      "type": "life", "value": -60, "happiness": 3, "energy": -3, "tone": "neutral", "weight": 5 },
+    { "id": "season_gifts", "title": "Regalos de temporada",
+      "description": "Cumpleaños y fiestas: la ilusión también cuesta dinero.",
+      "type": "life", "value": -400, "happiness": 6, "tone": "bad", "weight": 4 },
+    { "id": "family_visit", "title": "Visita a la familia",
+      "description": "Un finde con los tuyos recarga el alma (y vacía algo la cartera).",
+      "type": "life", "value": -90, "happiness": 8, "energy": -3, "tone": "good", "weight": 5 },
+
+    { "id": "promotion", "title": "Ascenso en el trabajo",
+      "description": "Tu esfuerzo da fruto: te suben el sueldo de forma permanente.",
+      "type": "life", "value": 0, "salaryBoost": 0.06, "happiness": 9, "tone": "good", "weight": 4 },
+    { "id": "tax_refund", "title": "Devolución de Hacienda",
+      "description": "La declaración sale a devolver. Pequeña alegría.",
+      "type": "life", "value": 600, "happiness": 3, "tone": "good", "weight": 4 },
+    { "id": "bonus", "title": "Paga extra / bonus",
+      "description": "Cobras un extra inesperado. Entra dinero fresco a caja.",
+      "type": "life", "value": 1500, "happiness": 5, "tone": "good", "weight": 5 },
+    { "id": "inheritance", "title": "Pequeña herencia",
+      "description": "Un familiar te deja un dinero. Agridulce, pero ayuda.",
+      "type": "life", "value": 3000, "happiness": 4, "tone": "good", "weight": 3 },
+    { "id": "lottery", "title": "Premio de lotería",
+      "description": "¡Toca un pellizco en el sorteo! La suerte existe.",
+      "type": "life", "value": 1200, "happiness": 8, "tone": "good", "weight": 2 },
+
+    { "id": "dilemma_trip", "title": "Viaje sorpresa con amigos",
+      "description": "Tus amigos montan una escapada este finde. ¿Te apuntas?",
+      "type": "dilemma", "tone": "neutral", "weight": 5,
+      "choices": [
+        { "label": "¡Me apunto! (−450 €)", "cash": -450, "happiness": 22, "energy": 6 },
+        { "label": "Esta vez lo dejo pasar", "happiness": -9 }
+      ] },
+    { "id": "dilemma_sidegig", "title": "Extra freelance de fin de semana",
+      "description": "Te ofrecen un proyecto rápido. ¿Cargas más trabajo o descansas?",
+      "type": "dilemma", "tone": "neutral", "weight": 5,
+      "choices": [
+        { "label": "Coger el extra (+950 €)", "cash": 950, "energy": -14, "happiness": -5 },
+        { "label": "Descansar este finde", "happiness": 5, "energy": 10 }
+      ] },
+    { "id": "dilemma_promotion", "title": "Ascenso estresante",
+      "description": "Te proponen un puesto mejor pagado, pero con mucha más presión.",
+      "type": "dilemma", "tone": "neutral", "weight": 4,
+      "choices": [
+        { "label": "Aceptar (+10% sueldo)", "salaryBoost": 0.10, "energy": -14, "happiness": -6 },
+        { "label": "Rechazar y mantener equilibrio", "happiness": 6 }
+      ] },
+    { "id": "dilemma_family_loan", "title": "Un familiar pide ayuda",
+      "description": "Alguien cercano necesita un préstamo. ¿Le echas una mano?",
+      "type": "dilemma", "tone": "neutral", "weight": 4,
+      "choices": [
+        { "label": "Ayudar (−1.500 €)", "cash": -1500, "happiness": 9 },
+        { "label": "No puedo permitírmelo ahora", "happiness": -11 }
+      ] },
+    { "id": "dilemma_car", "title": "El coche viejo falla",
+      "description": "¿Lo reparas una vez más o das el salto a uno mejor?",
+      "type": "dilemma", "tone": "neutral", "weight": 4,
+      "choices": [
+        { "label": "Repararlo (−400 €)", "cash": -400, "happiness": -3 },
+        { "label": "Comprar uno mejor (−2.500 €)", "cash": -2500, "happiness": 10, "energy": 4 }
+      ] },
+    { "id": "dilemma_health_ins", "title": "Seguro médico premium",
+      "description": "Te ofrecen una póliza que te daría tranquilidad… por un precio.",
+      "type": "dilemma", "tone": "neutral", "weight": 3,
+      "choices": [
+        { "label": "Contratarlo (−500 €)", "cash": -500, "happiness": 6, "energy": 5 },
+        { "label": "Seguir sin seguro", "happiness": -4 }
+      ] }
   ]
 }

@@ -41,17 +41,63 @@ export class EconomyEngine {
     this.REFI_FEE_PCT = 0.03;   // comisión (sobre la hipoteca) por refinanciar
     this.REFI_REDUCTION = 0.25; // reducción de la cuota tras refinanciar
 
+    // --- Bienestar: Felicidad y Energía (0-100) ---
+    this.happiness = 70;
+    this.energy = 80;
+    this.salaryBoost = 1;              // sube con formación/ascensos
+    this.lifestyleUsed = new Set();    // acciones de estilo de vida usadas este mes
+    this.WORK_ENERGY_DRAIN = 7;        // energía que consume el trabajo cada mes
+    this.HAPPINESS_DRIFT = 3;          // desgaste base de felicidad (la rutina)
+    this.BURNOUT_ENERGY = 25;          // por debajo → burnout (penaliza el sueldo)
+    this.BURNOUT_SALARY_MULT = 0.65;   // multiplicador de sueldo en burnout
+
+    // --- Coste de arranque (fianza + mudanza): el principio pesa ---
+    this.cash -= Math.round(profile.fixed_expenses * 1.5);
+
     this.recordSnapshot();
   }
 
   /* ---------------------------- INGRESOS ---------------------------- */
 
+  /** Factor de productividad por energía (burnout reduce el sueldo). */
+  energyFactor() {
+    return this.energy < this.BURNOUT_ENERGY ? this.BURNOUT_SALARY_MULT : 1;
+  }
+
+  /** Sueldo base efectivo: perfil × mejoras (formación) × energía. */
+  effectiveSalaryBase() {
+    return this.profile.salary_base * this.salaryBoost * this.energyFactor();
+  }
+
+  isBurnout() { return this.energy < this.BURNOUT_ENERGY; }
+
   /** Sueldo del mes (aplica varianza si el perfil es variable). */
   rollSalary() {
-    const { salary_base, salary_variance } = this.profile;
-    if (!salary_variance) return salary_base;
-    const delta = (Math.random() * 2 - 1) * salary_variance;
-    return Math.round(salary_base + delta);
+    const base = this.effectiveSalaryBase();
+    const { salary_variance } = this.profile;
+    if (!salary_variance) return Math.round(base);
+    const delta = (Math.random() * 2 - 1) * salary_variance * this.salaryBoost * this.energyFactor();
+    return Math.round(base + delta);
+  }
+
+  /* --------------------------- BIENESTAR ---------------------------- */
+
+  _clampWellbeing() {
+    this.happiness = Math.max(0, Math.min(100, this.happiness));
+    this.energy = Math.max(0, Math.min(100, this.energy));
+  }
+
+  /** Ejecuta una acción de estilo de vida (cuesta dinero, ajusta bienestar). */
+  doLifestyle(action) {
+    if (this.lifestyleUsed.has(action.id)) return { ok: false, reason: 'Ya lo hiciste este mes' };
+    if (this.cash < action.cost) return { ok: false, reason: 'Liquidez insuficiente' };
+    this.cash -= action.cost;
+    this.happiness += action.happiness || 0;
+    this.energy += action.energy || 0;
+    if (action.salaryBoost) this.salaryBoost += action.salaryBoost;
+    this._clampWellbeing();
+    this.lifestyleUsed.add(action.id);
+    return { ok: true };
   }
 
   /** Cuota hipotecaria efectiva de un activo (tipos + refinanciación). */
@@ -137,8 +183,14 @@ export class EconomyEngine {
   }
 
   hasLost() {
-    // insolvencia: caja muy negativa sin capacidad de cubrir el mes
-    return this.cash < -3000;
+    // insolvencia (caja muy negativa) o abandono (felicidad agotada)
+    return this.cash < -3000 || this.happiness <= 0;
+  }
+
+  lossReason() {
+    if (this.happiness <= 0) return 'abandono';
+    if (this.cash < -3000) return 'insolvencia';
+    return null;
   }
 
   /* --------------------------- ACCIONES ----------------------------- */
@@ -280,12 +332,45 @@ export class EconomyEngine {
     return this.events[this.events.length - 1];
   }
 
+  /** ¿Este evento requiere que el jugador elija (dilema)? */
+  isDilemma(ev) { return ev && ev.type === 'dilemma'; }
+
+  /** Elección automática de dilema (bots / modo auto): prioriza el bienestar bajo. */
+  autoDilemmaChoice(ev) {
+    if (!ev || !ev.choices) return 0;
+    // si el bienestar está bajo, elige la opción que más felicidad/energía dé
+    if (this.happiness < 40 || this.energy < 35) {
+      let best = 0, bestScore = -Infinity;
+      ev.choices.forEach((c, i) => {
+        const score = (c.happiness || 0) + (c.energy || 0);
+        if (score > bestScore) { bestScore = score; best = i; }
+      });
+      return best;
+    }
+    // si no, elige la que más aporte a la economía (cash + salaryBoost*grande)
+    let best = 0, bestScore = -Infinity;
+    ev.choices.forEach((c, i) => {
+      const score = (c.cash || 0) + (c.salaryBoost || 0) * 20000;
+      if (score > bestScore) { bestScore = score; best = i; }
+    });
+    return best;
+  }
+
+  /** Aplica los efectos de bienestar/sueldo de un objeto {happiness,energy,salaryBoost}. */
+  _applyWellbeingEffects(o) {
+    if (!o) return;
+    if (o.happiness) this.happiness += o.happiness;
+    if (o.energy) this.energy += o.energy;
+    if (o.salaryBoost) this.salaryBoost += o.salaryBoost;
+    this._clampWellbeing();
+  }
+
   /**
    * Aplica el efecto de un evento a la liquidación de ESTE mes.
-   * Devuelve un ajuste { cashDelta, incomeDelta } que se suma al cashflow.
-   * Los efectos permanentes (tipos) modifican mortgageModifier.
+   * @param {number|null} choiceIndex  para dilemas: opción elegida (o auto si null)
+   * @returns ajuste { cashDelta, incomeDelta, _choice? }
    */
-  applyEvent(ev) {
+  applyEvent(ev, choiceIndex = null) {
     const adj = { cashDelta: 0, incomeDelta: 0 };
     if (!ev) return adj;
 
@@ -293,7 +378,6 @@ export class EconomyEngine {
       case 'neutral':
         break;
       case 'mortgage_cost_pct':
-        // efecto permanente sobre las cuotas hipotecarias (deuda verde)
         this.mortgageModifier = Math.max(0.5, this.mortgageModifier * (1 + ev.value));
         break;
       case 'one_time_expense':
@@ -302,11 +386,25 @@ export class EconomyEngine {
       case 'one_time_income':
         adj.cashDelta += ev.value;
         break;
+      case 'life':
+        // evento de vida: value puede ser negativo (coste) o positivo (ingreso)
+        adj.cashDelta += ev.value || 0;
+        break;
+      case 'dilemma': {
+        const idx = choiceIndex == null ? this.autoDilemmaChoice(ev) : choiceIndex;
+        const choice = ev.choices[idx];
+        if (choice) {
+          adj.cashDelta += choice.cash || 0;
+          this._applyWellbeingEffects(choice);
+          adj._choice = choice.label;
+        }
+        break;
+      }
       case 'vacancy_real_estate': {
         const re = this.ownedAssets.filter(a => a.category === 'real_estate');
         if (re.length) {
           const hit = re[Math.floor(Math.random() * re.length)];
-          adj.incomeDelta -= hit.financials.gross_monthly_income; // pierde renta bruta este mes
+          adj.incomeDelta -= hit.financials.gross_monthly_income;
           adj._vacancyAsset = hit.title;
         }
         break;
@@ -322,10 +420,12 @@ export class EconomyEngine {
         const loss = this.ownedAssets
           .filter(a => a.category === ev.sector)
           .reduce((s, a) => s + this.assetNetIncome(a), 0);
-        adj.incomeDelta -= loss; // este mes ese sector no aporta
+        adj.incomeDelta -= loss;
         break;
       }
     }
+    // efectos de bienestar de cualquier evento (los dilemas ya aplican los de su opción)
+    if (ev.type !== 'dilemma') this._applyWellbeingEffects(ev);
     return adj;
   }
 
@@ -335,19 +435,41 @@ export class EconomyEngine {
    * Ejecuta la liquidación del mes: sueldo + evento + cashflow.
    * @returns snapshot con el desglose para la UI.
    */
-  endTurn() {
+  /** Deriva mensual del bienestar: trabajo, rutina y estrés financiero. */
+  applyWellbeingDrift() {
+    this.energy -= this.WORK_ENERGY_DRAIN;
+    let happyDelta = -this.HAPPINESS_DRIFT;
+    if (this.cashCushionMonths() < 1) happyDelta -= 4;          // estrés por falta de colchón
+    if (this.totalRedDebtPayment() > 0) happyDelta -= 2;        // agobio de la deuda roja
+    if (this.emancipationIndex() >= 100) happyDelta += 3;       // motiva ver la meta cerca
+    this.happiness += happyDelta;
+    this._clampWellbeing();
+  }
+
+  /**
+   * Ejecuta la liquidación del mes: sueldo + evento + cashflow + bienestar.
+   * @param {object|null} presetEvent  evento ya elegido (para dilemas del jugador)
+   * @param {number|null} choiceIndex  opción del dilema elegida por el jugador
+   */
+  endTurn(presetEvent = null, choiceIndex = null) {
     const salary = this.rollSalary();
-    const event = this.pickEvent();
-    const adj = this.applyEvent(event);
+    const event = presetEvent || this.pickEvent();
+    const adj = this.applyEvent(event, choiceIndex);
 
     const baseCashflow = this.netMonthlyCashflow(salary);
     const monthResult = Math.round(baseCashflow + adj.cashDelta + adj.incomeDelta);
 
     this.cash += monthResult;
 
+    // deriva de bienestar del mes
+    this.applyWellbeingDrift();
+
     // amortización de saldo de deudas rojas (reduce balance según cuota)
     this.redDebts.forEach(d => { d.balance = Math.max(0, d.balance - d.monthly_payment); });
     this.redDebts = this.redDebts.filter(d => d.balance > 0);
+
+    // nuevo mes: se resetean las acciones de estilo de vida
+    this.lifestyleUsed = new Set();
 
     this.month += 1;
     const snap = this.recordSnapshot({
@@ -376,8 +498,13 @@ export class EconomyEngine {
       ie: Math.round(this.emancipationIndex() * 10) / 10,
       cushionMonths: Math.round(this.cashCushionMonths() * 10) / 10,
       assetsCount: this.ownedAssets.length,
+      happiness: Math.round(this.happiness),
+      energy: Math.round(this.energy),
+      burnout: this.isBurnout(),
+      salaryBoost: Math.round((this.salaryBoost - 1) * 100),
       won: this.hasWon(),
       lost: this.hasLost(),
+      lossReason: this.lossReason(),
     };
   }
 
@@ -405,6 +532,10 @@ export class EconomyEngine {
       redDebts: this.redDebts,
       mortgageModifier: this.mortgageModifier,
       taxVehicle: this.taxVehicle,
+      happiness: this.happiness,
+      energy: this.energy,
+      salaryBoost: this.salaryBoost,
+      lifestyleUsed: [...this.lifestyleUsed],
       history: this.history,
       _seq: this._seq,
     };
@@ -419,6 +550,10 @@ export class EconomyEngine {
     e.redDebts = data.redDebts || [];
     e.mortgageModifier = data.mortgageModifier ?? 1;
     e.taxVehicle = data.taxVehicle || 'personal';
+    e.happiness = data.happiness ?? 70;
+    e.energy = data.energy ?? 80;
+    e.salaryBoost = data.salaryBoost ?? 1;
+    e.lifestyleUsed = new Set(data.lifestyleUsed || []);
     e.history = data.history || [];
     e._seq = data._seq || 0;
     return e;
