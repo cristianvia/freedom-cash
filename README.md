@@ -1,0 +1,99 @@
+# 💸 Freedom Cash — El Juego de la Libertad Financiera
+
+Videojuego educativo de estrategia financiera por turnos, inspirado en la filosofía de
+*Padre Rico Padre Pobre* / *Cashflow* pero con **ritmo ágil tipo Monopoly**, una
+**interfaz Fintech Dark Mode** y una **ciudad isométrica** que crece físicamente con cada
+activo que compras.
+
+> **Objetivo:** alcanzar un **Indicador de Emancipación (IE) ≥ 120%** — que tus ingresos
+> pasivos cubran el 120% de tus gastos — con un colchón de **6 meses** de tesorería en caja.
+
+---
+
+## 🎮 Cómo jugar
+
+1. Elige tu **Ficha de Vida** (Empleado, Autónomo o Inversor): cada una arranca con sueldo,
+   gastos, liquidez y rating de crédito distintos.
+2. En el **Marketplace**, compra activos **al contado** o **apalancado con hipoteca**:
+   - **Inmuebles** 🏠 · **Negocios digitales** 💻 · **Activos financieros** 📈
+3. Cada activo comprado **aparece construido** en tu ciudad isométrica.
+4. Pulsa **"Cobrar y pasar de mes"** para liquidar el flujo de caja, disparar un
+   **evento macroeconómico** (subida de tipos, vacancia, boom turístico…) y actualizar tu IE.
+5. Gestiona el riesgo: la **deuda verde** (ligada a activos que se auto-pagan) es buena;
+   la **deuda roja** (préstamos de consumo) penaliza tu IE y ahoga la caja.
+
+Gana cuando `IE ≥ 120%` **y** `caja ≥ 6 × gastos fijos`.
+
+---
+
+## ▶️ Ejecutar en local
+
+El juego usa **ES Modules** y `fetch`, así que necesita servirse por HTTP (no vale abrir el
+`index.html` con doble clic):
+
+```bash
+# desde la carpeta del proyecto
+python -m http.server 8765
+# luego abre http://127.0.0.1:8765/index.html
+```
+
+**Atajos de demo/test** (parámetros de URL):
+- `?auto=corporate|freelance|investor` → arranca directo con ese perfil.
+- `&demo=1` → además compra las oportunidades asequibles y pasa un mes (para pruebas).
+
+---
+
+## 🧮 Matemáticas del juego
+
+```
+IE = (Ingresos Pasivos Mensuales / (Gastos Fijos + Cuotas Deuda Roja)) × 100
+
+Cashflow Neto = (Sueldo + Ingresos Pasivos) − (Gastos Fijos + Hipotecas + Deuda Roja)
+```
+
+- **Deuda verde** = hipoteca de un activo donde `ingreso bruto > cuota`.
+- **Deuda roja** = préstamo de consumo; resta liquidez y penaliza el denominador del IE.
+- **Apalancamiento** = pagas solo la entrada, pero las subidas de tipos encarecen tu cuota.
+
+---
+
+## 🏗️ Arquitectura
+
+```
+freedom-cash/
+├── index.html              # layout de 3 columnas (dashboard · ciudad · marketplace)
+├── css/styles.css          # tema Fintech Dark Mode
+├── assets/sprites/         # sprites isométricos curados (Kenney, CC0)
+└── src/
+    ├── main.js             # controlador: une lógica + render + DOM
+    ├── engine/
+    │   ├── EconomyEngine.js # núcleo contable (sin dependencias de UI)
+    │   └── IsoCity.js       # renderizador isométrico 2D sobre <canvas>
+    └── data/
+        ├── assets_database.json  # catálogo de activos del Marketplace
+        ├── profiles.json         # fichas de vida
+        └── events.json           # eventos macro e imprevistos
+```
+
+**Datos desacoplados:** todo el catálogo de activos, perfiles y eventos vive en JSON, listo
+para ampliarse sin tocar la lógica. La `EconomyEngine` es **UI-agnóstica** (testeable en Node).
+
+**Stack:** HTML/CSS + JavaScript (ES Modules) + Canvas 2D isométrico. Preparado para empaquetar
+a móvil (Capacitor) o migrar el render a Phaser/Pixi en el futuro.
+
+---
+
+## 🎨 Créditos de arte
+
+Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Tiles City* e
+*Isometric Tiles Buildings*, licencia **CC0** (dominio público). Ver
+`assets/sprites/LICENSE_kenney_*.txt`.
+
+---
+
+## 🗺️ Roadmap
+
+- [x] **Fase 1 (MVP):** single-player, lógica económica, ciudad isométrica, marketplace, eventos.
+- [ ] Fase 2: bots/IA rival, negociación P2P y sindicación de compras.
+- [ ] Fase 3: multijugador en tiempo real.
+- [ ] Optimización fiscal (persona física vs. sociedad) y refinanciación de hipotecas.

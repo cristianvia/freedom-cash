@@ -1,0 +1,203 @@
+{
+  "$schema_note": "Catálogo de oportunidades del Marketplace. financials en euros/mes. Para activos financieros (leverage_allowed=false) down_payment_required == total_price y mortgage=0.",
+  "assets": [
+    {
+      "id": "re_apt_01",
+      "category": "real_estate",
+      "sprite": "assets/sprites/b_vacation.png",
+      "title": "Apartamento Turístico en Costa",
+      "description": "Estudio reformado cerca de la playa con alta demanda estacional.",
+      "financials": {
+        "total_price": 85000,
+        "down_payment_required": 17000,
+        "mortgage_available": 68000,
+        "monthly_mortgage_cost": 320,
+        "gross_monthly_income": 850,
+        "maintenance_and_taxes": 130,
+        "net_monthly_cashflow": 400
+      },
+      "metrics": { "coc_return_percentage": 28.23, "vacancy_rate_risk": 0.15 },
+      "leverage_allowed": true
+    },
+    {
+      "id": "re_flat_02",
+      "category": "real_estate",
+      "sprite": "assets/sprites/b_apartment.png",
+      "title": "Piso para Reforma y Alquiler",
+      "description": "Vivienda a rehabilitar en barrio en auge. Alquiler residencial estable.",
+      "financials": {
+        "total_price": 120000,
+        "down_payment_required": 30000,
+        "mortgage_available": 90000,
+        "monthly_mortgage_cost": 430,
+        "gross_monthly_income": 950,
+        "maintenance_and_taxes": 150,
+        "net_monthly_cashflow": 370
+      },
+      "metrics": { "coc_return_percentage": 14.8, "vacancy_rate_risk": 0.08 },
+      "leverage_allowed": true
+    },
+    {
+      "id": "re_local_03",
+      "category": "real_estate",
+      "sprite": "assets/sprites/b_shop.png",
+      "title": "Local Comercial en Centro",
+      "description": "Local a pie de calle con inquilino de larga duración. Renta neta alta.",
+      "financials": {
+        "total_price": 160000,
+        "down_payment_required": 48000,
+        "mortgage_available": 112000,
+        "monthly_mortgage_cost": 560,
+        "gross_monthly_income": 1350,
+        "maintenance_and_taxes": 180,
+        "net_monthly_cashflow": 610
+      },
+      "metrics": { "coc_return_percentage": 15.25, "vacancy_rate_risk": 0.12 },
+      "leverage_allowed": true
+    },
+    {
+      "id": "biz_saas_01",
+      "category": "digital_business",
+      "sprite": "assets/sprites/b_office.png",
+      "title": "Micro-SaaS Automatizado",
+      "description": "Software de suscripción con bajo mantenimiento y márgenes altos.",
+      "financials": {
+        "total_price": 45000,
+        "down_payment_required": 45000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 900,
+        "maintenance_and_taxes": 220,
+        "net_monthly_cashflow": 680
+      },
+      "metrics": { "coc_return_percentage": 18.13, "vacancy_rate_risk": 0.25 },
+      "leverage_allowed": false
+    },
+    {
+      "id": "biz_ecom_02",
+      "category": "digital_business",
+      "sprite": "assets/sprites/b_startup.png",
+      "title": "Tienda E-commerce Automatizada",
+      "description": "Marca de nicho con logística externalizada. Escalable con marketing.",
+      "financials": {
+        "total_price": 28000,
+        "down_payment_required": 28000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 720,
+        "maintenance_and_taxes": 300,
+        "net_monthly_cashflow": 420
+      },
+      "metrics": { "coc_return_percentage": 18.0, "vacancy_rate_risk": 0.35 },
+      "leverage_allowed": false
+    },
+    {
+      "id": "biz_vending_03",
+      "category": "digital_business",
+      "sprite": "assets/sprites/b_cafe.png",
+      "title": "Ruta de Máquinas Vending",
+      "description": "Sistema semi-automático de máquinas en ubicaciones de alto tránsito.",
+      "financials": {
+        "total_price": 22000,
+        "down_payment_required": 22000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 540,
+        "maintenance_and_taxes": 190,
+        "net_monthly_cashflow": 350
+      },
+      "metrics": { "coc_return_percentage": 19.09, "vacancy_rate_risk": 0.18 },
+      "leverage_allowed": false
+    },
+    {
+      "id": "fin_etf_09",
+      "category": "financial",
+      "sprite": "assets/sprites/b_retail2.png",
+      "title": "ETF de Dividendos Global",
+      "description": "Cesta de acciones de reparto. Punto de entrada barato para empezar.",
+      "financials": {
+        "total_price": 4000,
+        "down_payment_required": 4000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 48,
+        "maintenance_and_taxes": 6,
+        "net_monthly_cashflow": 42
+      },
+      "metrics": { "coc_return_percentage": 12.6, "vacancy_rate_risk": 0.1 },
+      "leverage_allowed": false
+    },
+    {
+      "id": "biz_affiliate_10",
+      "category": "digital_business",
+      "sprite": "assets/sprites/b_coworking.png",
+      "title": "Web de Afiliación SEO",
+      "description": "Blog de nicho monetizado con afiliación. Barato y escalable con contenido.",
+      "financials": {
+        "total_price": 6000,
+        "down_payment_required": 6000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 240,
+        "maintenance_and_taxes": 90,
+        "net_monthly_cashflow": 150
+      },
+      "metrics": { "coc_return_percentage": 30.0, "vacancy_rate_risk": 0.4 },
+      "leverage_allowed": false
+    },
+    {
+      "id": "re_parking_11",
+      "category": "real_estate",
+      "sprite": "assets/sprites/b_house.png",
+      "title": "Plaza de Garaje en Alquiler",
+      "description": "Activo inmobiliario de bajo coste y mantenimiento casi nulo. Ideal para arrancar apalancado.",
+      "financials": {
+        "total_price": 14000,
+        "down_payment_required": 3500,
+        "mortgage_available": 10500,
+        "monthly_mortgage_cost": 55,
+        "gross_monthly_income": 130,
+        "maintenance_and_taxes": 20,
+        "net_monthly_cashflow": 55
+      },
+      "metrics": { "coc_return_percentage": 18.9, "vacancy_rate_risk": 0.06 },
+      "leverage_allowed": true
+    },
+    {
+      "id": "fin_reit_01",
+      "category": "financial",
+      "sprite": "assets/sprites/b_bank.png",
+      "title": "Fondo Inmobiliario (REIT)",
+      "description": "Cartera diversificada de inmuebles que reparte dividendos mensuales.",
+      "financials": {
+        "total_price": 20000,
+        "down_payment_required": 20000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 145,
+        "maintenance_and_taxes": 15,
+        "net_monthly_cashflow": 130
+      },
+      "metrics": { "coc_return_percentage": 7.8, "vacancy_rate_risk": 0.05 },
+      "leverage_allowed": false
+    },
+    {
+      "id": "fin_crypto_02",
+      "category": "financial",
+      "sprite": "assets/sprites/b_tower.png",
+      "title": "Cesta Cripto Diversificada",
+      "description": "Activos digitales con staking. Alta volatilidad, rendimiento agresivo.",
+      "financials": {
+        "total_price": 15000,
+        "down_payment_required": 15000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 260,
+        "maintenance_and_taxes": 20,
+        "net_monthly_cashflow": 240
+      },
+      "metrics": { "coc_return_percentage": 19.2, "vacancy_rate_risk": 0.55 },
+      "leverage_allowed": false
+    }
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "$schema_note": "Eventos macro e imprevistos aplicados al pasar turno. type define cómo lo interpreta el EconomyEngine.",
+  "events": [
+    {
+      "id": "calm",
+      "title": "Mes tranquilo",
+      "description": "Sin sobresaltos. Los mercados se mueven de lado y todo fluye.",
+      "type": "neutral",
+      "tone": "neutral",
+      "weight": 24
+    },
+    {
+      "id": "rate_hike",
+      "title": "Subida de tipos de interés",
+      "description": "El banco central sube tipos: tus hipotecas se encarecen un 12%.",
+      "type": "mortgage_cost_pct",
+      "value": 0.12,
+      "tone": "bad",
+      "weight": 10
+    },
+    {
+      "id": "rate_cut",
+      "title": "Bajada de tipos de interés",
+      "description": "Política monetaria expansiva: tus hipotecas se abaratan un 8%.",
+      "type": "mortgage_cost_pct",
+      "value": -0.08,
+      "tone": "good",
+      "weight": 8
+    },
+    {
+      "id": "vacancy",
+      "title": "Vacancia de inquilinos",
+      "description": "Un inmueble se queda sin inquilino este mes. Pierdes su renta bruta.",
+      "type": "vacancy_real_estate",
+      "tone": "bad",
+      "weight": 10
+    },
+    {
+      "id": "repair",
+      "title": "Imprevisto de mantenimiento",
+      "description": "Una avería inesperada golpea tu caja con un gasto puntual.",
+      "type": "one_time_expense",
+      "value": 1200,
+      "tone": "bad",
+      "weight": 10
+    },
+    {
+      "id": "tourism_boom",
+      "title": "Boom turístico",
+      "description": "Temporada récord: tus inmuebles vacacionales rinden +30% este mes.",
+      "type": "sector_bonus",
+      "sector": "real_estate",
+      "value": 0.30,
+      "tone": "good",
+      "weight": 8
+    },
+    {
+      "id": "tech_boom",
+      "title": "Boom tecnológico",
+      "description": "Auge del sector digital: tus negocios online rinden +40% este mes.",
+      "type": "sector_bonus",
+      "sector": "digital_business",
+      "value": 0.40,
+      "tone": "good",
+      "weight": 8
+    },
+    {
+      "id": "crypto_crash",
+      "title": "Corrección del mercado",
+      "description": "Pánico vendedor: tus activos financieros no reparten nada este mes.",
+      "type": "sector_zero",
+      "sector": "financial",
+      "tone": "bad",
+      "weight": 7
+    },
+    {
+      "id": "bonus",
+      "title": "Extra inesperado",
+      "description": "Cobras una paga extra o un bonus. Entra dinero fresco a caja.",
+      "type": "one_time_income",
+      "value": 1500,
+      "tone": "good",
+      "weight": 7
+    }
+  ]
+}

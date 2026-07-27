@@ -1,0 +1,12 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Node (para futuras fases con Capacitor/Phaser)
+node_modules/
+dist/
+.env
+
+# Claude Code local
+.claude/settings.local.json

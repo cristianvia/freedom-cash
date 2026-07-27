@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Freedom Cash · El Juego de la Libertad Financiera</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ===== IZQUIERDA: Dashboard financiero ===== -->
+    <aside class="col left">
+      <div class="brand">
+        <div class="logo">💸</div>
+        <div>
+          <h1>Freedom Cash</h1>
+          <small>Libertad Financiera · MVP</small>
+        </div>
+      </div>
+
+      <div class="panel freedom">
+        <h2>Indicador de Emancipación</h2>
+        <div class="big" id="ie-value">0%</div>
+        <div class="sub">Objetivo: rentas pasivas ≥ 120% de tus gastos</div>
+        <div class="progress"><i id="ie-bar"></i><span class="goal" id="ie-goal"></span></div>
+        <div class="goal-note">meta 120%</div>
+      </div>
+
+      <div class="panel">
+        <h2>Tesorería</h2>
+        <div class="stat">
+          <span class="label"><span class="dot green"></span>Caja disponible</span>
+          <span class="val blue" id="cash">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label">Cashflow neto / mes</span>
+          <span class="val" id="cashflow">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label">Colchón (meses)</span>
+          <span class="val" id="cushion">0</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Flujo mensual</h2>
+        <div class="stat">
+          <span class="label">Sueldo base</span><span class="val" id="salary">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label">Ingresos pasivos</span><span class="val green" id="passive">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label">Gastos fijos</span><span class="val red" id="expenses">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label">Cuotas hipotecas</span><span class="val amber" id="green-debt">0 €</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Deuda: Verde vs Roja</h2>
+        <div class="debtbar"><span class="g" id="db-green"></span><span class="r" id="db-red"></span></div>
+        <div class="stat" style="margin-top:8px">
+          <span class="label"><span class="dot green"></span>Deuda verde (auto-pagada)</span>
+          <span class="val green" id="green-lbl">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label"><span class="dot red"></span>Deuda roja (consumo)</span>
+          <span class="val red" id="red-lbl">0 €</span>
+        </div>
+        <div class="buy-row" style="margin-top:10px">
+          <button class="btn-ghost btn-sm" id="btn-loan" style="flex:1">+ Préstamo 5.000 €</button>
+          <button class="btn-ghost btn-sm" id="btn-repay" style="flex:1">Amortizar roja</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Ranking · Carrera a la Libertad</h2>
+        <div id="standings"></div>
+      </div>
+    </aside>
+
+    <!-- ===== CENTRO: Ciudad isométrica + HUD ===== -->
+    <main class="col center">
+      <canvas id="city"></canvas>
+      <div class="hud-top">
+        <div class="chip"><span class="k">Mes</span><span id="hud-month">1</span></div>
+        <div class="chip"><span class="k">Perfil</span><span id="hud-profile">—</span></div>
+        <div class="chip"><span class="k">Activos</span><span id="hud-assets">0</span></div>
+      </div>
+      <div class="event-toast" id="toast">
+        <div class="et" id="toast-title"></div>
+        <div class="ed" id="toast-desc"></div>
+      </div>
+    </main>
+
+    <!-- ===== DERECHA: Marketplace + Portfolio + Turno ===== -->
+    <aside class="col right">
+      <div class="panel">
+        <h2>Marketplace · Oportunidades</h2>
+        <div id="market"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Tu Portfolio</h2>
+        <div id="portfolio"><div class="empty">Aún no tienes activos. Compra en el Marketplace.</div></div>
+      </div>
+
+      <button class="btn-primary" id="btn-endturn">Cobrar y pasar de mes ▸</button>
+    </aside>
+  </div>
+
+  <!-- ===== Modal selección de perfil ===== -->
+  <div class="overlay" id="profile-overlay">
+    <div class="modal">
+      <h2>Elige tu Ficha de Vida</h2>
+      <p class="lead">Cada perfil arranca con un punto de partida distinto. Tu objetivo: alcanzar un
+        <b>Indicador de Emancipación del 120%</b> con 6 meses de colchón en caja.</p>
+      <div class="profiles" id="profiles"></div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

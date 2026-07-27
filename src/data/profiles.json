@@ -1,0 +1,44 @@
+{
+  "$schema_note": "Fichas de vida asimétricas. salary y expenses en euros/mes. starting_cash = liquidez inicial.",
+  "profiles": [
+    {
+      "id": "corporate",
+      "name": "Empleado Corporativo",
+      "emoji": "💼",
+      "sprite": "assets/sprites/b_home.png",
+      "description": "Sueldo alto y estable, pero un tren de vida caro te come el margen.",
+      "salary_base": 3500,
+      "salary_variance": 0,
+      "fixed_expenses": 2800,
+      "starting_cash": 8000,
+      "credit_rating": "A+",
+      "credit_limit": 150000
+    },
+    {
+      "id": "freelance",
+      "name": "Autónomo / Freelance",
+      "emoji": "🧑‍💻",
+      "sprite": "assets/sprites/b_home.png",
+      "description": "Ingresos variables (1.500–4.000 €) y gastos medios. Libertad con incertidumbre.",
+      "salary_base": 2750,
+      "salary_variance": 1250,
+      "fixed_expenses": 1600,
+      "starting_cash": 6000,
+      "credit_rating": "B",
+      "credit_limit": 90000
+    },
+    {
+      "id": "investor",
+      "name": "Inversor Principiante",
+      "emoji": "🌱",
+      "sprite": "assets/sprites/b_home.png",
+      "description": "Sueldo bajo pero gastos contenidos y buena liquidez inicial para arrancar.",
+      "salary_base": 1400,
+      "salary_variance": 0,
+      "fixed_expenses": 900,
+      "starting_cash": 12000,
+      "credit_rating": "C",
+      "credit_limit": 45000
+    }
+  ]
+}
