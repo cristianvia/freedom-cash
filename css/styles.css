@@ -227,6 +227,18 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .life-txt b { font-size: 13px; } .life-txt small { font-size: 11px; color: var(--txt-dim); }
 .life-cost { font-size: 12px; font-weight: 700; color: var(--txt-dim); white-space: nowrap; }
 
+/* ---------- Tips educativos ---------- */
+.tip-card {
+  position: fixed; left: 20px; bottom: 20px; z-index: 55; width: 320px; max-width: calc(100vw - 40px);
+  background: linear-gradient(180deg, #17233a, #121a2b); border: 1px solid var(--blue);
+  border-radius: 14px; padding: 16px; box-shadow: var(--shadow);
+  opacity: 0; transform: translateY(12px); transition: opacity .3s, transform .3s;
+}
+.tip-card.show { opacity: 1; transform: translateY(0); }
+.tip-card .tip-t { font-weight: 800; font-size: 14px; margin-bottom: 6px; color: var(--blue); }
+.tip-card .tip-d { font-size: 12.5px; color: var(--txt); line-height: 1.5; }
+.tip-card .tip-x { margin-top: 12px; background: var(--blue); color: #04121f; font-weight: 700; }
+
 /* ---------- Vehículo ---------- */
 .veh-current { display: flex; align-items: center; gap: 12px; }
 .veh-current .veh-img { width: 52px; height: 40px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,.5)); }

@@ -55,6 +55,11 @@ export class EconomyEngine {
     this.vehicle = null;         // null = transporte público por defecto
     this.NO_CAR_TRANSPORT = 45;  // abono de transporte si no tienes coche
 
+    // --- Inflación y hitos de vida (tu coste de vida sube con el tiempo) ---
+    this.expenseInflation = 1;   // ~4,9%/año; obliga a no quedarte quieto
+    this.lifeExpenses = 0;       // gasto extra permanente por hitos (pareja, hijos...)
+    this.firedOnce = new Set();  // eventos "once" ya disparados
+
     // --- Coste de arranque (fianza + mudanza): el principio pesa ---
     this.cash -= Math.round(profile.fixed_expenses * 1.5);
 
@@ -185,7 +190,7 @@ export class EconomyEngine {
   /* ------------------------- MÉTRICAS CLAVE ------------------------- */
 
   fixedExpenses() {
-    return this.profile.fixed_expenses;
+    return Math.round(this.profile.fixed_expenses * this.expenseInflation) + this.lifeExpenses;
   }
 
   /** Indicador de Emancipación (%). El coste del coche sube tu listón de libertad. */
@@ -352,16 +357,20 @@ export class EconomyEngine {
 
   /* --------------------------- EVENTOS ------------------------------ */
 
-  /** Elige un evento aleatorio ponderado por weight. */
+  /** Elige un evento aleatorio ponderado (respeta minMonth y eventos "once"). */
   pickEvent() {
     if (!this.events.length) return null;
-    const total = this.events.reduce((s, e) => s + (e.weight || 1), 0);
+    const pool = this.events.filter(e =>
+      !(e.minMonth && this.month < e.minMonth) &&
+      !(e.once && this.firedOnce.has(e.id)));
+    const list = pool.length ? pool : this.events;
+    const total = list.reduce((s, e) => s + (e.weight || 1), 0);
     let r = Math.random() * total;
-    for (const e of this.events) {
+    for (const e of list) {
       r -= (e.weight || 1);
       if (r <= 0) return e;
     }
-    return this.events[this.events.length - 1];
+    return list[list.length - 1];
   }
 
   /** ¿Este evento requiere que el jugador elija (dilema)? */
@@ -405,6 +414,7 @@ export class EconomyEngine {
   applyEvent(ev, choiceIndex = null) {
     const adj = { cashDelta: 0, incomeDelta: 0 };
     if (!ev) return adj;
+    if (ev.once && this.firedOnce.has(ev.id)) return adj; // hito único ya ocurrido
 
     switch (ev.type) {
       case 'neutral':
@@ -458,6 +468,9 @@ export class EconomyEngine {
     }
     // efectos de bienestar de cualquier evento (los dilemas ya aplican los de su opción)
     if (ev.type !== 'dilemma') this._applyWellbeingEffects(ev);
+    // hitos de vida: gasto permanente y marca de evento único
+    if (ev.expenseAdd) this.lifeExpenses += ev.expenseAdd;
+    if (ev.once) this.firedOnce.add(ev.id);
     return adj;
   }
 
@@ -496,6 +509,9 @@ export class EconomyEngine {
 
     // deriva de bienestar del mes
     this.applyWellbeingDrift();
+
+    // inflación: tu coste de vida sube poco a poco (~3,7%/año)
+    this.expenseInflation *= 1.003;
 
     // amortización de saldo de deudas rojas (reduce balance según cuota)
     this.redDebts.forEach(d => { d.balance = Math.max(0, d.balance - d.monthly_payment); });
@@ -571,6 +587,9 @@ export class EconomyEngine {
       energy: this.energy,
       salaryBoost: this.salaryBoost,
       vehicle: this.vehicle,
+      expenseInflation: this.expenseInflation,
+      lifeExpenses: this.lifeExpenses,
+      firedOnce: [...this.firedOnce],
       lifestyleUsed: [...this.lifestyleUsed],
       history: this.history,
       _seq: this._seq,
@@ -590,6 +609,9 @@ export class EconomyEngine {
     e.energy = data.energy ?? 80;
     e.salaryBoost = data.salaryBoost ?? 1;
     e.vehicle = data.vehicle ?? null;
+    e.expenseInflation = data.expenseInflation ?? 1;
+    e.lifeExpenses = data.lifeExpenses ?? 0;
+    e.firedOnce = new Set(data.firedOnce || []);
     e.lifestyleUsed = new Set(data.lifestyleUsed || []);
     e.history = data.history || [];
     e._seq = data._seq || 0;

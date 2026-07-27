@@ -12,12 +12,12 @@
         "down_payment_required": 17000,
         "mortgage_available": 68000,
         "monthly_mortgage_cost": 320,
-        "gross_monthly_income": 1318,
+        "gross_monthly_income": 1555,
         "maintenance_and_taxes": 130,
-        "net_monthly_cashflow": 868
+        "net_monthly_cashflow": 1105
       },
       "metrics": {
-        "coc_return_percentage": 61.27,
+        "coc_return_percentage": 78,
         "vacancy_rate_risk": 0.15
       },
       "leverage_allowed": true
@@ -33,12 +33,12 @@
         "down_payment_required": 30000,
         "mortgage_available": 90000,
         "monthly_mortgage_cost": 430,
-        "gross_monthly_income": 1473,
+        "gross_monthly_income": 1738,
         "maintenance_and_taxes": 150,
-        "net_monthly_cashflow": 893
+        "net_monthly_cashflow": 1158
       },
       "metrics": {
-        "coc_return_percentage": 35.72,
+        "coc_return_percentage": 46.32,
         "vacancy_rate_risk": 0.08
       },
       "leverage_allowed": true
@@ -54,12 +54,12 @@
         "down_payment_required": 48000,
         "mortgage_available": 112000,
         "monthly_mortgage_cost": 560,
-        "gross_monthly_income": 2093,
+        "gross_monthly_income": 2470,
         "maintenance_and_taxes": 180,
-        "net_monthly_cashflow": 1353
+        "net_monthly_cashflow": 1730
       },
       "metrics": {
-        "coc_return_percentage": 33.83,
+        "coc_return_percentage": 43.25,
         "vacancy_rate_risk": 0.12
       },
       "leverage_allowed": true
@@ -75,12 +75,12 @@
         "down_payment_required": 45000,
         "mortgage_available": 0,
         "monthly_mortgage_cost": 0,
-        "gross_monthly_income": 1395,
+        "gross_monthly_income": 1646,
         "maintenance_and_taxes": 220,
-        "net_monthly_cashflow": 1175
+        "net_monthly_cashflow": 1426
       },
       "metrics": {
-        "coc_return_percentage": 31.33,
+        "coc_return_percentage": 38.03,
         "vacancy_rate_risk": 0.25
       },
       "leverage_allowed": false
@@ -96,12 +96,12 @@
         "down_payment_required": 28000,
         "mortgage_available": 0,
         "monthly_mortgage_cost": 0,
-        "gross_monthly_income": 1116,
+        "gross_monthly_income": 1317,
         "maintenance_and_taxes": 300,
-        "net_monthly_cashflow": 816
+        "net_monthly_cashflow": 1017
       },
       "metrics": {
-        "coc_return_percentage": 34.97,
+        "coc_return_percentage": 43.59,
         "vacancy_rate_risk": 0.35
       },
       "leverage_allowed": false
@@ -117,12 +117,12 @@
         "down_payment_required": 22000,
         "mortgage_available": 0,
         "monthly_mortgage_cost": 0,
-        "gross_monthly_income": 837,
+        "gross_monthly_income": 988,
         "maintenance_and_taxes": 190,
-        "net_monthly_cashflow": 647
+        "net_monthly_cashflow": 798
       },
       "metrics": {
-        "coc_return_percentage": 35.29,
+        "coc_return_percentage": 43.53,
         "vacancy_rate_risk": 0.18
       },
       "leverage_allowed": false
@@ -138,12 +138,12 @@
         "down_payment_required": 4000,
         "mortgage_available": 0,
         "monthly_mortgage_cost": 0,
-        "gross_monthly_income": 74,
+        "gross_monthly_income": 87,
         "maintenance_and_taxes": 6,
-        "net_monthly_cashflow": 68
+        "net_monthly_cashflow": 81
       },
       "metrics": {
-        "coc_return_percentage": 20.4,
+        "coc_return_percentage": 24.3,
         "vacancy_rate_risk": 0.1
       },
       "leverage_allowed": false
@@ -159,12 +159,12 @@
         "down_payment_required": 6000,
         "mortgage_available": 0,
         "monthly_mortgage_cost": 0,
-        "gross_monthly_income": 372,
+        "gross_monthly_income": 439,
         "maintenance_and_taxes": 90,
-        "net_monthly_cashflow": 282
+        "net_monthly_cashflow": 349
       },
       "metrics": {
-        "coc_return_percentage": 56.4,
+        "coc_return_percentage": 69.8,
         "vacancy_rate_risk": 0.4
       },
       "leverage_allowed": false
@@ -180,12 +180,12 @@
         "down_payment_required": 3500,
         "mortgage_available": 10500,
         "monthly_mortgage_cost": 55,
-        "gross_monthly_income": 202,
+        "gross_monthly_income": 238,
         "maintenance_and_taxes": 20,
-        "net_monthly_cashflow": 127
+        "net_monthly_cashflow": 163
       },
       "metrics": {
-        "coc_return_percentage": 43.54,
+        "coc_return_percentage": 55.89,
         "vacancy_rate_risk": 0.06
       },
       "leverage_allowed": true
@@ -201,12 +201,12 @@
         "down_payment_required": 20000,
         "mortgage_available": 0,
         "monthly_mortgage_cost": 0,
-        "gross_monthly_income": 225,
+        "gross_monthly_income": 266,
         "maintenance_and_taxes": 15,
-        "net_monthly_cashflow": 210
+        "net_monthly_cashflow": 251
       },
       "metrics": {
-        "coc_return_percentage": 12.6,
+        "coc_return_percentage": 15.06,
         "vacancy_rate_risk": 0.05
       },
       "leverage_allowed": false
@@ -222,12 +222,12 @@
         "down_payment_required": 15000,
         "mortgage_available": 0,
         "monthly_mortgage_cost": 0,
-        "gross_monthly_income": 403,
+        "gross_monthly_income": 476,
         "maintenance_and_taxes": 20,
-        "net_monthly_cashflow": 383
+        "net_monthly_cashflow": 456
       },
       "metrics": {
-        "coc_return_percentage": 30.64,
+        "coc_return_percentage": 36.48,
         "vacancy_rate_risk": 0.55
       },
       "leverage_allowed": false

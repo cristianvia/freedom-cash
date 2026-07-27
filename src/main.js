@@ -233,6 +233,8 @@ function doBuy(assetId, financing) {
     `${asset.title} · ${financing === 'leverage' ? 'financiado con hipoteca (deuda verde)' : 'pagado al contado'}`,
     'good');
   logActivity(`🫵 Compraste ${asset.title}`, 'good');
+  if (engine.ownedAssets.length === 1) showTip('first_asset');
+  if (financing === 'leverage') showTip('leverage');
   renderMarket();
   render();
 }
@@ -530,6 +532,7 @@ function wireDebtButtons() {
   $('btn-loan').onclick = () => {
     engine.takeConsumerLoan(5000);
     toast('Préstamo de consumo', 'Entran 5.000 € a caja, pero suma DEUDA ROJA que penaliza tu IE.', 'bad');
+    showTip('red_debt');
     render();
   };
   $('btn-repay').onclick = () => {
@@ -540,7 +543,7 @@ function wireDebtButtons() {
   };
   $('btn-incorporate').onclick = () => {
     const r = engine.incorporate();
-    if (r.ok) { toast('🏢 Sociedad constituida', 'A partir de ahora tributas como sociedad: impuestos fijos en lugar de recargo por renta alta.', 'good'); render(); }
+    if (r.ok) { toast('🏢 Sociedad constituida', 'A partir de ahora tributas como sociedad: impuestos fijos en lugar de recargo por renta alta.', 'good'); showTip('incorporate'); render(); }
     else toast('No se pudo constituir', r.reason, 'bad');
   };
   $('btn-vehicle').onclick = showVehicleChooser;
@@ -691,6 +694,7 @@ function showVehicleChooser() {
         toast(`${v.emoji} ${v.label}`,
           btn.dataset.fin === 'loan' ? 'Financiado: genera deuda roja que penaliza tu IE.' : 'Elección aplicada.', 'good');
         logActivity(v.id === 'none' ? '🫵 Prescindes del coche' : `🫵 Coche: ${v.label}`, 'neutral');
+        if (btn.dataset.fin === 'loan') showTip('car_finance');
         render();
       } else toast('No se pudo', r.reason, 'bad');
     };
@@ -847,6 +851,32 @@ function drawSparkline() {
   ctx.fillStyle = '#2ee6a0'; ctx.fill();
 }
 
+/* ---------------------- TIPS EDUCATIVOS --------------------------- */
+const TIP_KEY = 'freedomcash.tips.v1';
+const TIPS = {
+  first_asset: { t: '💡 Ingresos pasivos', d: 'Acabas de comprar tu primer activo. Su renta entra cada mes sin que trabajes: eso son ingresos pasivos, la base de la libertad financiera.' },
+  leverage: { t: '💡 Apalancamiento (deuda buena)', d: 'Con hipoteca pagas solo la entrada y el propio activo cubre su cuota. Usar deuda para comprar algo que te da dinero es "deuda buena".' },
+  red_debt: { t: '⚠️ Deuda roja (deuda mala)', d: 'Un préstamo de consumo resta liquidez cada mes y no te da nada a cambio. Penaliza tu IE. Úsalo solo si es imprescindible.' },
+  car_finance: { t: '⚠️ Un coche es un pasivo', d: 'Financiar un coche crea deuda roja y su coste mensual sube tu listón de libertad. Un coche saca dinero de tu bolsillo: es un pasivo, no un activo.' },
+  incorporate: { t: '💡 Optimización fiscal', d: 'Con rentas altas, una sociedad paga impuestos fijos en vez de un recargo. Estructurar bien tus inversiones protege tu flujo de caja.' },
+};
+function tipSeen(id) { try { return JSON.parse(localStorage.getItem(TIP_KEY) || '[]').includes(id); } catch (e) { return false; } }
+function markTip(id) { try { const a = JSON.parse(localStorage.getItem(TIP_KEY) || '[]'); if (!a.includes(id)) { a.push(id); localStorage.setItem(TIP_KEY, JSON.stringify(a)); } } catch (e) {} }
+function showTip(id) {
+  if (AUTO_MODE) return;
+  const tip = TIPS[id];
+  if (!tip || tipSeen(id)) return;
+  markTip(id);
+  const el = document.createElement('div');
+  el.className = 'tip-card';
+  el.innerHTML = `<div class="tip-t">${tip.t}</div><div class="tip-d">${tip.d}</div><button class="btn-sm tip-x">Entendido</button>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  const close = () => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); };
+  el.querySelector('.tip-x').onclick = close;
+  setTimeout(close, 15000);
+}
+
 /* ---------------------------- TOAST ------------------------------- */
 let toastTimer = null;
 function toast(title, desc, tone = 'neutral') {
@@ -898,6 +928,9 @@ function toast(title, desc, tone = 'neutral') {
     if (params.get('veh')) showVehicleChooser();
     // hook de test: ?view=global abre la vista global
     if (params.get('view') === 'global') toggleView();
+    // hook de test: ?tip=<id> muestra una tip (ignora AUTO_MODE)
+    const tipId = params.get('tip');
+    if (tipId && TIPS[tipId]) { const save = AUTO_MODE; AUTO_MODE = false; markTip('_'); showTip(tipId); AUTO_MODE = save; }
     if (params.get('demo')) {
       // compra oportunidades asequibles y pasa varios meses (solo test/demo)
       const turns = parseInt(params.get('demo'), 10) || 1;

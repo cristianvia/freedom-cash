@@ -107,6 +107,10 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 - [x] **Feed de actividad** en vivo de los rivales.
 - [x] **Vehículos:** decisión de coche (contado/financiar), coste mensual que sube tu
       listón de libertad y enseña que "un coche es un pasivo". Más variedad de edificios por distrito.
+- [x] **Vista global de rivales:** mini-ciudades de todos evolucionando en vivo.
+- [x] **Capa educativa y realista:** tips contextuales (micro-lecciones), inflación de gastos
+      y hitos de vida (mascota, pareja, bebé, casa propia) que suben tu coste de vida.
+- [ ] Fase 2: **multijugador en tiempo real** (próxima sesión).
 - [ ] Fase 2: sindicación de compras (comprar activos a medias entre jugadores).
 - [ ] Fase 3: multijugador en tiempo real.
 

@@ -117,6 +117,23 @@
       "choices": [
         { "label": "Contratarlo (−500 €)", "cash": -500, "happiness": 6, "energy": 5 },
         { "label": "Seguir sin seguro", "happiness": -4 }
-      ] }
+      ] },
+
+    { "id": "hito_mascota", "title": "🐶 Adoptas una mascota",
+      "description": "Un nuevo miembro peludo en casa. Alegría diaria, pero gastos recurrentes.",
+      "type": "life", "value": -120, "expenseAdd": 35, "happiness": 12,
+      "tone": "good", "weight": 2, "minMonth": 4, "once": true },
+    { "id": "hito_pareja", "title": "❤️ Te vas a vivir con tu pareja",
+      "description": "Compartís vida (y piso). Sube la felicidad… y algo el nivel de vida.",
+      "type": "life", "value": -500, "expenseAdd": 110, "happiness": 15,
+      "tone": "good", "weight": 2, "minMonth": 8, "once": true },
+    { "id": "hito_bebe", "title": "👶 ¡Vais a tener un bebé!",
+      "description": "La mayor alegría… y un gasto permanente que sube tu coste de vida.",
+      "type": "life", "value": -700, "expenseAdd": 260, "happiness": 18, "energy": -10,
+      "tone": "good", "weight": 2, "minMonth": 16, "once": true },
+    { "id": "hito_casa", "title": "🏡 Compráis vuestra casa",
+      "description": "Dejáis de pagar alquiler: la hipoteca de tu hogar sustituye ese gasto.",
+      "type": "life", "value": -4000, "expenseAdd": -150, "happiness": 14,
+      "tone": "good", "weight": 2, "minMonth": 24, "once": true }
   ]
 }
