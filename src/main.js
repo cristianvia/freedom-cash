@@ -161,9 +161,9 @@ function doBuy(assetId, financing) {
   const res = engine.buyAsset(asset, financing);
   if (!res.ok) { toast('No se pudo comprar', res.reason, 'bad'); return; }
 
-  // aparece el edificio en su distrito
+  // aparece el edificio en su distrito (guardamos la celda para poder retirarlo al vender)
   const cell = city.placeBuilding(assetId, asset.category);
-  if (cell) city.emitCoins();
+  if (cell) { res.instance.cell = cell; city.emitCoins(); }
 
   // reemplaza la tarjeta comprada por otra nueva del pool
   const idx = market.findIndex(m => m.id === assetId);
@@ -202,8 +202,14 @@ function renderPortfolio() {
   });
   wrap.querySelectorAll('button[data-sell]').forEach(btn => {
     btn.onclick = () => {
+      const inst = engine.ownedAssets.find(a => a.instanceId === btn.dataset.sell);
+      const cell = inst && inst.cell;
       const r = engine.sellAsset(btn.dataset.sell);
-      if (r.ok) { toast('Activo vendido', `Recuperas ${euro(r.proceeds)} de capital.`, 'good'); render(); }
+      if (r.ok) {
+        if (cell) city.removeBuilding(cell);
+        toast('Activo vendido', `Recuperas ${euro(r.proceeds)} de capital.`, 'good');
+        render();
+      }
     };
   });
 }
@@ -325,11 +331,14 @@ function render() {
   cfEl.className = 'val ' + (cf >= 0 ? 'green' : 'red');
   $('cushion').textContent = s.cushionMonths;
 
-  // Flujo mensual
-  $('salary').textContent = euro(salary);
+  // Flujo mensual (la suma cuadra con el cashflow neto)
+  $('salary').textContent = '+' + euro(salary);
   $('passive').textContent = '+' + euro(s.passiveIncome);
   $('expenses').textContent = '−' + euro(s.fixedExpenses);
-  $('green-debt').textContent = '−' + euro(s.greenDebt);
+  $('flow-red').textContent = '−' + euro(s.redDebt);
+  const netEl = $('flow-net');
+  netEl.textContent = (cf >= 0 ? '+' : '−') + euro(Math.abs(cf));
+  netEl.className = 'val ' + (cf >= 0 ? 'green' : 'red');
 
   // Deuda verde/roja
   const totalDebt = s.greenDebt + s.redDebt || 1;
@@ -344,6 +353,52 @@ function render() {
 
   renderPortfolio();
   renderStandings();
+  drawSparkline();
+}
+
+/* ------------------------ SPARKLINE DE IE ------------------------- */
+function drawSparkline() {
+  const cv = $('ie-spark');
+  if (!cv) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 280, h = 52;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const hist = engine.history;
+  const maxIE = Math.max(WIN_IE, ...hist.map(p => p.ie), 10);
+  const x = i => hist.length > 1 ? (i / (hist.length - 1)) * (w - 4) + 2 : w / 2;
+  const y = ie => h - 4 - (ie / maxIE) * (h - 8);
+
+  // línea de meta 120%
+  ctx.strokeStyle = 'rgba(255,178,62,.5)';
+  ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, y(WIN_IE)); ctx.lineTo(w, y(WIN_IE)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  if (hist.length < 2) return;
+
+  // relleno bajo la curva
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(46,230,160,.35)');
+  grad.addColorStop(1, 'rgba(46,230,160,0)');
+  ctx.beginPath();
+  ctx.moveTo(x(0), y(hist[0].ie));
+  hist.forEach((p, i) => ctx.lineTo(x(i), y(p.ie)));
+  ctx.lineTo(x(hist.length - 1), h); ctx.lineTo(x(0), h); ctx.closePath();
+  ctx.fillStyle = grad; ctx.fill();
+
+  // curva IE
+  ctx.beginPath();
+  hist.forEach((p, i) => i ? ctx.lineTo(x(i), y(p.ie)) : ctx.moveTo(x(i), y(p.ie)));
+  ctx.strokeStyle = '#2ee6a0'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+
+  // punto final
+  const last = hist[hist.length - 1];
+  ctx.beginPath(); ctx.arc(x(hist.length - 1), y(last.ie), 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#2ee6a0'; ctx.fill();
 }
 
 /* ---------------------------- TOAST ------------------------------- */
@@ -371,13 +426,16 @@ function toast(title, desc, tone = 'neutral') {
     const p = DATA.profiles.find(x => x.id === auto) || DATA.profiles[0];
     await startGame(p);
     if (params.get('demo')) {
-      // compra las oportunidades asequibles del marketplace y pasa un mes (solo test/demo)
-      market.slice().forEach(a => {
-        const fin = a.leverage_allowed && engine.canBuy(a, 'leverage').ok ? 'leverage'
-                  : engine.canBuy(a, 'cash').ok ? 'cash' : null;
-        if (fin) doBuy(a.id, fin);
-      });
-      endTurn();
+      // compra oportunidades asequibles y pasa varios meses (solo test/demo)
+      const turns = parseInt(params.get('demo'), 10) || 1;
+      for (let t = 0; t < turns; t++) {
+        market.slice().forEach(a => {
+          const fin = a.leverage_allowed && engine.canBuy(a, 'leverage').ok ? 'leverage'
+                    : engine.canBuy(a, 'cash').ok ? 'cash' : null;
+          if (fin) doBuy(a.id, fin);
+        });
+        if (!ended) endTurn();
+      }
     }
   }
 })();

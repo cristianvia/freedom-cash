@@ -68,7 +68,8 @@ freedom-cash/
     ├── main.js             # controlador: une lógica + render + DOM
     ├── engine/
     │   ├── EconomyEngine.js # núcleo contable (sin dependencias de UI)
-    │   └── IsoCity.js       # renderizador isométrico 2D sobre <canvas>
+    │   ├── IsoCity.js       # render isométrico 2D con distritos y animaciones
+    │   └── BotAI.js         # IA de oponentes (compra por rendimiento/euro)
     └── data/
         ├── assets_database.json  # catálogo de activos del Marketplace
         ├── profiles.json         # fichas de vida
@@ -94,6 +95,8 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 ## 🗺️ Roadmap
 
 - [x] **Fase 1 (MVP):** single-player, lógica económica, ciudad isométrica, marketplace, eventos.
-- [ ] Fase 2: bots/IA rival, negociación P2P y sindicación de compras.
+- [x] **Bots/IA rival** con ranking en vivo (carrera a la libertad financiera).
+- [x] **Ciudad viva:** distritos por categoría, animación de construcción y gráfica de IE.
+- [ ] Fase 2: negociación P2P y sindicación de compras (comprar activos a medias).
 - [ ] Fase 3: multijugador en tiempo real.
 - [ ] Optimización fiscal (persona física vs. sociedad) y refinanciación de hipotecas.

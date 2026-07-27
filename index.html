@@ -24,6 +24,7 @@
         <div class="sub">Objetivo: rentas pasivas ≥ 120% de tus gastos</div>
         <div class="progress"><i id="ie-bar"></i><span class="goal" id="ie-goal"></span></div>
         <div class="goal-note">meta 120%</div>
+        <canvas id="ie-spark" class="spark" height="52"></canvas>
       </div>
 
       <div class="panel">
@@ -48,13 +49,16 @@
           <span class="label">Sueldo base</span><span class="val" id="salary">0 €</span>
         </div>
         <div class="stat">
-          <span class="label">Ingresos pasivos</span><span class="val green" id="passive">0 €</span>
+          <span class="label">Ingresos pasivos <small style="opacity:.6">(netos)</small></span><span class="val green" id="passive">0 €</span>
         </div>
         <div class="stat">
           <span class="label">Gastos fijos</span><span class="val red" id="expenses">0 €</span>
         </div>
         <div class="stat">
-          <span class="label">Cuotas hipotecas</span><span class="val amber" id="green-debt">0 €</span>
+          <span class="label">Deuda roja (consumo)</span><span class="val red" id="flow-red">0 €</span>
+        </div>
+        <div class="stat" style="border-top:1px solid var(--line);margin-top:2px;padding-top:10px">
+          <span class="label" style="color:var(--txt)">= Cashflow neto</span><span class="val" id="flow-net">0 €</span>
         </div>
       </div>
 

@@ -70,6 +70,7 @@ body {
 .progress .goal { position: absolute; top: -2px; bottom: -2px; left: 100%;
   width: 2px; background: var(--amber); }
 .goal-note { font-size: 11px; color: var(--amber); text-align: right; }
+.spark { width: 100%; height: 52px; margin-top: 10px; display: block; }
 
 /* ---------- Stat rows ---------- */
 .stat { display: flex; justify-content: space-between; align-items: center;

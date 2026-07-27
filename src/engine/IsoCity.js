@@ -129,6 +129,13 @@ export class IsoCity {
     return cell;
   }
 
+  /** Retira el edificio de una celda (al vender el activo). */
+  removeBuilding(cell) {
+    if (!cell) return;
+    const g = this.grid[cell.row] && this.grid[cell.row][cell.col];
+    if (g) { g.building = null; this.draw(); }
+  }
+
   /** Monedas ascendentes desde cada edificio (feedback al cobrar). */
   emitCoins() {
     for (let r = 0; r < this.rows; r++)

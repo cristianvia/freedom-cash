@@ -91,8 +91,11 @@ export class EconomyEngine {
 
   /** Cashflow neto del mes (lo que entra realmente a caja). */
   netMonthlyCashflow(salary) {
+    // IMPORTANTE: totalPassiveIncome() YA descuenta las cuotas de hipoteca
+    // (deuda verde) dentro de assetNetIncome(); por eso NO se vuelven a restar
+    // aquí. Solo restamos gastos fijos y cuotas de deuda roja (consumo).
     const income = salary + this.totalPassiveIncome();
-    const outflow = this.fixedExpenses() + this.totalGreenDebtPayment() + this.totalRedDebtPayment();
+    const outflow = this.fixedExpenses() + this.totalRedDebtPayment();
     return income - outflow;
   }
 
@@ -262,7 +265,7 @@ export class EconomyEngine {
     const adj = this.applyEvent(event);
 
     const baseCashflow = this.netMonthlyCashflow(salary);
-    const monthResult = baseCashflow + adj.cashDelta + adj.incomeDelta;
+    const monthResult = Math.round(baseCashflow + adj.cashDelta + adj.incomeDelta);
 
     this.cash += monthResult;
 
@@ -281,31 +284,8 @@ export class EconomyEngine {
 
   /* --------------------------- SNAPSHOT ----------------------------- */
 
-  recordSnapshot(extra = {}) {
-    const snap = {
-      month: this.month,
-      cash: Math.round(this.cash),
-      passiveIncome: Math.round(this.totalPassiveIncome()),
-      fixedExpenses: this.fixedExpenses(),
-      greenDebt: Math.round(this.totalGreenDebtPayment()),
-      redDebt: Math.round(this.totalRedDebtPayment()),
-      redDebtBalance: Math.round(this.totalRedDebtBalance()),
-      ie: Math.round(this.emancipationIndex() * 10) / 10,
-      cushionMonths: Math.round(this.cashCushionMonths() * 10) / 10,
-      won: this.hasWon(),
-      lost: this.hasLost(),
-      ...extra,
-    };
-    this.history.push({ month: snap.month, ie: snap.ie, cash: snap.cash });
-    return snap;
-  }
-
-  /** Estado compacto para pintar el dashboard en cualquier momento. */
-  status() {
-    return this.recordSnapshotReadOnly();
-  }
-
-  recordSnapshotReadOnly() {
+  /** Métricas base compartidas por el snapshot y el status (sin efectos). */
+  _metrics() {
     return {
       month: this.month,
       cash: Math.round(this.cash),
@@ -320,5 +300,17 @@ export class EconomyEngine {
       won: this.hasWon(),
       lost: this.hasLost(),
     };
+  }
+
+  /** Registra el snapshot del mes en el historial (para la gráfica) y lo devuelve. */
+  recordSnapshot(extra = {}) {
+    const snap = { ...this._metrics(), ...extra };
+    this.history.push({ month: snap.month, ie: snap.ie, cash: snap.cash });
+    return snap;
+  }
+
+  /** Estado compacto para pintar el dashboard en cualquier momento (sin mutar). */
+  status() {
+    return this._metrics();
   }
 }
