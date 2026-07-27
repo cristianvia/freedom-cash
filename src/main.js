@@ -14,6 +14,8 @@ let city = null;
 let bots = [];              // oponentes IA: { name, emoji, engine, aggr }
 let DATA = { assets: [], profiles: [], events: [] };
 let market = [];            // oportunidades visibles este turno
+let p2pOffers = [];         // activos que los rivales ponen a la venta
+let p2pSeq = 0;             // contador de instancias compradas por P2P
 let ended = false;          // evita disparar el fin de partida dos veces
 const spriteMap = {};       // key -> url para IsoCity
 
@@ -252,8 +254,63 @@ function endTurn() {
   });
 
   refreshMarket();
+  refreshP2P();
   render();
   checkEnd();
+}
+
+/* --------------------------- MERCADO P2P -------------------------- */
+function refreshP2P() {
+  p2pOffers = [];
+  bots.forEach(b => {
+    const owned = b.engine.ownedAssets;
+    if (owned.length < 2 || Math.random() > 0.3) return;
+    const a = owned[Math.floor(Math.random() * owned.length)];
+    const equity = a.financing === 'leverage' ? a.financials.down_payment_required : a.financials.total_price;
+    const urgent = b.engine.cash < b.engine.fixedExpenses();  // necesita liquidez → descuento
+    const price = Math.round(equity * (urgent ? 0.82 : 0.92));
+    p2pOffers.push({ bot: b, instanceId: a.instanceId, asset: a, financing: a.financing, price, urgent });
+  });
+}
+
+function buyP2P(idx) {
+  const o = p2pOffers[idx];
+  if (!o) return;
+  if (engine.cash < o.price) { toast('Sin liquidez', `Necesitas ${euro(o.price)} para cerrar este trato.`, 'bad'); return; }
+
+  // pago y transferencia del activo del bot al jugador
+  engine.cash -= o.price;
+  o.bot.engine.cash += o.price;
+  o.bot.engine.ownedAssets = o.bot.engine.ownedAssets.filter(x => x.instanceId !== o.instanceId);
+
+  const inst = { ...o.asset, financing: o.financing, instanceId: `${o.asset.id}#p2p${++p2pSeq}`, purchasedMonth: engine.month };
+  delete inst.cell;
+  engine.ownedAssets.push(inst);
+  const cell = city.placeBuilding(o.asset.id, o.asset.category);
+  if (cell) { inst.cell = cell; city.emitCoins(); }
+
+  p2pOffers.splice(idx, 1);
+  toast('🤝 Trato P2P cerrado',
+    `Compraste "${o.asset.title}" a ${o.bot.emoji} ${o.bot.name} por ${euro(o.price)}${o.urgent ? ' (venta forzada por liquidez)' : ''}.`, 'good');
+  render();
+}
+
+function renderP2P() {
+  const panel = $('p2p-panel');
+  const wrap = $('p2p');
+  if (!p2pOffers.length) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  wrap.innerHTML = p2pOffers.map((o, i) => `
+    <div class="p2p-offer ${o.urgent ? 'urgent' : ''}">
+      <img src="${o.asset.sprite}" alt="">
+      <div class="p2p-info">
+        <div class="p2p-title">${o.asset.title}</div>
+        <div class="p2p-meta">${o.bot.emoji} ${o.bot.name} ${o.urgent ? '· <b style="color:var(--red)">liquidez urgente</b>' : '· reequilibra cartera'}</div>
+        <div class="p2p-nums">Precio <b>${euro(o.price)}</b> · <span style="color:var(--green)">+${euro(o.asset.financials.net_monthly_cashflow)}/mes</span></div>
+      </div>
+      <button class="btn-lever btn-sm" data-p2p="${i}">Comprar</button>
+    </div>`).join('');
+  wrap.querySelectorAll('button[data-p2p]').forEach(b => b.onclick = () => buyP2P(+b.dataset.p2p));
 }
 
 function renderStandings() {
@@ -395,6 +452,7 @@ function render() {
 
   renderPortfolio();
   renderStandings();
+  renderP2P();
   drawSparkline();
 }
 
@@ -484,6 +542,8 @@ function toast(title, desc, tone = 'neutral') {
           if (tg && engine.canRefinance(tg.instanceId).ok) engine.refinanceAsset(tg.instanceId);
         }
         if (!ended) endTurn();
+        // aprovecha una oferta P2P si la hay y hay liquidez (demo)
+        if (p2pOffers.length && engine.cash > p2pOffers[0].price + engine.fixedExpenses()) buyP2P(0);
       }
     }
   }

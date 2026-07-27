@@ -154,6 +154,16 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .badge.cash { background: rgba(74,168,255,.15); color: var(--blue); }
 .empty { color: var(--txt-dim); font-size: 13px; text-align: center; padding: 20px 0; }
 
+/* ---------- Mercado P2P ---------- */
+.p2p-offer { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line);
+  border-radius: 12px; margin-bottom: 8px; background: var(--panel-2); }
+.p2p-offer.urgent { border-color: #7a2530; background: rgba(122,37,48,.12); }
+.p2p-offer img { width: 44px; height: 42px; object-fit: contain; flex-shrink: 0; }
+.p2p-info { flex: 1; min-width: 0; }
+.p2p-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p2p-meta { font-size: 11px; color: var(--txt-dim); }
+.p2p-nums { font-size: 12px; margin-top: 2px; }
+
 /* ---------- Hints / fiscalidad ---------- */
 .hint { font-size: 11px; color: var(--txt-dim); margin-top: 8px; line-height: 1.4; text-align: center; }
 .hint.good { color: var(--green); }
