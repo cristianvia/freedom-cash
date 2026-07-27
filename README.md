@@ -67,9 +67,9 @@ freedom-cash/
 └── src/
     ├── main.js             # controlador: une lógica + render + DOM
     ├── engine/
-    │   ├── EconomyEngine.js # núcleo contable (sin dependencias de UI)
+    │   ├── EconomyEngine.js # núcleo contable + fiscalidad, refi y serialización
     │   ├── IsoCity.js       # render isométrico 2D con distritos y animaciones
-    │   └── BotAI.js         # IA de oponentes (compra por rendimiento/euro)
+    │   └── BotAI.js         # IA de oponentes (compra, fiscalidad y refi)
     └── data/
         ├── assets_database.json  # catálogo de activos del Marketplace
         ├── profiles.json         # fichas de vida
@@ -97,6 +97,17 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 - [x] **Fase 1 (MVP):** single-player, lógica económica, ciudad isométrica, marketplace, eventos.
 - [x] **Bots/IA rival** con ranking en vivo (carrera a la libertad financiera).
 - [x] **Ciudad viva:** distritos por categoría, animación de construcción y gráfica de IE.
-- [ ] Fase 2: negociación P2P y sindicación de compras (comprar activos a medias).
+- [x] **Balance validado por simulación** (~20-40 turnos por partida).
+- [x] **Estrategia avanzada:** refinanciación de hipotecas y régimen fiscal (persona física vs. sociedad).
+- [x] **Negociación P2P:** compra activos a rivales que necesitan liquidez.
+- [x] **Persistencia** (localStorage) y **pantalla de fin** con estadísticas.
+- [ ] Fase 2: sindicación de compras (comprar activos a medias entre jugadores).
 - [ ] Fase 3: multijugador en tiempo real.
-- [ ] Optimización fiscal (persona física vs. sociedad) y refinanciación de hipotecas.
+
+## 🎯 Estrategia (mecánicas avanzadas)
+
+- **Apalancamiento:** paga solo la entrada; las subidas de tipos encarecen tu cuota.
+- **Refinanciar:** comisión del 3% de la hipoteca → cuota −25% y tipo fijo (inmune a subidas).
+- **Régimen fiscal:** de persona física (recargo del 25% sobre renta pasiva > 2.000 €/mes) a
+  **sociedad** (coste fijo). Solo compensa a rentas altas — como en la vida real.
+- **Mercado P2P:** los rivales venden activos cuando necesitan caja; con liquidez lista, cazas gangas.
