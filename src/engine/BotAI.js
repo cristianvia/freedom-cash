@@ -15,12 +15,17 @@ export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggre
   const buys = [];
   let attempts = 2;
 
+  // los rivales juegan con el MISMO presupuesto de acciones que tú: reservan
+  // al menos una jugada para comprar, así que no se gastan el mes en cuidarse
+  const reserveForBuying = 1;
+  const canSpendOnUpkeep = () => engine.actionsLeft() > reserveForBuying;
+
   // 0a) Trabajos extra: si va justo de liquidez y tiene energía, se busca la vida.
   //     En apuros hace hasta 2 gigs; descansa gratis para poder seguir currando.
   if (engine.gigsEnabled() && gigs.length) {
     const tight = engine.cash < engine.fixedExpenses() * 3;
     let gigsThisTurn = 0;
-    while (tight && engine.energy > 22 && gigsThisTurn < 2) {
+    while (tight && engine.energy > 22 && gigsThisTurn < 2 && engine.actionsLeft() > 0) {
       const g = gigs.filter(x => !engine.gigsUsed.has(x.id))
         .sort((a, b) => (b.cash / -(b.energy || 1)) - (a.cash / -(a.energy || 1)))[0];
       if (!g) break;
@@ -32,7 +37,7 @@ export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggre
   }
 
   // 0b) Vehículo: compra un coche usado modesto al contado cuando puede (evita la deuda roja del coche)
-  if (vehicles && vehicles.length && !engine.vehicle &&
+  if (vehicles && vehicles.length && !engine.vehicle && canSpendOnUpkeep() &&
       engine.cash > 4500 + engine.fixedExpenses() * 3) {
     const used = vehicles.find(v => v.id === 'used');
     if (used) engine.chooseVehicle(used, 'cash');
@@ -50,8 +55,8 @@ export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggre
         .sort((a, b) => (b.happiness / (b.cost + 1)) - (a.happiness / (a.cost + 1)));
       if (opts[0]) engine.doLifestyle(opts[0]);
     }
-    // formación ocasional cuando va sobrado de energía y liquidez
-    if (engine.energy > 62 && engine.cash > 15000 && Math.random() < 0.2) {
+    // formación ocasional cuando va sobrado de energía, liquidez y tiempo
+    if (engine.energy > 62 && engine.cash > 15000 && canSpendOnUpkeep() && Math.random() < 0.2) {
       const course = lifestyle.find(l => l.id === 'course');
       if (course) engine.doLifestyle(course);
     }
@@ -64,8 +69,8 @@ export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggre
     engine.incorporate();
   }
 
-  // 2) Refinanciar una hipoteca si los tipos han subido
-  if (engine.mortgageModifier > 1.05) {
+  // 2) Refinanciar una hipoteca si los tipos han subido (y le sobra tiempo)
+  if (engine.mortgageModifier > 1.05 && canSpendOnUpkeep()) {
     const target = engine.ownedAssets.find(a => a.financing === 'leverage' && !a.refinanced);
     if (target && engine.canRefinance(target.instanceId).ok) {
       engine.refinanceAsset(target.instanceId);

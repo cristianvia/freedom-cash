@@ -63,6 +63,11 @@ export class EconomyEngine {
     this.REFI_FEE_PCT = 0.03;   // comisión (sobre la hipoteca) por refinanciar
     this.REFI_REDUCTION = 0.25; // reducción de la cuota tras refinanciar
 
+    // --- Acciones por mes: tu tiempo es el recurso más escaso ---
+    this.ACTIONS_BASE = 3;      // jugadas que caben en un mes
+    this.ACTIONS_MAX = 5;       // tope aunque encadenes eras
+    this.actionsUsed = 0;
+
     // --- Horquilla de rendimiento: ningún activo renta lo mismo todos los meses ---
     this.YIELD_SPREAD_BASE = 0.10;  // volatilidad mínima (hasta un bono se mueve)
     this.YIELD_SPREAD_RISK = 0.80;  // cuánto amplía la horquilla el riesgo del activo
@@ -119,6 +124,32 @@ export class EconomyEngine {
 
   isBurnout() { return this.energy < this.BURNOUT_ENERGY; }
 
+  /* ------------------------ ACCIONES DEL MES ------------------------ */
+  /*
+   * El dinero no es el único límite: el mes tiene un número de jugadas.
+   * Comprar, currar un extra, cuidarte o cerrar un traspaso compiten por el
+   * mismo hueco, así que cada turno obliga a priorizar. La experiencia
+   * (encadenar eras) da margen; el burnout te lo quita.
+   */
+
+  actionsMax() {
+    const era = Math.min(this.ACTIONS_MAX - this.ACTIONS_BASE, this.era - 1);
+    return Math.max(1, this.ACTIONS_BASE + era - (this.isBurnout() ? 1 : 0));
+  }
+
+  actionsLeft() { return Math.max(0, this.actionsMax() - this.actionsUsed); }
+
+  /** ¿Queda jugada este mes? Motivo listo para enseñar en el botón. */
+  canAct() {
+    return this.actionsLeft() > 0
+      ? { ok: true }
+      : { ok: false, reason: this.isBurnout()
+          ? 'Sin acciones: el burnout te deja un mes muy corto'
+          : 'Sin acciones este mes — pasa de mes para recuperarlas' };
+  }
+
+  spendAction(n = 1) { this.actionsUsed += n; }
+
   /** Sueldo del mes (aplica varianza si el perfil es variable). */
   rollSalary() {
     const base = this.effectiveSalaryBase();
@@ -165,6 +196,9 @@ export class EconomyEngine {
     }
     const upfront = (financing === 'loan' && v.financeable) ? Math.round(v.price * 0.15) : v.price;
     if (this.cash < upfront) return { ok: false, reason: 'Liquidez insuficiente' };
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason };
+    this.spendAction();
     // si ya tenías coche, primero recuperas su valor residual (cambio de coche)
     if (this.vehicle) this.cash += this.vehicleResaleValue();
     this.cash -= upfront;
@@ -192,6 +226,9 @@ export class EconomyEngine {
     if (!this.gigsEnabled()) return { ok: false, reason: 'No disponible en este modo' };
     if (this.gigsUsed.has(gig.id)) return { ok: false, reason: 'Ya lo hiciste este mes' };
     if (this.energy < 6) return { ok: false, reason: 'Sin energía para más trabajo' };
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason };
+    this.spendAction();
     this.cash += gig.cash || 0;
     this.energy += gig.energy || 0;
     if (gig.happiness) this.happiness += gig.happiness;
@@ -204,6 +241,9 @@ export class EconomyEngine {
   doLifestyle(action) {
     if (this.lifestyleUsed.has(action.id)) return { ok: false, reason: 'Ya lo hiciste este mes' };
     if (this.cash < action.cost) return { ok: false, reason: 'Liquidez insuficiente' };
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason };
+    this.spendAction();
     this.cash -= action.cost;
     this.happiness += action.happiness || 0;
     this.energy += action.energy || 0;
@@ -426,6 +466,11 @@ export class EconomyEngine {
    */
   canBuy(asset, financing) {
     const f = asset.financials;
+    const act = this.canAct();
+    if (!act.ok) {
+      return { ok: false, reason: act.reason, noActions: true,
+        cost: financing === 'leverage' ? f.down_payment_required : f.total_price };
+    }
     if (financing === 'leverage') {
       if (!asset.leverage_allowed) return { ok: false, reason: 'Sin apalancamiento disponible', cost: f.total_price };
       if (f.mortgage_available > this.creditLimit()) {
@@ -446,6 +491,7 @@ export class EconomyEngine {
     const check = this.canBuy(asset, financing);
     if (!check.ok) return { ok: false, reason: check.reason };
 
+    this.spendAction();
     this.cash -= check.cost;
     const instance = {
       ...asset,
@@ -488,6 +534,7 @@ export class EconomyEngine {
 
   /** Incorpora al portfolio un activo adquirido fuera del Marketplace (traspaso P2P). */
   acquireAsset(asset, financing, tag = 'p2p') {
+    this.spendAction();
     const instance = {
       ...asset,
       financing,
@@ -545,6 +592,8 @@ export class EconomyEngine {
     const a = this.ownedAssets.find(x => x.instanceId === instanceId);
     if (!a || a.financing !== 'leverage') return { ok: false, reason: 'No es una hipoteca' };
     if (a.refinanced) return { ok: false, reason: 'Ya refinanciada' };
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason, fee: this.refiFee(a) };
     const fee = this.refiFee(a);
     return { ok: this.cash >= fee, reason: 'Liquidez insuficiente', fee };
   }
@@ -554,6 +603,7 @@ export class EconomyEngine {
     const c = this.canRefinance(instanceId);
     if (!c.ok) return { ok: false, reason: c.reason };
     const a = this.ownedAssets.find(x => x.instanceId === instanceId);
+    this.spendAction();
     this.cash -= c.fee;
     a.refinanced = true;
     a.rateLocked = true;
@@ -572,6 +622,8 @@ export class EconomyEngine {
 
   canIncorporate() {
     if (this.taxVehicle === 'company') return { ok: false, reason: 'Ya eres sociedad' };
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason, cost: this.COMPANY_SETUP };
     return { ok: this.cash >= this.COMPANY_SETUP, reason: 'Liquidez insuficiente', cost: this.COMPANY_SETUP };
   }
 
@@ -579,6 +631,7 @@ export class EconomyEngine {
   incorporate() {
     const c = this.canIncorporate();
     if (!c.ok) return { ok: false, reason: c.reason };
+    this.spendAction();
     this.cash -= this.COMPANY_SETUP;
     this.taxVehicle = 'company';
     return { ok: true };
@@ -759,7 +812,8 @@ export class EconomyEngine {
     this.redDebts.forEach(d => { d.balance = Math.max(0, d.balance - d.monthly_payment); });
     this.redDebts = this.redDebts.filter(d => d.balance > 0);
 
-    // nuevo mes: se resetean las acciones de estilo de vida y los trabajos extra
+    // nuevo mes: se resetean las jugadas disponibles, el estilo de vida y los extras
+    this.actionsUsed = 0;
     this.lifestyleUsed = new Set();
     this.gigsUsed = new Set();
 
@@ -803,6 +857,8 @@ export class EconomyEngine {
       vehicleCost: this.vehicleMonthlyCost(),
       extraRent: this.extraRent,
       gigsEnabled: this.gigsEnabled(),
+      actionsLeft: this.actionsLeft(),
+      actionsMax: this.actionsMax(),
       mode: this.mode.id,
       era: this.era,
       eraLabel: eraLabel(this.era),
@@ -851,6 +907,7 @@ export class EconomyEngine {
       eraRisk: this.eraRisk,
       creditBoost: this.creditBoost,
       eraStartMonth: this.eraStartMonth,
+      actionsUsed: this.actionsUsed,
       firedOnce: [...this.firedOnce],
       lifestyleUsed: [...this.lifestyleUsed],
       history: this.history,
@@ -879,6 +936,7 @@ export class EconomyEngine {
     e.eraRisk = data.eraRisk ?? 1;
     e.creditBoost = data.creditBoost ?? 1;
     e.eraStartMonth = data.eraStartMonth ?? 1;
+    e.actionsUsed = data.actionsUsed ?? 0;
     e.firedOnce = new Set(data.firedOnce || []);
     e.lifestyleUsed = new Set(data.lifestyleUsed || []);
     e.history = data.history || [];

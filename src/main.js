@@ -13,6 +13,7 @@ const euro = (n) => `${Math.round(n).toLocaleString('es-ES')} €`;
 // chip con emoji (siempre visible) + texto (ocultable en móvil)
 const chipHTML = (emoji, text) => `<span class="chip-ic">${emoji}</span><span class="chip-txt"> ${text}</span>`;
 const shuffleArr = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const rand = (a, b) => a + Math.random() * (b - a);
 const SAVE_KEY = 'freedomcash.save.v1';
 const TUT_KEY = 'freedomcash.tutorialDone.v1';
 
@@ -287,41 +288,123 @@ function buildCatalog() {
 }
 
 /* -------------------------- MARKETPLACE --------------------------- */
+/*
+ * El mercado ya no se rebaraja entero cada mes: las oportunidades PERMANECEN
+ * unos meses en el tablón. Eso hace viable ahorrar para una concreta… pero los
+ * rivales miran las mismas ofertas, así que esperar tiene un precio.
+ */
+const MARKET_SLOTS = 4;
+const MARKET_TTL = [3, 6];   // meses que aguanta una oportunidad en el tablón
+
+/** ¿Puedo pagarlo ahora mismo? (ignora el límite de acciones: es asequibilidad) */
 function affordable(a) {
-  return engine.canBuy(a, 'cash').ok || (a.leverage_allowed && engine.canBuy(a, 'leverage').ok);
+  const cash = engine.cash >= a.financials.total_price;
+  const lev = a.leverage_allowed &&
+    a.financials.mortgage_available <= engine.creditLimit() &&
+    engine.cash >= a.financials.down_payment_required;
+  return cash || lev;
 }
 
-function refreshMarket() {
-  // solo oportunidades elegibles (universales + de tu profesión)
-  const pool = catalog.filter(a => engine.assetEligible(a));
-  market = [];
-  while (market.length < 3 && pool.length) {
-    const i = Math.floor(Math.random() * pool.length);
-    market.push(pool.splice(i, 1)[0]);
-  }
-  // sesga: si tienes profesión, que a menudo aparezca uno de TUS proyectos
+/** Rivales que pueden permitirse esta oportunidad: son quienes te la pueden quitar. */
+function rivalsEyeing(asset) {
+  return bots.filter(b => {
+    if (!b.engine.assetEligible(asset) || b.engine.hasLost()) return false;
+    const f = asset.financials;
+    return b.engine.cash >= f.total_price ||
+      (asset.leverage_allowed && f.mortgage_available <= b.engine.creditLimit() &&
+       b.engine.cash >= f.down_payment_required);
+  });
+}
+
+/** Rellena los huecos del tablón con oportunidades nuevas. */
+function fillMarket() {
+  const inMarket = new Set(market.map(m => m.asset.id));
+  let pool = catalog.filter(a => engine.assetEligible(a) && !inMarket.has(a.id));
+  // sesga hacia proyectos de tu profesión si no hay ninguno en el tablón
   const myProjects = pool.filter(a => a.profession === engine.professionId);
-  if (engine.professionId !== 'none' && myProjects.length && !market.some(a => a.profession) && Math.random() < 0.6) {
-    market[Math.floor(Math.random() * market.length)] = myProjects[Math.floor(Math.random() * myProjects.length)];
+  while (market.length < MARKET_SLOTS && pool.length) {
+    const wantsProject = engine.professionId !== 'none' && myProjects.length &&
+      !market.some(m => m.asset.profession) && Math.random() < 0.6;
+    const src = wantsProject ? myProjects : pool;
+    const pick = src[Math.floor(Math.random() * src.length)];
+    pool = pool.filter(a => a.id !== pick.id);
+    const i = myProjects.indexOf(pick); if (i >= 0) myProjects.splice(i, 1);
+    market.push({ asset: pick, left: Math.round(rand(MARKET_TTL[0], MARKET_TTL[1])) });
   }
-  // garantiza al menos una opción asequible para no bloquear el turno
-  if (!market.some(affordable)) {
-    const cheap = pool.filter(affordable).sort((a, b) =>
-      engine.canBuy(a, 'leverage').cost - engine.canBuy(b, 'leverage').cost)[0];
-    if (cheap) market[market.length - 1] = cheap;
+  // que nunca se bloquee el turno: si nada es asequible, entra algo que sí lo sea
+  if (market.length && !market.some(m => affordable(m.asset))) {
+    const cheap = catalog
+      .filter(a => engine.assetEligible(a) && affordable(a))
+      .sort((a, b) => a.financials.down_payment_required - b.financials.down_payment_required)[0];
+    if (cheap) market[market.length - 1] = { asset: cheap, left: MARKET_TTL[1] };
   }
+}
+
+/** Arranque de partida: tablón limpio. */
+function refreshMarket() {
+  market = [];
+  fillMarket();
   renderMarket();
+}
+
+/**
+ * Fin de mes: las oportunidades envejecen y algunas caducan. Lo que no compras
+ * no te espera indefinidamente.
+ */
+function tickMarket() {
+  const expired = [];
+  market = market.filter(m => {
+    m.left -= 1;
+    if (m.left > 0) return true;
+    expired.push(m.asset);
+    return false;
+  });
+  expired.forEach(a => logActivity(`⌛ Se retiró del mercado: ${a.title}`, 'neutral'));
+  fillMarket();
+}
+
+/**
+ * Los rivales compran del mismo tablón que tú. Si dejaste pasar una buena
+ * oportunidad que ellos pueden pagar, se la llevan — y te enteras por el feed.
+ */
+function botsSnipeMarket() {
+  const sniped = [];
+  market.slice().forEach(m => {
+    const rivals = rivalsEyeing(m.asset).filter(b => b.engine.canAct().ok);
+    if (!rivals.length) return;
+    // cuanto más apetecible y más rivales, más probable que vuele
+    const heat = Math.min(0.45, 0.12 * rivals.length + (m.left <= 2 ? 0.1 : 0));
+    if (Math.random() > heat) return;
+    const b = rivals[Math.floor(Math.random() * rivals.length)];
+    const fin = (m.asset.leverage_allowed && b.engine.canBuy(m.asset, 'leverage').ok)
+      ? 'leverage' : (b.engine.canBuy(m.asset, 'cash').ok ? 'cash' : null);
+    if (!fin || !b.engine.buyAsset(m.asset, fin).ok) return;
+    market = market.filter(x => x !== m);
+    sniped.push({ b, a: m.asset });
+  });
+  sniped.forEach(({ b, a }) =>
+    logActivity(`⚡ ${b.emoji} ${b.name} se llevó ${a.title} del mercado`, 'bad'));
+  return sniped;
 }
 
 function renderMarket() {
   const wrap = $('market');
   wrap.innerHTML = '';
-  market.forEach(a => {
+  market.forEach(m => {
+    const a = m.asset;
     const f = a.financials;
     const cashCheck = engine.canBuy(a, 'cash');
     const levCheck = engine.canBuy(a, 'leverage');
     const catLabel = { real_estate: 'Inmueble', digital_business: 'Negocio', financial: 'Financiero' }[a.category];
     const prof = a.profession ? DATA.professions.find(pr => pr.id === a.profession) : null;
+    const rivals = rivalsEyeing(a);
+    // dos avisos honestos: cuánto le queda en el tablón y quién más la mira
+    const ttlCls = m.left <= 2 ? 'hot' : '';
+    const ttlTag = `<span class="ttl ${ttlCls}">⌛ ${m.left} ${m.left === 1 ? 'mes' : 'meses'}</span>`;
+    const heatTag = rivals.length
+      ? `<span class="heat" title="Pueden permitírsela y podrían adelantarse">🔥 ${rivals
+          .slice(0, 2).map(b => b.name).join(', ')}${rivals.length > 2 ? ` +${rivals.length - 2}` : ''}</span>`
+      : '';
     // horquilla: el cashflow con hipoteca es peor que al contado, así que se
     // muestra la banda del modo que el jugador puede permitirse ahora mismo
     const bandCash = engine.incomeBand({ ...a, financing: 'cash' });
@@ -338,6 +421,7 @@ function renderMarket() {
           <span class="tag ${a.category}">${catLabel}</span>
         </div>
       </div>
+      <div class="card-flags">${ttlTag}${heatTag}</div>
       <div class="desc">${a.description}</div>
       <div class="mini-grid">
         <span>Precio<b>${euro(f.total_price)}</b></span>
@@ -381,11 +465,9 @@ function doBuy(assetId, financing) {
   const placed = city.placeBuilding(asset.category);
   if (placed) { res.instance.cell = placed.cell; res.instance.citySprite = placed.key; city.emitCoins(); }
 
-  // reemplaza la tarjeta comprada por otra nueva del pool
-  const idx = market.findIndex(m => m.id === assetId);
-  const remaining = catalog.filter(a => engine.assetEligible(a) && !market.includes(a));
-  if (remaining.length) market[idx] = remaining[Math.floor(Math.random() * remaining.length)];
-  else market.splice(idx, 1);
+  // la oportunidad comprada deja su hueco libre en el tablón
+  market = market.filter(m => m.asset.id !== assetId);
+  fillMarket();
 
   toast('✅ Activo adquirido',
     `${asset.title} · ${financing === 'leverage' ? 'financiado con hipoteca (deuda verde)' : 'pagado al contado'}`,
@@ -485,6 +567,10 @@ function resolveTurn(ev, choiceIndex) {
     `${desc}  ·  Cashflow del mes: ${sign}${euro(snap.cashflow)}`, tone);
   if (ev && ev.title) logActivity(`📅 ${ev.title}`, tone);
 
+  // los rivales miran TU tablón antes que nada: lo que dejaste ahí con el aviso
+  // "🔥 Ana puede permitírselo" es exactamente lo que se pueden llevar ahora
+  const sniped = botsSnipeMarket();
+
   // turno de los oponentes IA (compran, se cuidan y resuelven sus eventos)
   bots.forEach(b => {
     const bought = takeBotTurn(b.engine, catalog, DATA.lifestyle, DATA.vehicles, b.aggr, DATA.gigs) || [];
@@ -493,9 +579,17 @@ function resolveTurn(ev, choiceIndex) {
     if (b.engine.hasLost()) logActivity(`${b.emoji} ${b.name} abandonó la partida 💥`, 'bad');
   });
 
-  refreshMarket();
+  // el tablón envejece: lo que no compraste no te espera para siempre
+  tickMarket();
   refreshP2P();
   render();
+  // el aviso de "te lo quitaron" espera a que pase el toast del evento del mes
+  if (sniped.length && !AUTO_MODE) {
+    const s0 = sniped[0];
+    setTimeout(() => toast('⚡ Te lo quitaron',
+      `${s0.b.emoji} ${s0.b.name} compró ${s0.a.title}` +
+      `${sniped.length > 1 ? ` (y ${sniped.length - 1} más)` : ''}. Las oportunidades no esperan.`, 'bad'), 4600);
+  }
   checkEnd();
 }
 
@@ -554,8 +648,6 @@ function renderActivity() {
 const P2P_MAX_OFFERS = 2;          // como mucho dos tratos sobre la mesa a la vez
 const P2P_URGENT_DISCOUNT = [0.08, 0.16];   // rebaja de quien necesita liquidez YA
 const P2P_NORMAL_PREMIUM = [-0.03, 0.09];   // negativo = ligera rebaja; normalmente prima
-
-const rand = (a, b) => a + Math.random() * (b - a);
 
 function refreshP2P() {
   p2pOffers = [];
@@ -939,6 +1031,9 @@ function render() {
   $('green-lbl').textContent = euro(s.greenDebt) + '/mes';
   $('red-lbl').textContent = euro(s.redDebt) + '/mes';
 
+  // Acciones del mes: el recurso que de verdad obliga a priorizar
+  renderActions(s);
+
   // HUD (desktop chips)
   $('hud-assets').textContent = s.assetsCount;
   $('hud-month').textContent = s.month;
@@ -950,6 +1045,7 @@ function render() {
   set('m-happy', s.happiness);
   set('m-energy', s.energy);
   set('m-month', s.month);
+  set('m-actions', s.actionsLeft);
 
   // reevalúa las tarjetas del Marketplace con la caja actual (botones Contado/Hipoteca)
   if (market.length) renderMarket();
@@ -969,6 +1065,31 @@ function render() {
   drawSparkline();
   refreshView();
   saveGame();
+}
+
+/* ------------------------ ACCIONES DEL MES ------------------------ */
+/*
+ * El mes tiene un número de jugadas. Comprar, currar un extra, cuidarte o
+ * refinanciar compiten por el mismo hueco: elegir qué NO haces es el juego.
+ */
+function renderActions(s) {
+  const bar = $('actions-bar');
+  if (!bar) return;
+  $('ab-left').textContent = s.actionsLeft;
+  $('ab-max').textContent = s.actionsMax;
+  $('ab-pips').innerHTML = Array.from({ length: s.actionsMax }, (_, i) =>
+    `<i class="${i < s.actionsLeft ? 'on' : ''}"></i>`).join('');
+  bar.classList.toggle('empty', s.actionsLeft === 0);
+  const hint = $('ab-hint');
+  if (s.actionsLeft === 0) {
+    hint.textContent = s.burnout
+      ? 'Sin jugadas: el burnout te ha comido el mes. Pasa de mes y descansa.'
+      : 'Has agotado el mes. Pasa de mes para recuperar tus jugadas.';
+  } else if (s.burnout) {
+    hint.textContent = '⚠️ El burnout te quita una acción al mes.';
+  } else {
+    hint.textContent = 'Comprar, un trabajo extra o cuidarte: cada jugada gasta una.';
+  }
 }
 
 /* ---------------------- VISTA (ciudad / global) ------------------- */
@@ -1165,7 +1286,7 @@ function saveGame() {
       engine: engine.toJSON(),
       bots: bots.map(b => ({ name: b.name, emoji: b.emoji, aggr: b.aggr,
         profileId: b.engine.profile.id, engine: b.engine.toJSON() })),
-      market: market.map(a => a.id),
+      market: market.map(m => ({ id: m.asset.id, left: m.left })),
       ts: Date.now(),
     }));
   } catch (e) { /* almacenamiento no disponible */ }
@@ -1211,8 +1332,12 @@ async function resumeGame(save) {
   });
   city.draw();
 
-  market = (save.market || []).map(id => catalog.find(a => a.id === id)).filter(Boolean);
-  if (market.length) renderMarket(); else refreshMarket();
+  // el tablón se guarda con la vida que le queda a cada oportunidad
+  market = (save.market || []).map(m => {
+    const asset = catalog.find(a => a.id === (m.id ?? m));   // compat: guardados antiguos
+    return asset ? { asset, left: m.left ?? MARKET_TTL[1] } : null;
+  }).filter(Boolean);
+  if (market.length) { fillMarket(); renderMarket(); } else refreshMarket();
   p2pOffers = [];
   render();
   maybeTutorial();
@@ -1324,6 +1449,15 @@ function toast(title, desc, tone = 'neutral') {
   // hook de test: ?profsel=investor abre el selector de profesión
   if (params.get('profsel')) { const p = DATA.profiles.find(x => x.id === params.get('profsel')) || DATA.profiles[0]; chooseProfession(p); return; }
 
+  // hook de test: ?dbg=1 expone el estado interno para inspeccionarlo desde fuera
+  if (params.get('dbg')) {
+    window.__fc = {
+      get engine() { return engine; }, get bots() { return bots; },
+      get market() { return market; }, get p2p() { return p2pOffers; },
+      rivalsEyeing, botsSnipeMarket, tickMarket, endTurn,
+    };
+  }
+
   // hook de test: ?mtab=life abre esa pestaña móvil (tras arrancar)
   if (params.get('mtab')) setTimeout(() => setMobileTab(params.get('mtab')), 400);
 
@@ -1358,11 +1492,13 @@ function toast(title, desc, tone = 'neutral') {
       engine.cash = 5e7;
       let safety = 40;
       while (!engine.hasWon() && safety-- > 0) {
+        engine.actionsUsed = 0;   // el hook de test ignora el presupuesto de acciones
         const best = catalog.filter(a => engine.assetEligible(a) && engine.canBuy(a, 'cash').ok)
           .sort((x, y) => y.financials.net_monthly_cashflow - x.financials.net_monthly_cashflow)[0];
         if (!best) break;
         engine.buyAsset(best, 'cash');
       }
+      engine.actionsUsed = 0;
       engine.cash = 5e7;
       render(); checkEnd();
     }
@@ -1375,7 +1511,7 @@ function toast(title, desc, tone = 'neutral') {
       // compra oportunidades asequibles y pasa varios meses (solo test/demo)
       const turns = parseInt(params.get('demo'), 10) || 1;
       for (let t = 0; t < turns; t++) {
-        market.slice().forEach(a => {
+        market.slice().forEach(({ asset: a }) => {
           const fin = a.leverage_allowed && engine.canBuy(a, 'leverage').ok ? 'leverage'
                     : engine.canBuy(a, 'cash').ok ? 'cash' : null;
           if (fin) doBuy(a.id, fin);

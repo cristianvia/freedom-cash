@@ -127,6 +127,33 @@ img { max-width: 100%; }
 .risk > i { display: block; height: 100%; background: linear-gradient(90deg,var(--green),var(--amber),var(--red)); }
 .buy-row { display: flex; gap: 8px; margin-top: 8px; }
 
+/* ---------- Avisos de la oportunidad (caducidad / rivales) ---------- */
+.card-flags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.card-flags .ttl, .card-flags .heat {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+  background: rgba(255,255,255,.05); color: var(--txt-dim); border: 1px solid var(--line);
+}
+.card-flags .ttl.hot { color: var(--amber); border-color: rgba(255,178,62,.35);
+  background: rgba(255,178,62,.1); }
+.card-flags .heat { color: var(--red); border-color: rgba(255,93,108,.3);
+  background: rgba(255,93,108,.09); max-width: 100%; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Acciones del mes ---------- */
+.actions-bar { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 11px 14px; margin-bottom: 10px; }
+.actions-bar.empty { border-color: rgba(255,178,62,.4); background: rgba(255,178,62,.06); }
+.ab-top { display: flex; justify-content: space-between; align-items: baseline; }
+.ab-k { font-size: 11px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .5px; }
+.ab-v { font-size: 13px; color: var(--txt-dim); font-variant-numeric: tabular-nums; }
+.ab-v b { font-size: 18px; color: var(--green); }
+.actions-bar.empty .ab-v b { color: var(--amber); }
+.ab-pips { display: flex; gap: 5px; margin: 7px 0 5px; }
+.ab-pips i { flex: 1; height: 6px; border-radius: 4px; background: #0d1320;
+  border: 1px solid var(--line); transition: background .2s; }
+.ab-pips i.on { background: linear-gradient(90deg, var(--green-dim), var(--green)); border-color: transparent; }
+.ab-hint { font-size: 11px; color: var(--txt-dim); line-height: 1.35; }
+
 /* ---------- Buttons ---------- */
 button { font-family: inherit; cursor: pointer; border: none; border-radius: 10px;
   padding: 9px 12px; font-size: 13px; font-weight: 700; transition: filter .12s, transform .08s; }
