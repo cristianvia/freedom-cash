@@ -296,9 +296,11 @@ function renderMarket() {
       <span style="font-size:11px;color:var(--txt-dim)">Riesgo de vacancia/volatilidad</span>
       <div class="risk"><i style="width:${Math.round(a.metrics.vacancy_rate_risk*100)}%"></i></div>
       <div class="buy-row">
-        <button class="btn-cash" ${cashCheck.ok ? '' : 'disabled'} data-buy="cash" data-id="${a.id}">
+        <button class="btn-cash" ${cashCheck.ok ? '' : 'disabled'} data-buy="cash" data-id="${a.id}"
+          title="${cashCheck.ok ? 'Pagar al contado' : (cashCheck.reason || 'No disponible')}">
           Contado</button>
-        <button class="btn-lever" ${(a.leverage_allowed && levCheck.ok) ? '' : 'disabled'} data-buy="leverage" data-id="${a.id}">
+        <button class="btn-lever" ${(a.leverage_allowed && levCheck.ok) ? '' : 'disabled'} data-buy="leverage" data-id="${a.id}"
+          title="${!a.leverage_allowed ? 'Este activo no admite financiación' : (levCheck.ok ? 'Financiar con hipoteca' : (levCheck.reason || 'No disponible'))}">
           ${a.leverage_allowed ? 'Hipoteca' : 'Sin deuda'}</button>
       </div>`;
     wrap.appendChild(el);
@@ -760,6 +762,8 @@ function render() {
   set('m-energy', s.energy);
   set('m-month', s.month);
 
+  // reevalúa las tarjetas del Marketplace con la caja actual (botones Contado/Hipoteca)
+  if (market.length) renderMarket();
   renderPortfolio();
   renderStandings();
   renderP2P();
