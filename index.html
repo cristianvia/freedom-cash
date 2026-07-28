@@ -2,218 +2,293 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
-  <title>Freedom Cash · El Juego de la Libertad Financiera</title>
-  <link rel="stylesheet" href="css/styles.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Freedom Cash · El juego de la libertad financiera</title>
+  <meta name="description" content="Juego de estrategia económica: construye una cartera de activos que pague tu vida entera. Compra inmuebles, negocios digitales y activos financieros, sobrevive a los imprevistos y alcanza la libertad financiera." />
+  <meta name="theme-color" content="#0d1017" />
+
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Freedom Cash · El juego de la libertad financiera" />
+  <meta property="og:description" content="Construye una cartera de activos que pague tu vida entera. Estrategia económica en tu navegador, gratis y sin registro." />
+  <meta property="og:image" content="assets/apple-touch-icon.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="stylesheet" href="css/landing.css" />
 </head>
-<body data-mtab="market">
-  <div id="app">
-    <!-- ===== HUD compacto (solo móvil) ===== -->
-    <div id="m-hud">
-      <div class="mh-block mh-ie"><span class="mh-k">IE</span><b id="m-ie">0%</b></div>
-      <div class="mh-block"><span class="mh-k">Caja</span><b id="m-cash">0 €</b></div>
-      <div class="mh-block mh-wb"><span>😊<b id="m-happy">70</b></span><span>⚡<b id="m-energy">80</b></span></div>
-      <div class="mh-block"><span class="mh-k">Mes</span><b id="m-month">1</b></div>
+<body>
+
+  <!-- ============================== NAV ============================== -->
+  <nav class="nav" id="nav">
+    <div class="wrap nav-in">
+      <a class="brand" href="#top">
+        <img src="assets/favicon.svg" alt="" />
+        <span>Freedom Cash</span>
+      </a>
+      <div class="nav-links">
+        <a href="#que-es">Qué es</a>
+        <a href="#como">Cómo se juega</a>
+        <a href="#mecanicas">Mecánicas</a>
+        <a href="#legado">Modo Legado</a>
+      </div>
+      <a class="btn btn-play btn-sm" href="game.html">▶ Jugar gratis</a>
     </div>
+  </nav>
 
-    <!-- ===== IZQUIERDA: Dashboard financiero ===== -->
-    <aside class="col left">
-      <div class="brand">
-        <div class="logo">💸</div>
-        <div class="brand-txt">
-          <h1>Freedom Cash</h1>
-          <small>Libertad Financiera</small>
+  <!-- ============================== HERO ============================= -->
+  <header class="hero" id="top">
+    <div class="grid-bg"></div>
+    <div class="wrap hero-in">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="dot"></span> Estrategia económica · Gratis · Sin registro</div>
+        <h1>Deja de cambiar<br>tiempo por dinero.<br><span class="grad">Que tus activos paguen tu vida.</span></h1>
+        <p class="sub">
+          Freedom Cash es un juego de estrategia sobre <b>libertad financiera</b>. Empiezas con
+          un sueldo, unos gastos y muy poco margen. Mes a mes decides en qué inviertes, cuánta
+          deuda aguantas y cuánto te cuidas — hasta que tus <b>rentas pasivas cubren tu vida entera</b>
+          y el sueldo deja de ser obligatorio.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-play" href="game.html">▶ Empezar partida</a>
+          <a class="btn btn-ghost" href="#como">Ver cómo funciona</a>
+        </div>
+        <div class="hero-note">
+          <span>🌐 Juega en el navegador</span>
+          <span>📱 Móvil y escritorio</span>
+          <span>💾 Guarda tu partida sola</span>
         </div>
       </div>
 
-      <div class="panel freedom" data-tab="hud">
-        <h2>Indicador de Emancipación</h2>
-        <div class="big" id="ie-value">0%</div>
-        <div class="sub">Objetivo: rentas pasivas ≥ <b id="ie-target-sub">120</b>% de tus gastos</div>
-        <div class="progress"><i id="ie-bar"></i><span class="goal" id="ie-goal"></span></div>
-        <div class="goal-note">meta <span id="ie-target-note">120</span>%</div>
-        <canvas id="ie-spark" class="spark" height="52"></canvas>
-      </div>
-
-      <div class="panel" id="panel-cash" data-tab="hud">
-        <h2>Tesorería</h2>
-        <div class="stat">
-          <span class="label"><span class="dot green"></span>Caja disponible</span>
-          <span class="val blue" id="cash">0 €</span>
+      <!-- maqueta del dashboard real del juego -->
+      <div class="mock" aria-hidden="true">
+        <div class="mock-head"><i></i><i></i><i></i><b>Mes 18 · Era 2</b></div>
+        <div class="mock-ie">
+          <div class="lbl">Indicador de Emancipación</div>
+          <div class="val">126%</div>
+          <div class="mock-bar"><i></i></div>
         </div>
-        <div class="stat">
-          <span class="label">Cashflow neto / mes</span>
-          <span class="val" id="cashflow">0 €</span>
+        <div class="mock-rows">
+          <div class="mock-row">
+            <img src="assets/sprites/b_vacation.png" alt="" />
+            <span class="t">Apartamento en costa</span><span class="c">+1.105 €</span>
+          </div>
+          <div class="mock-row">
+            <img src="assets/sprites/b_startup.png" alt="" />
+            <span class="t">Micro-SaaS automatizado</span><span class="c">+840 €</span>
+          </div>
+          <div class="mock-row">
+            <img src="assets/sprites/b_bank.png" alt="" />
+            <span class="t">Cartera indexada</span><span class="c">+415 €</span>
+          </div>
         </div>
-        <div class="stat">
-          <span class="label">Colchón (meses)</span>
-          <span class="val" id="cushion">0</span>
-        </div>
-      </div>
-
-      <div class="panel" id="panel-wellbeing" data-tab="life">
-        <h2>Bienestar</h2>
-        <div class="wb-row">
-          <span class="wb-label">😊 Felicidad</span>
-          <div class="wb-bar"><i id="wb-happy"></i></div>
-          <span class="wb-val" id="wb-happy-v">70</span>
-        </div>
-        <div class="wb-row">
-          <span class="wb-label">⚡ Energía</span>
-          <div class="wb-bar"><i id="wb-energy"></i></div>
-          <span class="wb-val" id="wb-energy-v">80</span>
-        </div>
-        <div class="hint" id="wb-hint"></div>
-      </div>
-
-      <div class="panel" id="panel-lifestyle" data-tab="life">
-        <h2>Estilo de vida</h2>
-        <div id="lifestyle"></div>
-      </div>
-
-      <div class="panel" id="panel-gigs" data-tab="life" style="display:none">
-        <h2>Trabajos extra</h2>
-        <div id="gigs"></div>
-      </div>
-
-      <div class="panel" id="panel-vehicle" data-tab="life">
-        <h2>Vehículo</h2>
-        <div class="veh-current" id="veh-current"></div>
-        <button class="btn-ghost btn-sm" id="btn-vehicle" style="width:100%;margin-top:10px">Cambiar vehículo</button>
-      </div>
-
-      <div class="panel" id="panel-flow" data-tab="money">
-        <h2>Flujo mensual</h2>
-        <div class="stat">
-          <span class="label">Sueldo base</span><span class="val" id="salary">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Ingresos pasivos <small style="opacity:.6">(netos)</small></span><span class="val green" id="passive">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Gastos fijos</span><span class="val red" id="expenses">0 €</span>
-        </div>
-        <div class="stat" id="flow-rent-row" style="display:none">
-          <span class="label">Alquiler</span><span class="val red" id="flow-rent">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Coche / transporte</span><span class="val red" id="flow-vehicle">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Deuda roja (consumo)</span><span class="val red" id="flow-red">0 €</span>
-        </div>
-        <div class="stat" style="border-top:1px solid var(--line);margin-top:2px;padding-top:10px">
-          <span class="label" style="color:var(--txt)">= Cashflow neto</span><span class="val" id="flow-net">0 €</span>
-        </div>
-      </div>
-
-      <div class="panel" id="panel-debt" data-tab="money">
-        <h2>Deuda: Verde vs Roja</h2>
-        <div class="debtbar"><span class="g" id="db-green"></span><span class="r" id="db-red"></span></div>
-        <div class="stat" style="margin-top:8px">
-          <span class="label"><span class="dot green"></span>Deuda verde (auto-pagada)</span>
-          <span class="val green" id="green-lbl">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label"><span class="dot red"></span>Deuda roja (consumo)</span>
-          <span class="val red" id="red-lbl">0 €</span>
-        </div>
-        <div class="buy-row" style="margin-top:10px">
-          <button class="btn-ghost btn-sm" id="btn-loan" style="flex:1">+ Préstamo 5.000 €</button>
-          <button class="btn-ghost btn-sm" id="btn-repay" style="flex:1">Amortizar roja</button>
-        </div>
-      </div>
-
-      <div class="panel" id="panel-tax" data-tab="money">
-        <h2>Régimen fiscal</h2>
-        <div class="stat">
-          <span class="label">Estructura</span><span class="val" id="tax-vehicle">Persona física</span>
-        </div>
-        <div class="stat">
-          <span class="label">Impuestos / mes</span><span class="val red" id="tax-cost">0 €</span>
-        </div>
-        <button class="btn-ghost btn-sm" id="btn-incorporate" style="width:100%;margin-top:10px">
-          Constituir sociedad · 4.000 €</button>
-        <div class="hint" id="tax-hint"></div>
-      </div>
-
-      <div class="panel" id="panel-rank" data-tab="stats">
-        <h2>Ranking · Carrera a la Libertad</h2>
-        <div id="standings"></div>
-      </div>
-
-      <div class="panel" id="panel-activity" data-tab="stats">
-        <h2>Actividad · En vivo</h2>
-        <div id="activity"></div>
-      </div>
-    </aside>
-
-    <!-- ===== CENTRO: Ciudad isométrica + HUD ===== -->
-    <main class="col center">
-      <canvas id="city"></canvas>
-      <div class="hud-top">
-        <div class="chip chip-mes"><span class="k">Mes</span><span id="hud-month">1</span></div>
-        <div class="chip"><span class="k">Perfil</span><span id="hud-profile">—</span></div>
-        <div class="chip" id="hud-prof-chip"><span class="k">Profesión</span><span id="hud-prof" style="display:none">—</span></div>
-        <div class="chip" id="hud-mode-chip"><span class="k">Modo</span><span id="hud-mode" style="display:none">—</span></div>
-        <div class="chip chip-era" id="hud-era-chip" style="display:none"><span class="k">Era</span><span id="hud-era">1</span></div>
-        <div class="chip chip-activos"><span class="k">Activos</span><span id="hud-assets">0</span></div>
-        <button class="chip chip-btn" id="btn-view"><span class="chip-ic">🌍</span><span class="chip-txt" id="view-txt"> Vista global</span></button>
-        <button class="chip chip-btn" id="btn-help"><span class="chip-ic">❓</span><span class="chip-txt"> Cómo jugar</span></button>
-      </div>
-    </main>
-
-    <!-- ===== DERECHA: Marketplace + Portfolio + Turno ===== -->
-    <aside class="col right">
-      <div class="panel" id="panel-market" data-tab="market">
-        <h2>Marketplace · Oportunidades</h2>
-        <div id="market"></div>
-      </div>
-
-      <div class="panel" id="p2p-panel" data-tab="market" style="display:none">
-        <h2>Mercado P2P · Rivales</h2>
-        <div id="p2p"></div>
-      </div>
-
-      <div class="panel" id="panel-portfolio" data-tab="market">
-        <h2>Tu Portfolio</h2>
-        <div id="portfolio"><div class="empty">Aún no tienes activos. Compra en el Marketplace.</div></div>
-      </div>
-
-      <button class="btn-primary" id="btn-endturn">Cobrar y pasar de mes ▸</button>
-    </aside>
-
-    <!-- Notificaciones de evento (siempre visibles) -->
-    <div class="event-toast" id="toast">
-      <div class="et" id="toast-title"></div>
-      <div class="ed" id="toast-desc"></div>
-    </div>
-
-    <!-- ===== Barra de navegación inferior (solo móvil) ===== -->
-    <nav id="m-nav">
-      <button class="m-tab" data-mtab="city"><span class="mt-i">🏙️</span><span class="mt-l">Ciudad</span></button>
-      <button class="m-tab" data-mtab="market"><span class="mt-i">🏪</span><span class="mt-l">Mercado</span></button>
-      <button class="m-tab" data-mtab="life"><span class="mt-i">🎯</span><span class="mt-l">Vida</span></button>
-      <button class="m-tab" data-mtab="money"><span class="mt-i">💰</span><span class="mt-l">Balance</span></button>
-      <button class="m-tab" data-mtab="stats"><span class="mt-i">📊</span><span class="mt-l">Liga</span></button>
-    </nav>
-  </div>
-
-  <!-- ===== Modal selección de perfil ===== -->
-  <div class="overlay" id="profile-overlay">
-    <div class="modal">
-      <h2>Elige tu situación de partida</h2>
-      <p class="lead">1/3 · Tu <b>situación económica</b> define cuánto ganas, gastas y tienes ahorrado.
-        Luego elegirás profesión y dificultad. Objetivo: alcanzar un
-        <b>Indicador de Emancipación del 120%</b> con 6 meses de colchón en caja.</p>
-      <div id="resume-slot"></div>
-      <div class="profiles" id="profiles"></div>
-      <div style="text-align:center;margin-top:20px">
-        <button class="btn-ghost" id="btn-leaderboard">🏆 Ver clasificación de la liga</button>
       </div>
     </div>
-  </div>
+  </header>
 
-  <script type="module" src="src/main.js"></script>
+  <!-- ============================ QUÉ ES ============================= -->
+  <section id="que-es">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="sec-tag">Para qué sirve</div>
+        <h2>Un simulador para entender cómo se construye la independencia económica</h2>
+        <p>No es un juego de hacerse rico. Es un juego sobre <b>cuánto tiempo de tu vida
+           te compra cada decisión financiera</b> — y sobre lo caro que sale ignorar el riesgo.</p>
+      </div>
+
+      <div class="why">
+        <div class="why-card hi">
+          <h3>🎯 El objetivo</h3>
+          <p>Alcanzar el <b>Indicador de Emancipación (IE)</b>: el porcentaje de tus gastos
+             que cubren tus rentas pasivas. Al 100% ya no dependes del sueldo; el juego te
+             pide llegar al <b>120% con seis meses de colchón</b>, para que sobrevivas a un mal año.</p>
+          <ul>
+            <li>Aprendes a distinguir un activo de un pasivo con dinero de mentira</li>
+            <li>Ves el efecto real del apalancamiento cuando suben los tipos</li>
+            <li>Descubres por qué la diversificación no es opcional</li>
+          </ul>
+        </div>
+        <div class="why-card">
+          <h3>🧠 Lo que vas a practicar</h3>
+          <p>Cada mes es una decisión con coste de oportunidad. El juego no te deja
+             optimizar solo una variable: si exprimes la economía, te quemas.</p>
+          <ul>
+            <li><b>Deuda verde vs. deuda roja</b>: la que se paga sola y la que te ahoga</li>
+            <li><b>Fiscalidad</b>: cuándo compensa constituir una sociedad</li>
+            <li><b>Bienestar</b>: felicidad y energía limitan cuánto puedes forzar</li>
+            <li><b>Inflación</b>: quedarte quieto es perder terreno</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="formula" style="margin-top:34px">
+        <code>IE = (Rentas pasivas mensuales ÷ (Gastos fijos + Cuotas de deuda roja)) × 100</code>
+        <div class="legend">
+          <div><b>Rentas pasivas</b> Lo que entra sin que trabajes: alquileres, negocios, dividendos.</div>
+          <div><b>Gastos fijos</b> Tu vida: vivienda, transporte, hijos… y sube con la inflación.</div>
+          <div><b>Deuda roja</b> Préstamos de consumo. No generan nada y hunden el indicador.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== CÓMO SE JUEGA ======================= -->
+  <section id="como" class="alt">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="sec-tag">Cómo se juega</div>
+        <h2>Cuatro decisiones por mes. Docenas de finales.</h2>
+        <p>Una partida dura entre 30 y 70 meses de juego, unos 15 minutos reales.</p>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <h3>Elige tu punto de partida</h3>
+          <p>Situación económica, profesión y dificultad. Un empleado con buen sueldo
+             y un autónomo sin colchón no juegan la misma partida.</p>
+        </div>
+        <div class="step">
+          <h3>Compra activos</h3>
+          <p>Inmuebles, negocios digitales o activos financieros. Al contado, o
+             apalancado con hipoteca pagando solo la entrada.</p>
+        </div>
+        <div class="step">
+          <h3>Pasa de mes</h3>
+          <p>Cobras, pagas, y salta un evento: subida de tipos, vacancia, un boom
+             sectorial o un dilema personal que tendrás que resolver.</p>
+        </div>
+        <div class="step">
+          <h3>Sobrevive y escala</h3>
+          <p>Refinancia, monta una sociedad, descansa antes de quemarte. Tu ciudad
+             isométrica crece con cada activo que compras.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ MECÁNICAS ========================== -->
+  <section id="mecanicas">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="sec-tag">Mecánicas</div>
+        <h2>Lo que hace que cada partida sea distinta</h2>
+      </div>
+
+      <div class="feats">
+        <div class="feat">
+          <div class="ic">🏙️</div>
+          <h3>Tu ciudad isométrica</h3>
+          <p>Cada activo comprado se construye en el mapa, en su distrito.
+             Tu patrimonio se ve crecer, no solo se lee en una tabla.</p>
+        </div>
+        <div class="feat">
+          <div class="ic">🎲</div>
+          <h3>Eventos y dilemas</h3>
+          <p>Subidas de tipos, inquilinos que se van, sectores que explotan y
+             decisiones personales sin respuesta correcta.</p>
+        </div>
+        <div class="feat">
+          <div class="ic">😊</div>
+          <h3>Felicidad y energía</h3>
+          <p>Si te vacías, el sueldo cae por burnout. Si la felicidad llega a
+             cero, abandonas: se puede perder sin arruinarse.</p>
+        </div>
+        <div class="feat">
+          <div class="ic">🧑‍💻</div>
+          <h3>Profesiones</h3>
+          <p>Tu profesión desbloquea proyectos temáticos que nadie más puede
+             comprar. Aportan ventaja, no atajos.</p>
+        </div>
+        <div class="feat">
+          <div class="ic">🤖</div>
+          <h3>Rivales con IA</h3>
+          <p>Otros aspirantes compiten por la libertad en paralelo. Si uno llega
+             antes que tú, la carrera se acabó.</p>
+        </div>
+        <div class="feat">
+          <div class="ic">🏆</div>
+          <h3>Liga persistente</h3>
+          <p>Cada partida puntúa según velocidad, patrimonio, bienestar y
+             dificultad elegida. La liga no termina nunca.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== MODO LEGADO ========================= -->
+  <section id="legado" class="alt">
+    <div class="wrap legacy">
+      <div class="legacy-copy">
+        <div class="sec-tag">Modo Legado</div>
+        <h2>Ganar no tiene por qué ser el final</h2>
+        <p>Cuando alcanzas la libertad financiera puedes <b>cerrar la partida… o seguir</b>.
+           Conservas caja, activos y patrimonio, y el juego sube de nivel: cada era eleva el
+           listón y, a la vez, te abre un mercado más grande.</p>
+        <div class="balance">
+          <div class="bal up">
+            <h4>Sube la exigencia</h4>
+            <ul>
+              <li>Meta de IE +35% por era</li>
+              <li>Tu nivel de vida se encarece</li>
+              <li>Los imprevistos pegan un 25% más</li>
+              <li>La inflación se acelera</li>
+            </ul>
+          </div>
+          <div class="bal down">
+            <h4>Sube tu capacidad</h4>
+            <ul>
+              <li>Límite de crédito ×1,7 por era</li>
+              <li>Activos un 55% mayores y mejor yield</li>
+              <li>Trabajos extra disponibles</li>
+              <li>Puntuación ×1,25 por era</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="era-track">
+        <div class="era-item"><span class="n">1</span><span class="t">Emancipación</span><span class="g">meta 120%</span></div>
+        <div class="era-item"><span class="n">2</span><span class="t">Consolidación</span><span class="g">meta 162%</span></div>
+        <div class="era-item"><span class="n">3</span><span class="t">Expansión</span><span class="g">meta 204%</span></div>
+        <div class="era-item"><span class="n">4</span><span class="t">Patrimonio</span><span class="g">meta 246%</span></div>
+        <div class="era-item locked"><span class="n">5</span><span class="t">Imperio</span><span class="g">meta 288%</span></div>
+        <div class="era-item locked"><span class="n">6</span><span class="t">Legado</span><span class="g">meta 330%</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================== CTA ============================== -->
+  <section class="cta-final">
+    <div class="wrap">
+      <h2>¿Cuántos meses necesitas para ser libre?</h2>
+      <p>Sin registro, sin descargas, sin dinero real. Abre y juega — la partida
+         se guarda sola en tu navegador.</p>
+      <a class="btn btn-play" href="game.html">▶ Jugar a Freedom Cash</a>
+    </div>
+  </section>
+
+  <!-- ============================= FOOTER ============================ -->
+  <footer>
+    <div class="wrap foot-in">
+      <a class="brand" href="#top">
+        <img src="assets/favicon.svg" alt="" />
+        <span>Freedom Cash</span>
+      </a>
+      <span>Proyecto personal · Juego educativo, no es asesoramiento financiero.</span>
+      <div class="foot-links">
+        <a href="game.html">Jugar</a>
+        <a href="https://github.com/cristianvia/freedom-cash">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // borde de la barra al hacer scroll
+    const nav = document.getElementById('nav');
+    const onScroll = () => nav.classList.toggle('stuck', window.scrollY > 8);
+    onScroll();
+    addEventListener('scroll', onScroll, { passive: true });
+  </script>
 </body>
 </html>

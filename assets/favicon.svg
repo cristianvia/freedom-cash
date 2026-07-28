@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1a2130"/>
+      <stop offset="1" stop-color="#0d1017"/>
+    </linearGradient>
+    <linearGradient id="up" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#127a58"/>
+      <stop offset=".55" stop-color="#2ee6a0"/>
+      <stop offset="1" stop-color="#4aa8ff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="15" fill="url(#bg)"/>
+  <rect x="1.25" y="1.25" width="61.5" height="61.5" rx="13.75" fill="none"
+        stroke="#2ee6a0" stroke-opacity=".28" stroke-width="2.5"/>
+
+  <!-- barras de patrimonio creciente -->
+  <g fill="url(#up)">
+    <rect x="12" y="38" width="8" height="14" rx="2.5" opacity=".45"/>
+    <rect x="24" y="31" width="8" height="21" rx="2.5" opacity=".7"/>
+    <rect x="36" y="22" width="8" height="30" rx="2.5"/>
+  </g>
+
+  <!-- flecha de libertad: rompe hacia arriba -->
+  <path d="M14 34 L28 24 L38 30 L52 16" fill="none" stroke="#2ee6a0"
+        stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M42 15 H53 V26" fill="none" stroke="#2ee6a0"
+        stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

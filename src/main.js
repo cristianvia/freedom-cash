@@ -1238,7 +1238,7 @@ function toast(title, desc, tone = 'neutral') {
   wireDebtButtons();
   wireMobileNav();
 
-  // Arranque rápido para demos/test:  index.html?auto=corporate|freelance|investor
+  // Arranque rápido para demos/test:  game.html?auto=corporate|freelance|investor
   const params = new URLSearchParams(location.search);
   const auto = params.get('auto');
   if (params.get('lb')) showLeaderboard(); // hook de test

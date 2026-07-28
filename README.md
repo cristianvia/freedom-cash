@@ -45,12 +45,12 @@ clasificación. Cerrar la partida en cualquier momento sigue siendo una opción.
 ## ▶️ Ejecutar en local
 
 El juego usa **ES Modules** y `fetch`, así que necesita servirse por HTTP (no vale abrir el
-`index.html` con doble clic):
+`game.html` con doble clic):
 
 ```bash
 # desde la carpeta del proyecto
 python -m http.server 8765
-# luego abre http://127.0.0.1:8765/index.html
+# luego abre http://127.0.0.1:8765/  (landing) o /game.html (juego)
 ```
 
 **Atajos de demo/test** (parámetros de URL):
@@ -78,7 +78,8 @@ Cashflow Neto = (Sueldo + Ingresos Pasivos) − (Gastos Fijos + Hipotecas + Deud
 
 ```
 freedom-cash/
-├── index.html              # layout de 3 columnas (dashboard · ciudad · marketplace)
+├── index.html              # landing: qué es el juego y para qué sirve
+├── game.html               # el juego: 3 columnas (dashboard · ciudad · marketplace)
 ├── css/styles.css          # tema Fintech Dark Mode
 ├── assets/sprites/         # sprites isométricos curados (Kenney, CC0)
 └── src/
