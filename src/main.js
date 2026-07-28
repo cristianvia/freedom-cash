@@ -10,6 +10,8 @@ import { computeScore, submitScore, topScores } from './engine/Leaderboard.js';
 
 const $ = (id) => document.getElementById(id);
 const euro = (n) => `${Math.round(n).toLocaleString('es-ES')} €`;
+// chip con emoji (siempre visible) + texto (ocultable en móvil)
+const chipHTML = (emoji, text) => `<span class="chip-ic">${emoji}</span><span class="chip-txt"> ${text}</span>`;
 const SAVE_KEY = 'freedomcash.save.v1';
 const TUT_KEY = 'freedomcash.tutorialDone.v1';
 
@@ -169,8 +171,8 @@ async function startGame(profile, mode = null) {
   engine = new EconomyEngine(profile, DATA.events, mode);
   ended = false;
   $('profile-overlay').style.display = 'none';
-  $('hud-profile').textContent = profile.emoji + ' ' + profile.name.split(' ')[0];
-  $('hud-mode').textContent = mode.emoji + ' ' + mode.label;
+  $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.name.split(' ')[0]);
+  $('hud-mode').innerHTML = chipHTML(mode.emoji, mode.label);
   $('hud-mode').style.display = '';
 
   // oponentes IA: los otros perfiles disponibles (mismo modo)
@@ -698,9 +700,17 @@ function render() {
   $('green-lbl').textContent = euro(s.greenDebt) + '/mes';
   $('red-lbl').textContent = euro(s.redDebt) + '/mes';
 
-  // HUD
+  // HUD (desktop chips)
   $('hud-assets').textContent = s.assetsCount;
   $('hud-month').textContent = s.month;
+
+  // HUD compacto móvil
+  const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+  set('m-ie', `${s.ie}%`);
+  set('m-cash', euro(s.cash));
+  set('m-happy', s.happiness);
+  set('m-energy', s.energy);
+  set('m-month', s.month);
 
   renderPortfolio();
   renderStandings();
@@ -739,8 +749,29 @@ function refreshView() {
 
 function toggleView() {
   globalView = !globalView;
-  $('btn-view').textContent = globalView ? '🏙️ Mi ciudad' : '🌍 Vista global';
+  $('btn-view').querySelector('.chip-ic').textContent = globalView ? '🏙️' : '🌍';
+  $('view-txt').textContent = globalView ? ' Mi ciudad' : ' Vista global';
   refreshView();
+}
+
+/* ---------------------- NAVEGACIÓN MÓVIL -------------------------- */
+function setMobileTab(tab) {
+  document.body.dataset.mtab = tab;
+  document.querySelectorAll('#m-nav .m-tab').forEach(b =>
+    b.classList.toggle('active', b.dataset.mtab === tab));
+  // el tamaño del contenedor de la ciudad cambia con la pestaña → recolocar
+  if (city) requestAnimationFrame(() => { city.resize(); refreshView(); });
+  // al entrar en una pestaña de paneles, sube el scroll al inicio
+  if (tab !== 'city') window.scrollTo(0, 0);
+}
+
+function wireMobileNav() {
+  document.querySelectorAll('#m-nav .m-tab').forEach(btn => {
+    btn.onclick = () => setMobileTab(btn.dataset.mtab);
+  });
+  setMobileTab(document.body.dataset.mtab || 'market');
+  // redibuja la ciudad al rotar/redimensionar
+  window.addEventListener('resize', () => { if (city) { city.resize(); refreshView(); } });
 }
 
 /* ---------------------------- VEHÍCULO ---------------------------- */
@@ -911,8 +942,8 @@ async function resumeGame(save) {
   engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events);
   ended = false;
   $('profile-overlay').style.display = 'none';
-  $('hud-profile').textContent = profile.emoji + ' ' + profile.name.split(' ')[0];
-  if (engine.mode) { $('hud-mode').textContent = (engine.mode.emoji || '') + ' ' + (engine.mode.label || ''); $('hud-mode').style.display = ''; }
+  $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.name.split(' ')[0]);
+  if (engine.mode) { $('hud-mode').innerHTML = chipHTML(engine.mode.emoji || '', engine.mode.label || ''); $('hud-mode').style.display = ''; }
 
   bots = (save.bots || []).map(bs => ({
     name: bs.name, emoji: bs.emoji, aggr: bs.aggr,
@@ -1033,6 +1064,7 @@ function toast(title, desc, tone = 'neutral') {
   $('btn-view').onclick = toggleView;
   $('btn-leaderboard').onclick = () => showLeaderboard();
   wireDebtButtons();
+  wireMobileNav();
 
   // Arranque rápido para demos/test:  index.html?auto=corporate|freelance|investor
   const params = new URLSearchParams(location.search);
@@ -1042,6 +1074,9 @@ function toast(title, desc, tone = 'neutral') {
 
   // hook de test: ?diff=investor abre el selector de dificultad
   if (params.get('diff')) { const p = DATA.profiles.find(x => x.id === params.get('diff')) || DATA.profiles[0]; chooseDifficulty(p); return; }
+
+  // hook de test: ?mtab=life abre esa pestaña móvil (tras arrancar)
+  if (params.get('mtab')) setTimeout(() => setMobileTab(params.get('mtab')), 400);
 
   // oferta de continuar partida guardada
   const save = loadSave();

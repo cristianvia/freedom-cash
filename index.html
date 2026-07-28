@@ -2,14 +2,22 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
   <title>Freedom Cash · El Juego de la Libertad Financiera</title>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
-<body>
+<body data-mtab="market">
   <div id="app">
-    <!-- ===== BARRA SUPERIOR: marca + métricas clave (siempre visibles) ===== -->
-    <header id="topbar">
+    <!-- ===== HUD compacto (solo móvil) ===== -->
+    <div id="m-hud">
+      <div class="mh-block mh-ie"><span class="mh-k">IE</span><b id="m-ie">0%</b></div>
+      <div class="mh-block"><span class="mh-k">Caja</span><b id="m-cash">0 €</b></div>
+      <div class="mh-block mh-wb"><span>😊<b id="m-happy">70</b></span><span>⚡<b id="m-energy">80</b></span></div>
+      <div class="mh-block"><span class="mh-k">Mes</span><b id="m-month">1</b></div>
+    </div>
+
+    <!-- ===== IZQUIERDA: Dashboard financiero ===== -->
+    <aside class="col left">
       <div class="brand">
         <div class="logo">💸</div>
         <div class="brand-txt">
@@ -17,58 +25,64 @@
           <small>Libertad Financiera</small>
         </div>
       </div>
-      <div class="topstats">
-        <div class="tcard tcard-ie">
-          <div class="ie-line">
-            <b id="ie-value">0%</b>
-            <span class="ie-lbl">Emancipación (IE)<br><small>meta 120%</small></span>
-            <canvas id="ie-spark" class="spark" height="34"></canvas>
-          </div>
-          <div class="progress"><i id="ie-bar"></i><span class="goal" id="ie-goal"></span></div>
+
+      <div class="panel freedom" data-tab="hud">
+        <h2>Indicador de Emancipación</h2>
+        <div class="big" id="ie-value">0%</div>
+        <div class="sub">Objetivo: rentas pasivas ≥ 120% de tus gastos</div>
+        <div class="progress"><i id="ie-bar"></i><span class="goal" id="ie-goal"></span></div>
+        <div class="goal-note">meta 120%</div>
+        <canvas id="ie-spark" class="spark" height="52"></canvas>
+      </div>
+
+      <div class="panel" id="panel-cash" data-tab="hud">
+        <h2>Tesorería</h2>
+        <div class="stat">
+          <span class="label"><span class="dot green"></span>Caja disponible</span>
+          <span class="val blue" id="cash">0 €</span>
         </div>
-        <div class="tcard tcard-cash">
-          <div class="tcard-head"><span>Caja disponible</span><b class="blue" id="cash">0 €</b></div>
-          <div class="tcard-sub">
-            <span>Cashflow/mes <b id="cashflow">0 €</b></span>
-            <span>Colchón <b id="cushion">0</b> m</span>
-          </div>
+        <div class="stat">
+          <span class="label">Cashflow neto / mes</span>
+          <span class="val" id="cashflow">0 €</span>
         </div>
-        <div class="tcard tcard-wb">
-          <div class="wb-row">
-            <span class="wb-label">😊</span>
-            <div class="wb-bar"><i id="wb-happy"></i></div>
-            <span class="wb-val" id="wb-happy-v">70</span>
-          </div>
-          <div class="wb-row">
-            <span class="wb-label">⚡</span>
-            <div class="wb-bar"><i id="wb-energy"></i></div>
-            <span class="wb-val" id="wb-energy-v">80</span>
-          </div>
-          <div class="hint" id="wb-hint"></div>
+        <div class="stat">
+          <span class="label">Colchón (meses)</span>
+          <span class="val" id="cushion">0</span>
         </div>
       </div>
-    </header>
 
-    <div id="board">
-    <!-- ===== IZQUIERDA: Dashboard financiero ===== -->
-    <aside class="col left">
-      <div class="panel" id="panel-lifestyle">
+      <div class="panel" id="panel-wellbeing" data-tab="life">
+        <h2>Bienestar</h2>
+        <div class="wb-row">
+          <span class="wb-label">😊 Felicidad</span>
+          <div class="wb-bar"><i id="wb-happy"></i></div>
+          <span class="wb-val" id="wb-happy-v">70</span>
+        </div>
+        <div class="wb-row">
+          <span class="wb-label">⚡ Energía</span>
+          <div class="wb-bar"><i id="wb-energy"></i></div>
+          <span class="wb-val" id="wb-energy-v">80</span>
+        </div>
+        <div class="hint" id="wb-hint"></div>
+      </div>
+
+      <div class="panel" id="panel-lifestyle" data-tab="life">
         <h2>Estilo de vida</h2>
         <div id="lifestyle"></div>
       </div>
 
-      <div class="panel" id="panel-gigs" style="display:none">
+      <div class="panel" id="panel-gigs" data-tab="life" style="display:none">
         <h2>Trabajos extra</h2>
         <div id="gigs"></div>
       </div>
 
-      <div class="panel" id="panel-vehicle">
+      <div class="panel" id="panel-vehicle" data-tab="life">
         <h2>Vehículo</h2>
         <div class="veh-current" id="veh-current"></div>
         <button class="btn-ghost btn-sm" id="btn-vehicle" style="width:100%;margin-top:10px">Cambiar vehículo</button>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="panel-flow" data-tab="money">
         <h2>Flujo mensual</h2>
         <div class="stat">
           <span class="label">Sueldo base</span><span class="val" id="salary">0 €</span>
@@ -93,7 +107,7 @@
         </div>
       </div>
 
-      <div class="panel" id="panel-debt">
+      <div class="panel" id="panel-debt" data-tab="money">
         <h2>Deuda: Verde vs Roja</h2>
         <div class="debtbar"><span class="g" id="db-green"></span><span class="r" id="db-red"></span></div>
         <div class="stat" style="margin-top:8px">
@@ -110,7 +124,7 @@
         </div>
       </div>
 
-      <div class="panel" id="panel-tax">
+      <div class="panel" id="panel-tax" data-tab="money">
         <h2>Régimen fiscal</h2>
         <div class="stat">
           <span class="label">Estructura</span><span class="val" id="tax-vehicle">Persona física</span>
@@ -123,12 +137,12 @@
         <div class="hint" id="tax-hint"></div>
       </div>
 
-      <div class="panel" id="panel-rank">
+      <div class="panel" id="panel-rank" data-tab="stats">
         <h2>Ranking · Carrera a la Libertad</h2>
         <div id="standings"></div>
       </div>
 
-      <div class="panel" id="panel-activity">
+      <div class="panel" id="panel-activity" data-tab="stats">
         <h2>Actividad · En vivo</h2>
         <div id="activity"></div>
       </div>
@@ -138,39 +152,49 @@
     <main class="col center">
       <canvas id="city"></canvas>
       <div class="hud-top">
-        <div class="chip"><span class="k">Mes</span><span id="hud-month">1</span></div>
+        <div class="chip chip-mes"><span class="k">Mes</span><span id="hud-month">1</span></div>
         <div class="chip"><span class="k">Perfil</span><span id="hud-profile">—</span></div>
         <div class="chip" id="hud-mode-chip"><span class="k">Modo</span><span id="hud-mode" style="display:none">—</span></div>
-        <div class="chip"><span class="k">Activos</span><span id="hud-assets">0</span></div>
-        <button class="chip chip-btn" id="btn-view">🌍 Vista global</button>
-        <button class="chip chip-btn" id="btn-help">❓ Cómo jugar</button>
-      </div>
-      <div class="event-toast" id="toast">
-        <div class="et" id="toast-title"></div>
-        <div class="ed" id="toast-desc"></div>
+        <div class="chip chip-activos"><span class="k">Activos</span><span id="hud-assets">0</span></div>
+        <button class="chip chip-btn" id="btn-view"><span class="chip-ic">🌍</span><span class="chip-txt" id="view-txt"> Vista global</span></button>
+        <button class="chip chip-btn" id="btn-help"><span class="chip-ic">❓</span><span class="chip-txt"> Cómo jugar</span></button>
       </div>
     </main>
 
     <!-- ===== DERECHA: Marketplace + Portfolio + Turno ===== -->
     <aside class="col right">
-      <div class="panel" id="panel-market">
+      <div class="panel" id="panel-market" data-tab="market">
         <h2>Marketplace · Oportunidades</h2>
         <div id="market"></div>
       </div>
 
-      <div class="panel" id="p2p-panel" style="display:none">
+      <div class="panel" id="p2p-panel" data-tab="market" style="display:none">
         <h2>Mercado P2P · Rivales</h2>
         <div id="p2p"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel" id="panel-portfolio" data-tab="market">
         <h2>Tu Portfolio</h2>
         <div id="portfolio"><div class="empty">Aún no tienes activos. Compra en el Marketplace.</div></div>
       </div>
 
       <button class="btn-primary" id="btn-endturn">Cobrar y pasar de mes ▸</button>
     </aside>
-    </div><!-- /#board -->
+
+    <!-- Notificaciones de evento (siempre visibles) -->
+    <div class="event-toast" id="toast">
+      <div class="et" id="toast-title"></div>
+      <div class="ed" id="toast-desc"></div>
+    </div>
+
+    <!-- ===== Barra de navegación inferior (solo móvil) ===== -->
+    <nav id="m-nav">
+      <button class="m-tab" data-mtab="city"><span class="mt-i">🏙️</span><span class="mt-l">Ciudad</span></button>
+      <button class="m-tab" data-mtab="market"><span class="mt-i">🏪</span><span class="mt-l">Mercado</span></button>
+      <button class="m-tab" data-mtab="life"><span class="mt-i">🎯</span><span class="mt-l">Vida</span></button>
+      <button class="m-tab" data-mtab="money"><span class="mt-i">💰</span><span class="mt-l">Balance</span></button>
+      <button class="m-tab" data-mtab="stats"><span class="mt-i">📊</span><span class="mt-l">Liga</span></button>
+    </nav>
   </div>
 
   <!-- ===== Modal selección de perfil ===== -->
