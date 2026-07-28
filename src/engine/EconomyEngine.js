@@ -25,6 +25,27 @@ export const ERA_NAMES = [
   'Emancipación', 'Consolidación', 'Expansión', 'Patrimonio', 'Imperio', 'Legado',
 ];
 
+/* --- Ciclo económico: la marea que sube y baja todos los barcos --- */
+/*
+ * El mercado ya no es un telón de fondo estático. Cuatro fases se encadenan y
+ * mueven a la vez precios, rentas, riesgo y valor de reventa. Comprar en
+ * recesión y vender en pico es, por fin, una jugada — y equivocarse duele.
+ */
+export const CYCLE_PHASES = [
+  { id: 'expansion', label: 'Expansión', emoji: '📈', tone: 'good',
+    desc: 'Todo sube: rentas fuertes y poco riesgo, pero comprar ya no es barato.',
+    price: 1.06, yield: 1.06, risk: 0.85, months: [4, 7] },
+  { id: 'peak', label: 'Pico de mercado', emoji: '🎈', tone: 'warn',
+    desc: 'Burbuja: los activos están carísimos. Vender ahora es el mejor negocio.',
+    price: 1.20, yield: 1.02, risk: 1.15, months: [2, 4] },
+  { id: 'recession', label: 'Recesión', emoji: '📉', tone: 'bad',
+    desc: 'Las rentas caen y sube la vacancia… pero todo está de rebajas. Si tienes caja, es TU momento.',
+    price: 0.76, yield: 0.86, risk: 1.40, months: [3, 6] },
+  { id: 'recovery', label: 'Recuperación', emoji: '🌤️', tone: 'neutral',
+    desc: 'El mercado despierta: los precios aún no se han enterado del todo.',
+    price: 0.90, yield: 0.97, risk: 1.05, months: [3, 6] },
+];
+
 /** Etiqueta legible de una era ("Era 3 · Expansión"). */
 export function eraLabel(era) {
   return `Era ${era} · ${ERA_NAMES[Math.min(era, ERA_NAMES.length) - 1]}`;
@@ -62,6 +83,10 @@ export class EconomyEngine {
     // --- Refinanciación de hipotecas ---
     this.REFI_FEE_PCT = 0.03;   // comisión (sobre la hipoteca) por refinanciar
     this.REFI_REDUCTION = 0.25; // reducción de la cuota tras refinanciar
+
+    // --- Ciclo económico (se arranca en 'recuperación': hay margen para entrar) ---
+    this.cycleIndex = 3;
+    this.cycleLeft = 4;
 
     // --- Acciones por mes: tu tiempo es el recurso más escaso ---
     this.ACTIONS_BASE = 3;      // jugadas que caben en un mes
@@ -261,6 +286,44 @@ export class EconomyEngine {
     return a.financials.monthly_mortgage_cost * rate * (a.refiFactor ?? 1);
   }
 
+  /* ------------------------ CICLO ECONÓMICO ------------------------- */
+
+  cyclePhase() { return CYCLE_PHASES[this.cycleIndex]; }
+  cyclePriceMult() { return this.cyclePhase().price; }
+  cycleYieldMult() { return this.cyclePhase().yield; }
+  cycleRiskMult() { return this.cyclePhase().risk; }
+
+  /** Avanza el reloj del ciclo. Devuelve la fase nueva si acaba de cambiar. */
+  advanceCycle() {
+    this.cycleLeft -= 1;
+    if (this.cycleLeft > 0) return null;
+    this.cycleIndex = (this.cycleIndex + 1) % CYCLE_PHASES.length;
+    const [a, b] = this.cyclePhase().months;
+    this.cycleLeft = Math.round(a + Math.random() * (b - a));
+    return this.cyclePhase();
+  }
+
+  /** Copia el ciclo de otro motor: la macro es del mundo, no de cada jugador. */
+  setCycle(index, left) { this.cycleIndex = index; this.cycleLeft = left; }
+
+  /* --------------------- PRECIOS SEGÚN EL CICLO --------------------- */
+
+  /**
+   * Ficha económica de un activo AL PRECIO DE HOY. El ciclo mueve precio,
+   * entrada, hipoteca y cuota a la vez (si compras más barato, debes menos).
+   */
+  pricedFinancials(asset) {
+    const f = asset.financials;
+    const k = this.cyclePriceMult();
+    return {
+      ...f,
+      total_price: Math.round(f.total_price * k),
+      down_payment_required: Math.round(f.down_payment_required * k),
+      mortgage_available: Math.round(f.mortgage_available * k),
+      monthly_mortgage_cost: Math.round(f.monthly_mortgage_cost * k),
+    };
+  }
+
   /* -------------------- HORQUILLA DE RENDIMIENTO -------------------- */
 
   /**
@@ -269,8 +332,13 @@ export class EconomyEngine {
    * (vacancia/volatilidad) es lo que ensancha la banda.
    */
   yieldSpread(a) {
-    const risk = (a.metrics && a.metrics.vacancy_rate_risk) || 0;
+    const risk = ((a.metrics && a.metrics.vacancy_rate_risk) || 0) * this.cycleRiskMult();
     return Math.min(this.YIELD_SPREAD_MAX, this.YIELD_SPREAD_BASE + this.YIELD_SPREAD_RISK * risk);
+  }
+
+  /** Renta bruta del mes de un activo: catálogo × ciclo × sorteo de la horquilla. */
+  grossIncomeOf(a) {
+    return a.financials.gross_monthly_income * this.cycleYieldMult() * (a.yieldFactor ?? 1);
   }
 
   /**
@@ -283,10 +351,11 @@ export class EconomyEngine {
     const f = a.financials;
     const spread = this.yieldSpread(a);
     const fixed = f.maintenance_and_taxes + this.mortgageCostOf(a);
+    const gross = f.gross_monthly_income * this.cycleYieldMult();
     return {
-      min: f.gross_monthly_income * (1 - spread) - fixed,
-      max: f.gross_monthly_income * (1 + spread) - fixed,
-      expected: f.gross_monthly_income - fixed,
+      min: gross * (1 - spread) - fixed,
+      max: gross * (1 + spread) - fixed,
+      expected: gross - fixed,
       spread,
     };
   }
@@ -309,8 +378,7 @@ export class EconomyEngine {
 
   /** Renta pasiva neta de un activo (bruto del mes - mantenimiento - hipoteca efectiva). */
   assetNetIncome(a) {
-    const f = a.financials;
-    return f.gross_monthly_income * (a.yieldFactor ?? 1) - f.maintenance_and_taxes - this.mortgageCostOf(a);
+    return this.grossIncomeOf(a) - a.financials.maintenance_and_taxes - this.mortgageCostOf(a);
   }
 
   /** Desviación del mes respecto al rendimiento esperado (%). 0 = en la media. */
@@ -465,7 +533,7 @@ export class EconomyEngine {
    * @returns {{ok:boolean, reason?:string, cost:number}}
    */
   canBuy(asset, financing) {
-    const f = asset.financials;
+    const f = this.pricedFinancials(asset);   // el ciclo manda en el precio de hoy
     const act = this.canAct();
     if (!act.ok) {
       return { ok: false, reason: act.reason, noActions: true,
@@ -493,11 +561,15 @@ export class EconomyEngine {
 
     this.spendAction();
     this.cash -= check.cost;
+    // el activo congela la ficha que pagaste: si compraste en recesión, tu
+    // hipoteca y tu entrada siguen siendo las baratas para siempre
     const instance = {
       ...asset,
+      financials: this.pricedFinancials(asset),
       financing,
       instanceId: `${asset.id}#${++this._seq}`,
       purchasedMonth: this.month,
+      purchasePriceMult: this.cyclePriceMult(),
     };
     instance.yieldFactor = this.rollYieldFactor(instance);  // ya renta dentro de su horquilla
     this.ownedAssets.push(instance);
@@ -513,11 +585,22 @@ export class EconomyEngine {
       : a.financials.total_price;
   }
 
-  /** Valor de traspaso: el capital revalorizado por los meses que lleva rentando. */
+  /**
+   * Valor de traspaso: el capital revalorizado por los meses que lleva rentando
+   * Y reajustado al precio de HOY. Comprar en recesión y vender en pico da una
+   * plusvalía real; al revés, te comes la minusvalía.
+   */
   assetTransferValue(a) {
     const held = Math.max(0, this.month - (a.purchasedMonth ?? this.month));
     const appr = 1 + Math.min(this.APPRECIATION_MAX, this.APPRECIATION_MONTH * held);
-    return this.assetEquity(a) * appr;
+    const cycle = this.cyclePriceMult() / (a.purchasePriceMult ?? this.cyclePriceMult());
+    return this.assetEquity(a) * appr * cycle;
+  }
+
+  /** Plusvalía latente (%) de un activo si lo vendieras hoy. */
+  assetGainPct(a) {
+    const eq = this.assetEquity(a);
+    return eq > 0 ? Math.round((this.assetTransferValue(a) / eq - 1) * 100) : 0;
   }
 
   /**
@@ -542,6 +625,7 @@ export class EconomyEngine {
       purchasedMonth: this.month,
     };
     delete instance.cell; delete instance.citySprite;
+    instance.purchasePriceMult = this.cyclePriceMult();
     instance.yieldFactor = this.rollYieldFactor(instance);
     this.ownedAssets.push(instance);
     return instance;
@@ -819,12 +903,15 @@ export class EconomyEngine {
 
     this.month += 1;
 
+    // la macro avanza: puede estrenarse fase del ciclo económico
+    const newPhase = this.advanceCycle();
+
     // el mes que empieza ya tiene su rendimiento sorteado dentro de la horquilla:
     // el dashboard enseña exactamente lo que vas a cobrar, no una media teórica
     this.rollYields();
 
     const snap = this.recordSnapshot({
-      salary, event, adj,
+      salary, event, adj, newPhase,
       cashflow: monthResult,
       baseCashflow,
     });
@@ -859,6 +946,8 @@ export class EconomyEngine {
       gigsEnabled: this.gigsEnabled(),
       actionsLeft: this.actionsLeft(),
       actionsMax: this.actionsMax(),
+      cycle: this.cyclePhase(),
+      cycleLeft: this.cycleLeft,
       mode: this.mode.id,
       era: this.era,
       eraLabel: eraLabel(this.era),
@@ -908,6 +997,8 @@ export class EconomyEngine {
       creditBoost: this.creditBoost,
       eraStartMonth: this.eraStartMonth,
       actionsUsed: this.actionsUsed,
+      cycleIndex: this.cycleIndex,
+      cycleLeft: this.cycleLeft,
       firedOnce: [...this.firedOnce],
       lifestyleUsed: [...this.lifestyleUsed],
       history: this.history,
@@ -937,6 +1028,8 @@ export class EconomyEngine {
     e.creditBoost = data.creditBoost ?? 1;
     e.eraStartMonth = data.eraStartMonth ?? 1;
     e.actionsUsed = data.actionsUsed ?? 0;
+    e.cycleIndex = data.cycleIndex ?? 3;
+    e.cycleLeft = data.cycleLeft ?? 4;
     e.firedOnce = new Set(data.firedOnce || []);
     e.lifestyleUsed = new Set(data.lifestyleUsed || []);
     e.history = data.history || [];

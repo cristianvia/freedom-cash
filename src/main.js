@@ -397,8 +397,11 @@ function renderMarket() {
   const wrap = $('market');
   wrap.innerHTML = '';
   market.forEach(m => {
-    const a = m.asset;
+    const base = m.asset;
+    // la tarjeta enseña el precio de HOY, movido por la fase del ciclo
+    const a = { ...base, financials: engine.pricedFinancials(base) };
     const f = a.financials;
+    const cycleDelta = Math.round((engine.cyclePriceMult() - 1) * 100);
     const cashCheck = engine.canBuy(a, 'cash');
     const levCheck = engine.canBuy(a, 'leverage');
     const catLabel = { real_estate: 'Inmueble', digital_business: 'Negocio', financial: 'Financiero' }[a.category];
@@ -430,7 +433,10 @@ function renderMarket() {
       <div class="card-flags">${ttlTag}${heatTag}</div>
       <div class="desc">${a.description}</div>
       <div class="mini-grid">
-        <span>Precio<b>${euro(f.total_price)}</b></span>
+        <span>Precio<b>${euro(f.total_price)}${cycleDelta ? `
+          <em class="cyc-delta ${cycleDelta < 0 ? 'down' : 'up'}"
+              title="${cycleDelta < 0 ? 'Rebajado' : 'Encarecido'} por la fase del ciclo (${engine.cyclePhase().label})"
+              >${cycleDelta > 0 ? '+' : ''}${cycleDelta}%</em>` : ''}</b></span>
         <span>Entrada<b>${a.leverage_allowed ? euro(f.down_payment_required) : '—'}</b></span>
         <span>CoC medio<b>${a.metrics.coc_return_percentage}%</b></span>
         <span>Volatilidad<b>±${Math.round(band.spread * 100)}%</b></span>
@@ -504,6 +510,7 @@ function renderPortfolio() {
     const cf = engine.assetNetIncome(a);
     const band = engine.incomeBand(a);
     const delta = engine.assetYieldDelta(a);
+    const gain = engine.assetGainPct(a);   // plusvalía latente si vendieras hoy
     // flecha del mes: cómo ha salido este activo dentro de su horquilla
     const arrow = delta > 3 ? `<span class="pf-d up" title="Buen mes: +${delta}% sobre su media">▲</span>`
                 : delta < -3 ? `<span class="pf-d down" title="Mal mes: ${delta}% bajo su media">▼</span>`
@@ -526,7 +533,10 @@ function renderPortfolio() {
         ${cf >= 0 ? '+' : ''}${euro(cf)} ${arrow}</div>
       <div class="pf-actions">
         ${refiBtn}
-        <button class="btn-ghost btn-sm" data-sell="${a.instanceId}">Vender</button>
+        <button class="btn-ghost btn-sm sell ${gain > 4 ? 'gain' : gain < -4 ? 'loss' : ''}"
+          data-sell="${a.instanceId}"
+          title="Recuperarías ${euro(engine.assetTransferValue(a) * 0.95)} (${gain >= 0 ? '+' : ''}${gain}% sobre tu capital, con 5% de costes de venta)">
+          Vender${gain ? ` <em>${gain > 0 ? '+' : ''}${gain}%</em>` : ''}</button>
       </div>`;
     wrap.appendChild(el);
   });
@@ -579,6 +589,16 @@ function resolveTurn(ev, choiceIndex) {
   city.emitCoins();
   $('hud-month').textContent = engine.month;
 
+  // cambio de fase del ciclo: es la noticia más importante del mes
+  if (snap.newPhase) {
+    const p = snap.newPhase;
+    logActivity(`${p.emoji} Nueva fase: ${p.label}`, p.tone === 'good' ? 'good' : p.tone === 'bad' ? 'bad' : 'neutral');
+    if (!AUTO_MODE) setTimeout(() => toast(`${p.emoji} ${p.label}`, p.desc,
+      p.tone === 'good' ? 'good' : p.tone === 'bad' ? 'bad' : 'neutral'), 4600);
+    if (p.id === 'recession') showTip('cycle_buy');
+    if (p.id === 'peak') showTip('cycle_sell');
+  }
+
   const sign = snap.cashflow >= 0 ? '+' : '';
   toast(`📅 Mes ${engine.month - 1} · ${ev ? ev.title : 'Liquidación'}`,
     `${desc}  ·  Cashflow del mes: ${sign}${euro(snap.cashflow)}`, tone);
@@ -592,6 +612,8 @@ function resolveTurn(ev, choiceIndex) {
   bots.forEach(b => {
     const bought = takeBotTurn(b.engine, catalog, DATA.lifestyle, DATA.vehicles, b.aggr, DATA.gigs) || [];
     b.engine.endTurn();
+    // la macroeconomía es del mundo, no de cada jugador: todos viven el mismo ciclo
+    b.engine.setCycle(engine.cycleIndex, engine.cycleLeft);
     bought.forEach(t => logActivity(`${b.emoji} ${b.name} compró ${t}`, 'neutral'));
     if (b.engine.hasLost()) logActivity(`${b.emoji} ${b.name} abandonó la partida 💥`, 'bad');
   });
@@ -1068,6 +1090,7 @@ function render() {
 
   // Acciones del mes: el recurso que de verdad obliga a priorizar
   renderActions(s);
+  renderCycle(s);
 
   // HUD (desktop chips)
   $('hud-assets').textContent = s.assetsCount;
@@ -1103,6 +1126,29 @@ function render() {
   drawSparkline();
   refreshView();
   saveGame();
+}
+
+/* ------------------------ CICLO ECONÓMICO ------------------------- */
+/*
+ * La fase del ciclo es información pública y accionable: el panel dice qué
+ * está pasando y qué conviene hacer, para que "comprar barato" deje de ser
+ * suerte y pase a ser una decisión.
+ */
+function renderCycle(s) {
+  const panel = $('panel-cycle');
+  if (!panel) return;
+  const c = s.cycle;
+  panel.dataset.tone = c.tone;
+  $('cyc-em').textContent = c.emoji;
+  $('cyc-label').textContent = c.label;
+  $('cyc-left').textContent = s.cycleLeft === 1 ? 'último mes' : `~${s.cycleLeft} meses`;
+  $('cyc-desc').textContent = c.desc;
+  const pct = (v) => `${v >= 1 ? '+' : ''}${Math.round((v - 1) * 100)}%`;
+  const cls = (v, good = true) => (v === 1 ? '' : (v > 1) === good ? 'up' : 'down');
+  $('cyc-mods').innerHTML = `
+    <span class="${cls(c.price, false)}">Precios <b>${pct(c.price)}</b></span>
+    <span class="${cls(c.yield)}">Rentas <b>${pct(c.yield)}</b></span>
+    <span class="${cls(c.risk, false)}">Riesgo <b>${pct(c.risk)}</b></span>`;
 }
 
 /* ---------------------------- LOGROS ------------------------------ */
@@ -1540,6 +1586,8 @@ const TIPS = {
   car_finance: { t: '⚠️ Un coche es un pasivo', d: 'Financiar un coche crea deuda roja y su coste mensual sube tu listón de libertad. Un coche saca dinero de tu bolsillo: es un pasivo, no un activo.' },
   incorporate: { t: '💡 Optimización fiscal', d: 'Con rentas altas, una sociedad paga impuestos fijos en vez de un recargo. Estructurar bien tus inversiones protege tu flujo de caja.' },
   p2p_assume: { t: '💡 Traspaso: compras capital, no el inmueble', d: 'En un traspaso pagas solo el capital que el vendedor había puesto y te subrogas en su hipoteca: la deuda pasa a ser tuya. Por eso el precio parece bajo — el inmueble sigue costando lo que costaba.' },
+  cycle_buy: { t: '💡 Se compra en la recesión', d: 'Cuando todo el mundo tiene miedo, los precios caen y las entradas se abaratan. Si has guardado caja, es tu momento: el activo que compres barato mantendrá su hipoteca barata para siempre.' },
+  cycle_sell: { t: '💡 Se vende en el pico', d: 'En la burbuja los activos valen más de lo que rinden. Vender ahora lo que compraste barato realiza la plusvalía… y te deja liquidez para la próxima recesión.' },
   yield_band: { t: '💡 Los retornos son horquillas', d: 'Ningún activo renta lo mismo todos los meses: cada uno oscila dentro de su horquilla. Cuanto más riesgo, más ancha la banda. Diversificar no sube la media… pero estabiliza tu IE.' },
 };
 function tipSeen(id) { try { return JSON.parse(localStorage.getItem(TIP_KEY) || '[]').includes(id); } catch (e) { return false; } }
