@@ -2,7 +2,7 @@
  * main.js — Controlador principal de Freedom Cash.
  * Une EconomyEngine (lógica) + IsoCity (render) + DOM (UI fintech).
  */
-import { EconomyEngine, ERA_ASSET_STEP } from './engine/EconomyEngine.js';
+import { EconomyEngine, ERA_ASSET_STEP, ERA_START_RATIO } from './engine/EconomyEngine.js';
 import { IsoCity } from './engine/IsoCity.js';
 import { takeBotTurn } from './engine/BotAI.js';
 import { Tutorial } from './ui/tutorial.js';
@@ -254,13 +254,22 @@ async function startGame(profile, mode = null, profession = null) {
  * ofrece una versión mayor de cada activo (más precio, pero mejor yield).
  * Los activos ya comprados no cambian — se guardan enteros en la partida.
  */
-const ERA_TIER = ['', 'Plus', 'Prime', 'Élite', 'Legendario'];
+const ERA_TIER = ['', 'Plus', 'Prime', 'Élite', 'Legendario', 'Mítico', 'Ancestral', 'Absoluto'];
 
-function eraCatalog(assets, era) {
-  if (era <= 1) return assets;
-  const k = Math.pow(ERA_ASSET_STEP, era - 1);   // escala de precio
+/** Sello de calibre del activo para una era. Sin techo: 'Absoluto ×3'. */
+function eraTier(era) {
+  const i = Math.min(era, ERA_TIER.length) - 1;
+  const extra = era > ERA_TIER.length ? ` ×${era - ERA_TIER.length + 1}` : '';
+  return ERA_TIER[i] + extra;
+}
+
+function eraCatalog(assets, era, inflation = 1) {
+  if (era <= 1 && inflation < 1.02) return assets;
+  // el mercado inflaciona con el mundo: si tu coste de vida sube y los precios
+  // no, una era larga se vuelve imposible por pura aritmética
+  const k = Math.pow(ERA_ASSET_STEP, era - 1) * inflation;   // escala de precio
   const y = k * (1 + 0.06 * (era - 1));          // escala de renta (yield algo mejor)
-  const tier = ERA_TIER[Math.min(era, ERA_TIER.length) - 1];
+  const tier = eraTier(era);
   const sc = (v, m) => Math.round((v || 0) * m);
   return assets.map(a => {
     const f = a.financials;
@@ -268,7 +277,7 @@ function eraCatalog(assets, era) {
       ...a,
       id: `${a.id}@e${era}`,
       baseId: a.baseId || a.id,
-      title: `${a.title} · ${tier}`,
+      title: era > 1 ? `${a.title} · ${tier}` : a.title,
       era,
       financials: {
         total_price: sc(f.total_price, k),
@@ -288,9 +297,14 @@ function eraCatalog(assets, era) {
   });
 }
 
-/** Recalcula el catálogo vigente a partir de la era del motor. */
+/** Recalcula el catálogo vigente a partir de la era y la inflación del motor. */
 function buildCatalog() {
-  catalog = eraCatalog(DATA.assets, engine ? engine.era : 1);
+  catalog = eraCatalog(DATA.assets, engine ? engine.era : 1, engine ? engine.expenseInflation : 1);
+  // el tablón apunta a los objetos del catálogo: hay que reengancharlo tras rehacerlo
+  market.forEach(m => {
+    const fresh = catalog.find(a => a.id === m.asset.id);
+    if (fresh) m.asset = fresh;
+  });
 }
 
 /* -------------------------- MARKETPLACE --------------------------- */
@@ -618,7 +632,9 @@ function resolveTurn(ev, choiceIndex) {
     if (b.engine.hasLost()) logActivity(`${b.emoji} ${b.name} abandonó la partida 💥`, 'bad');
   });
 
-  // el tablón envejece: lo que no compraste no te espera para siempre
+  // el catálogo sigue a la inflación, y el tablón envejece: lo que no compraste
+  // no te espera para siempre
+  buildCatalog();
   tickMarket();
   refreshP2P();
   render();
@@ -909,10 +925,10 @@ function endModal(title, html, win, canContinue = false) {
       </div>
       ${canContinue ? `
       <div class="era-teaser">
-        <b>¿Sigues?</b> Conservas caja, activos y patrimonio. Sube el listón a
-        <b>${Math.round(engine.winTargetIE() * (1 + 0.35))}%</b> de IE, tu nivel de vida
-        se encarece y los imprevistos pegan más fuerte — pero se abre un mercado
-        con activos mayores y más crédito.
+        <b>¿Sigues?</b> Conservas caja, activos y patrimonio — pero también subes de
+        nivel de vida: tu día a día se encarece hasta que lo que ya tienes cubre
+        solo la mitad de la nueva vida. Vuelve a haber partida, a una escala mayor,
+        con mercado más grande y más crédito. Las eras no se acaban.
       </div>` : ''}
       <div class="end-actions">
         <button class="btn-ghost" id="btn-lb">🏆 Clasificación</button>
@@ -954,10 +970,12 @@ function startNextEra() {
       <div style="font-size:56px;text-align:center">🚀</div>
       <h2 style="text-align:center">${info.label}</h2>
       <p class="lead" style="text-align:center">
-        Conservas todo lo construido. El listón sube y el juego se pone serio.</p>
+        Conservas todo lo construido — pero tu vida sube de nivel con tu patrimonio.
+        Tu IE arranca en torno al <b>${Math.round(ERA_START_RATIO * 100)}%</b> del nuevo
+        objetivo: hay partida otra vez, a mayor escala.</p>
       <div class="era-grid">
         <div class="era-up"><span>Meta de IE</span><b>${info.targetFrom}% → ${info.targetTo}%</b></div>
-        <div class="era-up"><span>Coste de vida</span><b>+${euro(info.lifeAdd)}/mes</b></div>
+        <div class="era-up"><span>Nivel de vida</span><b>+${euro(info.lifeAdd)}/mes</b></div>
         <div class="era-up"><span>Imprevistos</span><b>+${info.riskPct}% de impacto</b></div>
         <div class="era-down"><span>Límite de crédito</span><b>${euro(info.creditFrom)} → ${euro(info.creditTo)}</b></div>
         <div class="era-down"><span>Mercado</span><b>Activos de mayor calibre</b></div>

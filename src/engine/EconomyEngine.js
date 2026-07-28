@@ -13,17 +13,36 @@
 export const WIN_IE = 120;          // Indicador de Emancipación objetivo (%) en la era 1
 export const WIN_MONTHS_CUSHION = 6; // colchón de tesorería (meses de gastos)
 
-/* --- Modo Legado: al ganar puedes encadenar "eras" cada vez más exigentes --- */
-export const ERA_IE_STEP = 0.35;    // el listón de IE sube un 35% por era
-export const ERA_RISK_STEP = 1.25;  // los eventos negativos pegan un 25% más fuerte
-export const ERA_CREDIT_STEP = 1.7; // pero tu límite de crédito crece un 70%
-export const ERA_LIFE_COST = 0.12;  // tu nivel de vida sube un 12% de los gastos base
-export const ERA_ASSET_STEP = 1.55; // el mercado ofrece activos ~55% mayores por era
+/* --- Modo Legado: al ganar encadenas "eras", y no se acaban nunca --- */
+export const ERA_IE_STEP = 0.20;    // el listón de IE sube un 20% por era
+export const ERA_RISK_STEP = 1.18;  // los eventos negativos pegan un 18% más fuerte
+export const ERA_CREDIT_STEP = 1.5; // tu límite de crédito crece un 50%
+export const ERA_ASSET_STEP = 1.40; // el mercado ofrece activos ~40% mayores por era
+export const ERA_LIFE_COST = 0.12;  // suelo mínimo de subida del coste de vida
 
-/** Nombre narrativo de cada era (se repite el último si se pasa de la lista). */
+/**
+ * La clave del espaciado. Al estrenar era, tu nivel de vida sube hasta dejar tu
+ * IE en esta fracción del nuevo objetivo: la libertad que ya tenías cubre poco
+ * más de la mitad de la vida que ahora llevas. Es el "lifestyle creep" real —
+ * y es lo que hace que cada era cueste trabajo en vez de regalarse.
+ */
+export const ERA_START_RATIO = 0.55;
+
+/** Nombres narrativos. Al agotarlos se reciclan con numeral: "Leyenda II". */
 export const ERA_NAMES = [
-  'Emancipación', 'Consolidación', 'Expansión', 'Patrimonio', 'Imperio', 'Legado',
+  'Emancipación', 'Consolidación', 'Expansión', 'Patrimonio', 'Imperio',
+  'Legado', 'Dinastía', 'Mecenazgo', 'Leyenda',
 ];
+
+const ROMAN = ['', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+
+/** Nombre de una era, sin techo: 'Expansión', 'Leyenda II', 'Imperio III'… */
+export function eraName(era) {
+  const n = ERA_NAMES.length;
+  const base = ERA_NAMES[(era - 1) % n];
+  const loop = Math.floor((era - 1) / n);
+  return loop ? `${base} ${ROMAN[loop] || `×${loop + 1}`}` : base;
+}
 
 /* --- Ciclo económico: la marea que sube y baja todos los barcos --- */
 /*
@@ -48,7 +67,7 @@ export const CYCLE_PHASES = [
 
 /** Etiqueta legible de una era ("Era 3 · Expansión"). */
 export function eraLabel(era) {
-  return `Era ${era} · ${ERA_NAMES[Math.min(era, ERA_NAMES.length) - 1]}`;
+  return `Era ${era} · ${eraName(era)}`;
 }
 
 export class EconomyEngine {
@@ -461,9 +480,14 @@ export class EconomyEngine {
     return Math.round(this.profile.credit_limit * this.creditBoost);
   }
 
-  /** Inflación mensual: se acelera con la era (el suelo se mueve más rápido). */
+  /**
+   * Inflación mensual: se acelera con la era, pero con techo. Sin el tope, a
+   * partir de la era 8 el suelo corría más que cualquier cartera y el Modo
+   * Legado se volvía imposible en vez de largo.
+   */
   inflationRate() {
-    return 1 + (this.INFLATION_BASE - 1) * (1 + 0.5 * (this.era - 1));
+    const accel = Math.min(2.5, 1 + 0.25 * (this.era - 1));
+    return 1 + (this.INFLATION_BASE - 1) * accel;
   }
 
   /**
@@ -476,11 +500,18 @@ export class EconomyEngine {
 
     this.era += 1;
     this.eraStartMonth = this.month;
-    this.eraRisk *= ERA_RISK_STEP;
+    this.eraRisk = Math.min(3, this.eraRisk * ERA_RISK_STEP);   // con techo: exigente, no imposible
     this.creditBoost *= ERA_CREDIT_STEP;
 
-    // tu nivel de vida sube contigo: más gasto fijo permanente
-    const lifeAdd = Math.round(this.profile.fixed_expenses * ERA_LIFE_COST);
+    // Tu nivel de vida sube contigo. No un porcentaje simbólico: sube hasta que
+    // la renta pasiva que ya tienes solo cubra ERA_START_RATIO del nuevo listón.
+    // Sin esto, cada era se ganaba en 3-6 meses porque llegabas con los deberes
+    // hechos; con esto, cada era es una partida de verdad a su escala.
+    const target = this.winTargetIE() * ERA_START_RATIO;         // IE con el que arrancas
+    const denomNow = this.fixedExpenses() + this.vehicleMonthlyCost() + this.totalRedDebtPayment();
+    const denomWanted = this.netPassiveIncome() / (target / 100);
+    const floor = Math.round(this.profile.fixed_expenses * ERA_LIFE_COST);
+    const lifeAdd = Math.max(floor, Math.round(denomWanted - denomNow));
     this.lifeExpenses += lifeAdd;
 
     // los hitos "once" vuelven a estar disponibles: nueva etapa, nuevos imprevistos
@@ -510,14 +541,19 @@ export class EconomyEngine {
            this.cash >= WIN_MONTHS_CUSHION * this.fixedExpenses();
   }
 
+  /** Descubierto que aguanta el banco antes de declararte insolvente. */
+  insolvencyLimit() {
+    return -Math.max(3000, this.fixedExpenses());   // escala con tu tamaño
+  }
+
   hasLost() {
     // insolvencia (caja muy negativa) o abandono (felicidad agotada)
-    return this.cash < -3000 || this.happiness <= 0;
+    return this.cash < this.insolvencyLimit() || this.happiness <= 0;
   }
 
   lossReason() {
     if (this.happiness <= 0) return 'abandono';
-    if (this.cash < -3000) return 'insolvencia';
+    if (this.cash < this.insolvencyLimit()) return 'insolvencia';
     return null;
   }
 
