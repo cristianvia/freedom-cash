@@ -142,8 +142,18 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
       currar un extra, cuidarte o refinanciar compiten por el mismo hueco.
 - [x] **Tablón persistente y competencia:** las oportunidades duran 3-6 meses y los rivales
       compran del mismo tablón — si la dejas pasar, se la llevan.
-- [x] **43 logros con meta-progresión:** persisten entre partidas, puntúan por tiers
+- [x] **53 logros con meta-progresión:** persisten entre partidas, puntúan por tiers
       (bronce/plata/oro/platino) y suman a la liga. Galería con progreso por categoría.
+- [x] **Ciclo económico:** expansión → pico → recesión → recuperación. Mueve precios,
+      rentas y riesgo; comprar barato y vender caro es por fin una jugada.
+- [x] **Modo Legado infinito:** cada era sube tu nivel de vida hasta dejar tu IE al 55%
+      del nuevo objetivo. Verificado hasta la era 25, ~30 meses por era.
+- [x] **Inversiones buenas y malas:** 44 activos entre sólidos, especulativos (pueden
+      despegar o irse a cero) y chiringuitos. Con **due diligence** para destaparlos.
+- [x] **Fiscalidad real:** escalera 👤 → 🏢 → 🏛️ → 🏗️ con IRPF por tramos, dos bases
+      imponibles, amortizaciones deducibles y asesor que dice cuándo NO subir.
+- [x] **Gestión del riesgo:** seguros, sinergias de distrito y liquidez por tipo de activo.
+- [x] **Audio y háptica:** efectos sintetizados con WebAudio (cero ficheros que descargar).
 - [ ] Fase 2: **multijugador en tiempo real** (próxima sesión) — conectar la liga a un
       backend (WebSocket/Supabase) reutilizando el interfaz de `Leaderboard.js`.
 - [ ] Fase 2: sindicación de compras (comprar activos a medias entre jugadores).

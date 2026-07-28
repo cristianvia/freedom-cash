@@ -8,6 +8,7 @@ import { takeBotTurn } from './engine/BotAI.js';
 import { Tutorial } from './ui/tutorial.js';
 import { computeScore, submitScore, topScores } from './engine/Leaderboard.js';
 import { Achievements } from './engine/Achievements.js';
+import { Sfx } from './engine/Sfx.js';
 
 const $ = (id) => document.getElementById(id);
 const euro = (n) => `${Math.round(n).toLocaleString('es-ES')} €`;
@@ -67,6 +68,7 @@ let p2pSeq = 0;             // contador de instancias compradas por P2P
 let ended = false;          // evita disparar el fin de partida dos veces
 let activityLog = [];       // feed de actividad (jugador + rivales)
 let ach = null;             // logros + meta-progresión (persiste entre partidas)
+const sfx = new Sfx();      // sonido sintetizado + háptica
 let AUTO_MODE = false;      // demos/test: resuelve dilemas automáticamente
 let globalView = false;     // alterna entre "mi ciudad" y "vista global"
 const spriteMap = {};       // key -> url para IsoCity
@@ -566,6 +568,7 @@ function doBuy(assetId, financing) {
   market = market.filter(m => m.asset.id !== assetId);
   fillMarket();
 
+  sfx.play('buy');
   toast('✅ Activo adquirido',
     `${asset.title} · ${financing === 'leverage' ? 'financiado con hipoteca (deuda verde)' : 'pagado al contado'}`,
     'good');
@@ -688,6 +691,7 @@ function resolveTurn(ev, choiceIndex) {
   if (snap.adj && snap.adj._choice) desc += ` → ${snap.adj._choice}`;
 
   city.emitCoins();
+  sfx.play('month');
   $('hud-month').textContent = engine.month;
 
   // ventas que se cierran este mes: entra el dinero y desaparece el edificio
@@ -700,6 +704,7 @@ function resolveTurn(ev, choiceIndex) {
   (snap.outcomes || []).forEach((o, i) => {
     ach.bumpRun(o.type === 'ruin' ? 'ruins' : 'booms');
     if (o.type === 'ruin') {
+      sfx.play('ruin');
       logActivity(`💀 ${o.asset.title} se fue a cero`, 'bad');
       if (!AUTO_MODE) setTimeout(() => toast(
         o.scam ? '🚨 Era una estafa' : '💀 La apuesta salió mal',
@@ -717,6 +722,7 @@ function resolveTurn(ev, choiceIndex) {
   // cambio de fase del ciclo: es la noticia más importante del mes
   if (snap.newPhase) {
     const p = snap.newPhase;
+    sfx.play('cycle');
     logActivity(`${p.emoji} Nueva fase: ${p.label}`, p.tone === 'good' ? 'good' : p.tone === 'bad' ? 'bad' : 'neutral');
     if (!AUTO_MODE) setTimeout(() => toast(`${p.emoji} ${p.label}`, p.desc,
       p.tone === 'good' ? 'good' : p.tone === 'bad' ? 'bad' : 'neutral'), 4600);
@@ -752,9 +758,9 @@ function resolveTurn(ev, choiceIndex) {
   // el aviso de "te lo quitaron" espera a que pase el toast del evento del mes
   if (sniped.length && !AUTO_MODE) {
     const s0 = sniped[0];
-    setTimeout(() => toast('⚡ Te lo quitaron',
+    setTimeout(() => { sfx.play('alert'); toast('⚡ Te lo quitaron',
       `${s0.b.emoji} ${s0.b.name} compró ${s0.a.title}` +
-      `${sniped.length > 1 ? ` (y ${sniped.length - 1} más)` : ''}. Las oportunidades no esperan.`, 'bad'), 4600);
+      `${sniped.length > 1 ? ` (y ${sniped.length - 1} más)` : ''}. Las oportunidades no esperan.`, 'bad'); }, 4600);
   }
   checkEnd();
 }
@@ -863,6 +869,7 @@ function buyP2P(idx) {
   p2pOffers.splice(idx, 1);
   const mort = o.financing === 'leverage'
     ? ` Te subrogas en una hipoteca de ${euro(o.asset.financials.mortgage_available)}.` : '';
+  sfx.play('buy');
   toast('🤝 Traspaso cerrado',
     `Compraste el capital de "${o.asset.title}" a ${o.bot.emoji} ${o.bot.name} por ${euro(o.price)}.${mort}`, 'good');
   logActivity(`🤝 Traspaso: ${o.asset.title} de ${o.bot.name}`, 'good');
@@ -999,6 +1006,7 @@ function computeEndStats() {
  * @param {boolean} canContinue  ofrecer encadenar la siguiente era (Modo Legado)
  */
 function endModal(title, html, win, canContinue = false) {
+  sfx.play(win ? 'win' : 'lose');
   if (!canContinue) clearSave();
   const st = computeEndStats();
   const rankTxt = ['🥇 1º', '🥈 2º', '🥉 3º'][st.rank - 1] || `${st.rank}º`;
@@ -1465,7 +1473,7 @@ function checkAchievements() {
   const fresh = ach.evaluate(engine.status(), achDerived());
   fresh.forEach((def, i) => {
     logActivity(`${def.emoji} Logro desbloqueado: ${def.title}`, 'good');
-    if (!AUTO_MODE) setTimeout(() => showAchievement(def), 600 + i * 2600);
+    if (!AUTO_MODE) setTimeout(() => { sfx.play('achievement'); showAchievement(def); }, 600 + i * 2600);
   });
 }
 
@@ -1900,6 +1908,8 @@ function showTip(id) {
 /* ---------------------------- TOAST ------------------------------- */
 let toastTimer = null;
 function toast(title, desc, tone = 'neutral') {
+  if (tone === 'good') sfx.playSoft('good');
+  else if (tone === 'bad') sfx.playSoft('bad');
   const t = $('toast');
   $('toast-title').textContent = title;
   $('toast-desc').textContent = desc;
@@ -1916,6 +1926,13 @@ function toast(title, desc, tone = 'neutral') {
   $('btn-help').onclick = () => startTutorial();
   $('btn-view').onclick = toggleView;
   $('btn-leaderboard').onclick = () => showLeaderboard();
+  // el AudioContext solo puede nacer de un gesto real del usuario
+  const unlockOnce = () => { sfx.unlock(); document.removeEventListener('pointerdown', unlockOnce); };
+  document.addEventListener('pointerdown', unlockOnce);
+  const soundIc = $('sound-ic');
+  soundIc.textContent = sfx.enabled ? '🔊' : '🔇';
+  $('btn-sound').onclick = () => { soundIc.textContent = sfx.toggle() ? '🔊' : '🔇'; };
+
   $('btn-ach').onclick = () => showAchievementsGallery();
   $('btn-ach-start').onclick = () => showAchievementsGallery();
   wireDebtButtons();
