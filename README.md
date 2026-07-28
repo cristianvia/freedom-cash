@@ -68,6 +68,11 @@ IE = (Ingresos Pasivos Mensuales / (Gastos Fijos + Cuotas Deuda Roja)) × 100
 Cashflow Neto = (Sueldo + Ingresos Pasivos) − (Gastos Fijos + Hipotecas + Deuda Roja)
 ```
 
+**Los retornos son horquillas, no números fijos.** Cada activo renta cada mes dentro de una
+banda `±(10% + 80% × riesgo)` (un bono ±12%, el cripto ±54%), sorteada con distribución
+triangular: la media a largo plazo es la del catálogo, pero un mes concreto puede salir mal.
+Diversificar no sube tu renta media — **estabiliza tu IE**, que es lo que te hace ganar.
+
 - **Deuda verde** = hipoteca de un activo donde `ingreso bruto > cuota`.
 - **Deuda roja** = préstamo de consumo; resta liquidez y penaliza el denominador del IE.
 - **Apalancamiento** = pagas solo la entrada, pero las subidas de tipos encarecen tu cuota.
@@ -144,4 +149,8 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 - **Refinanciar:** comisión del 3% de la hipoteca → cuota −25% y tipo fijo (inmune a subidas).
 - **Régimen fiscal:** de persona física (recargo del 25% sobre renta pasiva > 2.000 €/mes) a
   **sociedad** (coste fijo). Solo compensa a rentas altas — como en la vida real.
-- **Mercado P2P:** los rivales venden activos cuando necesitan caja; con liquidez lista, cazas gangas.
+- **Mercado P2P (traspasos):** compras el **capital** de un rival y **te subrogas en su hipoteca**
+  — por eso el precio es bajo: el inmueble sigue costando lo que costaba. El precio parte del
+  valor de traspaso (capital revalorizado ~9%/año) y solo hay descuento real (−8% a −16%) si el
+  rival está ahogado de liquidez; si solo reequilibra, te pide **prima**. Súmale un 4% de gastos
+  y necesitas límite de crédito para asumir la deuda.

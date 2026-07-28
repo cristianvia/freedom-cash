@@ -113,6 +113,16 @@ img { max-width: 100%; }
   font-size: 12px; margin: 8px 0; }
 .mini-grid span { color: var(--txt-dim); }
 .mini-grid b { float: right; font-variant-numeric: tabular-nums; }
+/* horquilla de cashflow: se compra un rango, no un número */
+.band { background: #0d1320; border: 1px solid var(--line); border-radius: 10px;
+  padding: 7px 10px; margin: 8px 0; display: grid; gap: 1px; }
+.band-lbl { font-size: 10px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .4px; }
+.band-range { font-size: 15px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.band-range i { font-style: normal; font-size: 11px; font-weight: 500;
+  color: var(--txt-dim); margin: 0 4px; }
+.band-range .green { color: var(--green); }
+.band-range .red { color: var(--red); }
+.band-avg { font-size: 10px; color: var(--txt-dim); }
 .risk { height: 5px; background: #0d1320; border-radius: 4px; overflow: hidden; margin-top:2px; }
 .risk > i { display: block; height: 100%; background: linear-gradient(90deg,var(--green),var(--amber),var(--red)); }
 .buy-row { display: flex; gap: 8px; margin-top: 8px; }
@@ -168,6 +178,14 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .p2p-title { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .p2p-meta { font-size: 11px; color: var(--txt-dim); }
 .p2p-nums { font-size: 12px; margin-top: 2px; }
+.p2p-sub { font-size: 11px; color: var(--txt-dim); margin-top: 2px; line-height: 1.35; }
+.p2p-sub .green { color: var(--green); }
+.p2p-sub.red { color: var(--red); }
+/* flecha del mes en el portfolio: cómo ha salido dentro de su horquilla */
+.pf-d { font-size: 10px; }
+.pf-d.up { color: var(--green); }
+.pf-d.down { color: var(--red); }
+.pf-d.flat { color: var(--txt-dim); }
 
 /* ---------- Hints / fiscalidad ---------- */
 .hint { font-size: 11px; color: var(--txt-dim); margin-top: 8px; line-height: 1.4; text-align: center; }

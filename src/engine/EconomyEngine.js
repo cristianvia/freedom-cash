@@ -63,6 +63,16 @@ export class EconomyEngine {
     this.REFI_FEE_PCT = 0.03;   // comisión (sobre la hipoteca) por refinanciar
     this.REFI_REDUCTION = 0.25; // reducción de la cuota tras refinanciar
 
+    // --- Horquilla de rendimiento: ningún activo renta lo mismo todos los meses ---
+    this.YIELD_SPREAD_BASE = 0.10;  // volatilidad mínima (hasta un bono se mueve)
+    this.YIELD_SPREAD_RISK = 0.80;  // cuánto amplía la horquilla el riesgo del activo
+    this.YIELD_SPREAD_MAX = 0.60;   // tope de la horquilla (±60%)
+
+    // --- Traspasos entre jugadores (mercado P2P) ---
+    this.APPRECIATION_MONTH = 0.0075; // el capital se revaloriza ~9%/año mientras renta
+    this.APPRECIATION_MAX = 0.45;     // tope de revalorización acumulada
+    this.TRANSFER_COST_PCT = 0.04;    // notaría/gestión de un traspaso (lo paga el comprador)
+
     // --- Bienestar: Felicidad y Energía (0-100) ---
     this.happiness = 70;
     this.energy = 80;
@@ -211,10 +221,61 @@ export class EconomyEngine {
     return a.financials.monthly_mortgage_cost * rate * (a.refiFactor ?? 1);
   }
 
-  /** Renta pasiva neta de un activo (bruto - mantenimiento - hipoteca efectiva). */
+  /* -------------------- HORQUILLA DE RENDIMIENTO -------------------- */
+
+  /**
+   * Amplitud de la horquilla de un activo (±%). Un bono apenas se mueve;
+   * un negocio digital o el cripto oscilan muchísimo. El riesgo del activo
+   * (vacancia/volatilidad) es lo que ensancha la banda.
+   */
+  yieldSpread(a) {
+    const risk = (a.metrics && a.metrics.vacancy_rate_risk) || 0;
+    return Math.min(this.YIELD_SPREAD_MAX, this.YIELD_SPREAD_BASE + this.YIELD_SPREAD_RISK * risk);
+  }
+
+  /**
+   * Horquilla de cashflow neto mensual de un activo: entre `min` y `max`,
+   * con `expected` como valor central. Es lo que se enseña en el Marketplace:
+   * no compras "un número", compras un rango de resultados posibles.
+   * @returns {{min:number, max:number, expected:number, spread:number}}
+   */
+  incomeBand(a) {
+    const f = a.financials;
+    const spread = this.yieldSpread(a);
+    const fixed = f.maintenance_and_taxes + this.mortgageCostOf(a);
+    return {
+      min: f.gross_monthly_income * (1 - spread) - fixed,
+      max: f.gross_monthly_income * (1 + spread) - fixed,
+      expected: f.gross_monthly_income - fixed,
+      spread,
+    };
+  }
+
+  /**
+   * Sortea el rendimiento del próximo mes dentro de la horquilla.
+   * Media de dos uniformes → distribución triangular: lo normal es quedarse
+   * cerca del valor esperado y los extremos son raros (pero existen).
+   */
+  rollYieldFactor(a) {
+    const spread = this.yieldSpread(a);
+    const u = (Math.random() + Math.random()) / 2;   // 0..1 centrado en 0,5
+    return 1 + (u * 2 - 1) * spread;
+  }
+
+  /** Fija el rendimiento del mes que empieza para todo el portfolio. */
+  rollYields() {
+    this.ownedAssets.forEach(a => { a.yieldFactor = this.rollYieldFactor(a); });
+  }
+
+  /** Renta pasiva neta de un activo (bruto del mes - mantenimiento - hipoteca efectiva). */
   assetNetIncome(a) {
     const f = a.financials;
-    return f.gross_monthly_income - f.maintenance_and_taxes - this.mortgageCostOf(a);
+    return f.gross_monthly_income * (a.yieldFactor ?? 1) - f.maintenance_and_taxes - this.mortgageCostOf(a);
+  }
+
+  /** Desviación del mes respecto al rendimiento esperado (%). 0 = en la media. */
+  assetYieldDelta(a) {
+    return Math.round(((a.yieldFactor ?? 1) - 1) * 100);
   }
 
   /** Suma de rentas pasivas netas de todo el portfolio (antes de impuestos). */
@@ -392,21 +453,62 @@ export class EconomyEngine {
       instanceId: `${asset.id}#${++this._seq}`,
       purchasedMonth: this.month,
     };
+    instance.yieldFactor = this.rollYieldFactor(instance);  // ya renta dentro de su horquilla
     this.ownedAssets.push(instance);
     return { ok: true, instance };
   }
 
-  /** Vende un activo por su valor neto de capital (precio - deuda pendiente aprox.). */
+  /* ------------------------ VALOR / TRASPASOS ----------------------- */
+
+  /** Capital aportado (equity): al contado el precio entero; apalancado, la entrada. */
+  assetEquity(a) {
+    return a.financing === 'leverage'
+      ? a.financials.down_payment_required
+      : a.financials.total_price;
+  }
+
+  /** Valor de traspaso: el capital revalorizado por los meses que lleva rentando. */
+  assetTransferValue(a) {
+    const held = Math.max(0, this.month - (a.purchasedMonth ?? this.month));
+    const appr = 1 + Math.min(this.APPRECIATION_MAX, this.APPRECIATION_MONTH * held);
+    return this.assetEquity(a) * appr;
+  }
+
+  /**
+   * ¿Puedo asumir la hipoteca de un activo que me traspasan? Subrogarse en un
+   * préstamo consume límite de crédito igual que pedirlo de cero.
+   */
+  canAssumeMortgage(a) {
+    if (a.financing !== 'leverage') return { ok: true };
+    if (a.financials.mortgage_available > this.creditLimit()) {
+      return { ok: false, reason: 'Tu límite de crédito no cubre la hipoteca que asumirías' };
+    }
+    return { ok: true };
+  }
+
+  /** Incorpora al portfolio un activo adquirido fuera del Marketplace (traspaso P2P). */
+  acquireAsset(asset, financing, tag = 'p2p') {
+    const instance = {
+      ...asset,
+      financing,
+      instanceId: `${asset.id}#${tag}${++this._seq}`,
+      purchasedMonth: this.month,
+    };
+    delete instance.cell; delete instance.citySprite;
+    instance.yieldFactor = this.rollYieldFactor(instance);
+    this.ownedAssets.push(instance);
+    return instance;
+  }
+
+  /** Vende un activo por su valor de traspaso menos la fricción de la venta. */
   sellAsset(instanceId) {
     const idx = this.ownedAssets.findIndex(a => a.instanceId === instanceId);
     if (idx === -1) return { ok: false, reason: 'Activo no encontrado' };
     const a = this.ownedAssets[idx];
-    const f = a.financials;
-    // equity aproximada: contado -> precio total; apalancado -> entrada (capital aportado)
-    const equity = a.financing === 'leverage' ? f.down_payment_required : f.total_price;
-    this.cash += Math.round(equity * 0.95); // 5% de fricción/costes de venta
+    const proceeds = Math.round(this.assetTransferValue(a) * 0.95); // 5% de costes de venta
+    this.cash += proceeds;
     this.ownedAssets.splice(idx, 1);
-    return { ok: true, proceeds: Math.round(equity * 0.95) };
+    return { ok: true, proceeds };
   }
 
   /** Pide un préstamo de consumo (DEUDA ROJA): entra caja, resta liquidez cada mes. */
@@ -662,6 +764,11 @@ export class EconomyEngine {
     this.gigsUsed = new Set();
 
     this.month += 1;
+
+    // el mes que empieza ya tiene su rendimiento sorteado dentro de la horquilla:
+    // el dashboard enseña exactamente lo que vas a cobrar, no una media teórica
+    this.rollYields();
+
     const snap = this.recordSnapshot({
       salary, event, adj,
       cashflow: monthResult,

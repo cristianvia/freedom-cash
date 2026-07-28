@@ -322,6 +322,11 @@ function renderMarket() {
     const levCheck = engine.canBuy(a, 'leverage');
     const catLabel = { real_estate: 'Inmueble', digital_business: 'Negocio', financial: 'Financiero' }[a.category];
     const prof = a.profession ? DATA.professions.find(pr => pr.id === a.profession) : null;
+    // horquilla: el cashflow con hipoteca es peor que al contado, así que se
+    // muestra la banda del modo que el jugador puede permitirse ahora mismo
+    const bandCash = engine.incomeBand({ ...a, financing: 'cash' });
+    const bandLev = a.leverage_allowed ? engine.incomeBand({ ...a, financing: 'leverage' }) : null;
+    const band = (bandLev && !cashCheck.ok && levCheck.ok) ? bandLev : bandCash;
     const el = document.createElement('div');
     el.className = 'market-card' + (prof ? ' prof-card' : '');
     el.innerHTML = `
@@ -336,9 +341,18 @@ function renderMarket() {
       <div class="desc">${a.description}</div>
       <div class="mini-grid">
         <span>Precio<b>${euro(f.total_price)}</b></span>
-        <span>Cashflow<b style="color:var(--green)">+${euro(f.net_monthly_cashflow)}</b></span>
         <span>Entrada<b>${a.leverage_allowed ? euro(f.down_payment_required) : '—'}</b></span>
-        <span>CoC<b>${a.metrics.coc_return_percentage}%</b></span>
+        <span>CoC medio<b>${a.metrics.coc_return_percentage}%</b></span>
+        <span>Volatilidad<b>±${Math.round(band.spread * 100)}%</b></span>
+      </div>
+      <div class="band" title="Ningún activo renta lo mismo todos los meses: este es el rango realista de cashflow, y la media a largo plazo es ${euro(band.expected)}.">
+        <span class="band-lbl">Cashflow / mes${band === bandLev ? ' (con hipoteca)' : ''}</span>
+        <span class="band-range">
+          <b class="${band.min >= 0 ? '' : 'red'}">${band.min >= 0 ? '+' : '−'}${euro(Math.abs(band.min))}</b>
+          <i>a</i>
+          <b class="green">+${euro(band.max)}</b>
+        </span>
+        <span class="band-avg">media ${euro(band.expected)}/mes</span>
       </div>
       <span style="font-size:11px;color:var(--txt-dim)">Riesgo de vacancia/volatilidad</span>
       <div class="risk"><i style="width:${Math.round(a.metrics.vacancy_rate_risk*100)}%"></i></div>
@@ -379,6 +393,7 @@ function doBuy(assetId, financing) {
   logActivity(`🫵 Compraste ${asset.title}`, 'good');
   if (engine.ownedAssets.length === 1) showTip('first_asset');
   if (financing === 'leverage') showTip('leverage');
+  if (engine.ownedAssets.length === 2) showTip('yield_band');
   renderMarket();
   render();
 }
@@ -393,6 +408,12 @@ function renderPortfolio() {
   wrap.innerHTML = '';
   engine.ownedAssets.forEach(a => {
     const cf = engine.assetNetIncome(a);
+    const band = engine.incomeBand(a);
+    const delta = engine.assetYieldDelta(a);
+    // flecha del mes: cómo ha salido este activo dentro de su horquilla
+    const arrow = delta > 3 ? `<span class="pf-d up" title="Buen mes: +${delta}% sobre su media">▲</span>`
+                : delta < -3 ? `<span class="pf-d down" title="Mal mes: ${delta}% bajo su media">▼</span>`
+                : `<span class="pf-d flat" title="Mes en su media">•</span>`;
     let badge = a.financing === 'leverage'
       ? '<span class="badge green">VERDE</span>' : '<span class="badge cash">CONTADO</span>';
     if (a.refinanced) badge += '<span class="badge refi">REFI</span>';
@@ -406,8 +427,9 @@ function renderPortfolio() {
     el.innerHTML = `
       <img src="${a.sprite}" alt="">
       <div class="pf-t">${a.title} ${badge}</div>
-      <div class="pf-cf" style="color:${cf >= 0 ? 'var(--green)' : 'var(--red)'}">
-        ${cf >= 0 ? '+' : ''}${euro(cf)}</div>
+      <div class="pf-cf" style="color:${cf >= 0 ? 'var(--green)' : 'var(--red)'}"
+           title="Horquilla: ${euro(band.min)} a ${euro(band.max)}/mes · media ${euro(band.expected)}">
+        ${cf >= 0 ? '+' : ''}${euro(cf)} ${arrow}</div>
       <div class="pf-actions">
         ${refiBtn}
         <button class="btn-ghost btn-sm" data-sell="${a.instanceId}">Vender</button>
@@ -523,56 +545,107 @@ function renderActivity() {
 }
 
 /* --------------------------- MERCADO P2P -------------------------- */
+/*
+ * Un traspaso NO es "comprar un piso barato": compras el CAPITAL del rival y te
+ * subrogas en su hipoteca. Por eso el precio se calcula sobre la equity (no
+ * sobre el precio del inmueble) y la tarjeta enseña siempre la deuda que asumes.
+ * Un rival solo malvende si está ahogado; si no, pide prima sobre el mercado.
+ */
+const P2P_MAX_OFFERS = 2;          // como mucho dos tratos sobre la mesa a la vez
+const P2P_URGENT_DISCOUNT = [0.08, 0.16];   // rebaja de quien necesita liquidez YA
+const P2P_NORMAL_PREMIUM = [-0.03, 0.09];   // negativo = ligera rebaja; normalmente prima
+
+const rand = (a, b) => a + Math.random() * (b - a);
+
 function refreshP2P() {
   p2pOffers = [];
-  bots.forEach(b => {
+  shuffleArr(bots).forEach(b => {
+    if (p2pOffers.length >= P2P_MAX_OFFERS) return;
     const owned = b.engine.ownedAssets;
-    if (owned.length < 2 || Math.random() > 0.3) return;
-    const a = owned[Math.floor(Math.random() * owned.length)];
-    const equity = a.financing === 'leverage' ? a.financials.down_payment_required : a.financials.total_price;
-    const urgent = b.engine.cash < b.engine.fixedExpenses();  // necesita liquidez → descuento
-    const price = Math.round(equity * (urgent ? 0.82 : 0.92));
-    p2pOffers.push({ bot: b, instanceId: a.instanceId, asset: a, financing: a.financing, price, urgent });
+    if (owned.length < 2) return;
+    const urgent = b.engine.cash < b.engine.fixedExpenses();
+    // sin apuros solo vende de vez en cuando; ahogado, saca algo casi siempre
+    if (Math.random() > (urgent ? 0.85 : 0.22)) return;
+
+    // ahogado suelta su peor activo; si reequilibra, uno cualquiera
+    const a = urgent
+      ? owned.slice().sort((x, y) => b.engine.assetNetIncome(x) - b.engine.assetNetIncome(y))[0]
+      : owned[Math.floor(Math.random() * owned.length)];
+
+    const fair = b.engine.assetTransferValue(a);
+    const adj = urgent ? -rand(...P2P_URGENT_DISCOUNT) : rand(...P2P_NORMAL_PREMIUM);
+    const fees = Math.round(fair * engine.TRANSFER_COST_PCT);   // notaría/gestión
+    const price = Math.max(1, Math.round(fair * (1 + adj))) + fees;
+
+    p2pOffers.push({
+      bot: b, instanceId: a.instanceId, asset: a, financing: a.financing,
+      price, fees, urgent,
+      equity: Math.round(engine.assetEquity(a)),
+      deltaPct: Math.round(adj * 100),
+      credit: engine.canAssumeMortgage(a),
+    });
   });
 }
 
 function buyP2P(idx) {
   const o = p2pOffers[idx];
   if (!o) return;
+  if (!o.credit.ok) { toast('Hipoteca no asumible', o.credit.reason, 'bad'); return; }
   if (engine.cash < o.price) { toast('Sin liquidez', `Necesitas ${euro(o.price)} para cerrar este trato.`, 'bad'); return; }
 
-  // pago y transferencia del activo del bot al jugador
+  // pago y transferencia del activo del bot al jugador (con su hipoteca)
   engine.cash -= o.price;
-  o.bot.engine.cash += o.price;
+  o.bot.engine.cash += o.price - o.fees;   // la notaría no se la lleva el vendedor
   o.bot.engine.ownedAssets = o.bot.engine.ownedAssets.filter(x => x.instanceId !== o.instanceId);
 
-  const inst = { ...o.asset, financing: o.financing, instanceId: `${o.asset.id}#p2p${++p2pSeq}`, purchasedMonth: engine.month };
-  delete inst.cell; delete inst.citySprite;
-  engine.ownedAssets.push(inst);
+  const inst = engine.acquireAsset(o.asset, o.financing, `p2p${++p2pSeq}`);
   const placed = city.placeBuilding(o.asset.category);
   if (placed) { inst.cell = placed.cell; inst.citySprite = placed.key; city.emitCoins(); }
 
   p2pOffers.splice(idx, 1);
-  toast('🤝 Trato P2P cerrado',
-    `Compraste "${o.asset.title}" a ${o.bot.emoji} ${o.bot.name} por ${euro(o.price)}${o.urgent ? ' (venta forzada por liquidez)' : ''}.`, 'good');
+  const mort = o.financing === 'leverage'
+    ? ` Te subrogas en una hipoteca de ${euro(o.asset.financials.mortgage_available)}.` : '';
+  toast('🤝 Traspaso cerrado',
+    `Compraste el capital de "${o.asset.title}" a ${o.bot.emoji} ${o.bot.name} por ${euro(o.price)}.${mort}`, 'good');
+  logActivity(`🤝 Traspaso: ${o.asset.title} de ${o.bot.name}`, 'good');
+  if (o.financing === 'leverage') showTip('p2p_assume');
   render();
 }
 
 function renderP2P() {
   const panel = $('p2p-panel');
   const wrap = $('p2p');
-  if (!p2pOffers.length) { panel.style.display = 'none'; return; }
+  if (!p2pOffers.length) { panel.style.display = 'none'; wrap.innerHTML = ''; return; }
   panel.style.display = '';
-  wrap.innerHTML = p2pOffers.map((o, i) => `
+  wrap.innerHTML = p2pOffers.map((o, i) => {
+    const f = o.asset.financials;
+    const band = engine.incomeBand(o.asset);
+    const lev = o.financing === 'leverage';
+    // etiqueta honesta: rebaja o prima sobre el valor de mercado del capital
+    const tag = o.deltaPct < 0
+      ? `<b style="color:var(--green)">${o.deltaPct}% sobre mercado</b>`
+      : o.deltaPct > 0 ? `<b style="color:var(--amber)">+${o.deltaPct}% de prima</b>`
+      : 'a precio de mercado';
+    const blocked = !o.credit.ok || engine.cash < o.price;
+    return `
     <div class="p2p-offer ${o.urgent ? 'urgent' : ''}">
       <img src="${o.asset.sprite}" alt="">
       <div class="p2p-info">
         <div class="p2p-title">${o.asset.title}</div>
-        <div class="p2p-meta">${o.bot.emoji} ${o.bot.name} ${o.urgent ? '· <b style="color:var(--red)">liquidez urgente</b>' : '· reequilibra cartera'}</div>
-        <div class="p2p-nums">Precio <b>${euro(o.price)}</b> · <span style="color:var(--green)">+${euro(o.asset.financials.net_monthly_cashflow)}/mes</span></div>
+        <div class="p2p-meta">${o.bot.emoji} ${o.bot.name} ${o.urgent
+          ? '· <b style="color:var(--red)">liquidez urgente</b>' : '· reequilibra cartera'}</div>
+        <div class="p2p-nums">Pagas <b>${euro(o.price)}</b> por el capital · ${tag}
+          <small>(incl. ${euro(o.fees)} de gastos)</small></div>
+        <div class="p2p-sub">${lev
+          ? `⚠️ Asumes su hipoteca de <b>${euro(f.mortgage_available)}</b> (${euro(engine.mortgageCostOf(o.asset))}/mes)`
+          : `Activo libre de deuda · valor ${euro(f.total_price)}`}</div>
+        <div class="p2p-sub">Renta neta entre <b class="green">${euro(band.min)}</b> y
+          <b class="green">${euro(band.max)}</b>/mes</div>
+        ${o.credit.ok ? '' : `<div class="p2p-sub red">🚫 ${o.credit.reason}</div>`}
       </div>
-      <button class="btn-lever btn-sm" data-p2p="${i}">Comprar</button>
-    </div>`).join('');
+      <button class="btn-lever btn-sm" data-p2p="${i}" ${blocked ? 'disabled' : ''}>Traspasar</button>
+    </div>`;
+  }).join('');
   wrap.querySelectorAll('button[data-p2p]').forEach(b => b.onclick = () => buyP2P(+b.dataset.p2p));
 }
 
@@ -1198,6 +1271,8 @@ const TIPS = {
   red_debt: { t: '⚠️ Deuda roja (deuda mala)', d: 'Un préstamo de consumo resta liquidez cada mes y no te da nada a cambio. Penaliza tu IE. Úsalo solo si es imprescindible.' },
   car_finance: { t: '⚠️ Un coche es un pasivo', d: 'Financiar un coche crea deuda roja y su coste mensual sube tu listón de libertad. Un coche saca dinero de tu bolsillo: es un pasivo, no un activo.' },
   incorporate: { t: '💡 Optimización fiscal', d: 'Con rentas altas, una sociedad paga impuestos fijos en vez de un recargo. Estructurar bien tus inversiones protege tu flujo de caja.' },
+  p2p_assume: { t: '💡 Traspaso: compras capital, no el inmueble', d: 'En un traspaso pagas solo el capital que el vendedor había puesto y te subrogas en su hipoteca: la deuda pasa a ser tuya. Por eso el precio parece bajo — el inmueble sigue costando lo que costaba.' },
+  yield_band: { t: '💡 Los retornos son horquillas', d: 'Ningún activo renta lo mismo todos los meses: cada uno oscila dentro de su horquilla. Cuanto más riesgo, más ancha la banda. Diversificar no sube la media… pero estabiliza tu IE.' },
 };
 function tipSeen(id) { try { return JSON.parse(localStorage.getItem(TIP_KEY) || '[]').includes(id); } catch (e) { return false; } }
 function markTip(id) { try { const a = JSON.parse(localStorage.getItem(TIP_KEY) || '[]'); if (!a.includes(id)) { a.push(id); localStorage.setItem(TIP_KEY, JSON.stringify(a)); } } catch (e) {} }
