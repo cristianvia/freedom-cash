@@ -62,11 +62,12 @@ export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggre
     }
   }
 
-  // 1) Optimización fiscal: constituir sociedad cuando compensa
-  if (engine.taxVehicle === 'personal' &&
-      engine.incorporationBenefit() > 40 &&
-      engine.cash > engine.COMPANY_SETUP + engine.fixedExpenses() * 2) {
-    engine.incorporate();
+  // 1) Optimización fiscal: sube de estructura cuando el asesor lo recomienda
+  //    y le queda colchón para pagar la constitución sin ahogarse
+  const advice = engine.taxAdvice && engine.taxAdvice();
+  if (advice && advice.best && advice.best.saving > 40 &&
+      engine.cash > advice.best.setup + engine.fixedExpenses() * 2) {
+    engine.adoptTax(advice.best.structure.id);
   }
 
   // 2) Refinanciar una hipoteca si los tipos han subido (y le sobra tiempo)

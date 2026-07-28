@@ -153,8 +153,12 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 
 - **Apalancamiento:** paga solo la entrada; las subidas de tipos encarecen tu cuota.
 - **Refinanciar:** comisión del 3% de la hipoteca → cuota −25% y tipo fijo (inmune a subidas).
-- **Régimen fiscal:** de persona física (recargo del 25% sobre renta pasiva > 2.000 €/mes) a
-  **sociedad** (coste fijo). Solo compensa a rentas altas — como en la vida real.
+- **Escalera fiscal (todo legal):** 👤 persona física → 🏢 sociedad → 🏛️ holding → 🏗️ SOCIMI.
+  El IRPF es real: alquileres y negocios van a la **base general** (19→47%) y dividendos y
+  plusvalías a la **del ahorro** (19→30%), con mínimo personal exento. Los inmuebles
+  **amortizan** (3% anual sobre el 70% del precio): deducen sin salida de caja. Cada peldaño
+  tiene coste de constitución y de mantenimiento, así que subir antes de tiempo te hace
+  **perder** dinero: el asesor te dice el ahorro, el payback y qué te falta para el siguiente.
 - **Mercado P2P (traspasos):** compras el **capital** de un rival y **te subrogas en su hipoteca**
   — por eso el precio es bajo: el inmueble sigue costando lo que costaba. El precio parte del
   valor de traspaso (capital revalorizado ~9%/año) y solo hay descuento real (−8% a −16%) si el

@@ -92,12 +92,12 @@ export class EconomyEngine {
     this.history = [];       // snapshots de IE por mes (para la gráfica)
     this._seq = 0;
 
-    // --- Vehículo fiscal (persona física vs sociedad) ---
+    // --- Estructura fiscal: 'personal' → 'company' → 'holding' → 'socimi' ---
     this.taxVehicle = 'personal';
-    this.TAX_THRESHOLD = 2000;  // renta pasiva/mes exenta de recargo (persona física)
-    this.PERSONAL_TAX = 0.25;   // recargo sobre el exceso de renta pasiva (persona física)
-    this.COMPANY_SETUP = 4000;  // coste único de constituir la sociedad
-    this.COMPANY_MONTHLY = 220; // gestoría/impuestos fijos de la sociedad
+    this.taxData = null;        // se inyecta con setTaxData() (tax.json)
+    // compat con partidas guardadas y con la UI antigua
+    this.COMPANY_SETUP = 4000;
+    this.COMPANY_MONTHLY = 220;
 
     // --- Refinanciación de hipotecas ---
     this.REFI_FEE_PCT = 0.03;   // comisión (sobre la hipoteca) por refinanciar
@@ -411,13 +411,205 @@ export class EconomyEngine {
   }
 
   /* --------------------------- FISCALIDAD --------------------------- */
+  /*
+   * Los impuestos son la mitad del juego de las finanzas, así que aquí no hay
+   * un porcentaje mágico: hay una escalera de estructuras reales (persona
+   * física → SL → holding → SOCIMI), base imponible con amortizaciones
+   * deducibles, y un asesor que dice cuándo compensa dar el salto.
+   */
 
-  /** Coste fiscal mensual según el vehículo (persona física vs sociedad). */
-  taxCost() {
-    if (this.taxVehicle === 'company') return this.COMPANY_MONTHLY;
-    // persona física: recargo sobre el exceso de renta pasiva
-    const excess = Math.max(0, this.totalPassiveIncome() - this.TAX_THRESHOLD);
-    return excess * this.PERSONAL_TAX;
+  /** Inyecta el catálogo fiscal (tax.json). Sin él se usa un IRPF simplificado. */
+  setTaxData(data) { this.taxData = data; }
+
+  /** Todas las estructuras disponibles, en orden de escalera. */
+  taxStructures() { return (this.taxData && this.taxData.structures) || []; }
+
+  taxStructure(id = this.taxVehicle) {
+    return this.taxStructures().find(s => s.id === id) || null;
+  }
+
+  /** Peldaño actual (0 = persona física). */
+  taxTier(id = this.taxVehicle) {
+    const i = this.taxStructures().findIndex(s => s.id === id);
+    return i < 0 ? 0 : i;
+  }
+
+  /**
+   * Amortización mensual deducible: solo la construcción (~70% del precio) se
+   * amortiza, al 3% anual. Es gasto sin salida de caja — la razón fiscal de que
+   * el ladrillo sea tan eficiente.
+   */
+  monthlyAmortization() {
+    const cfg = (this.taxData && this.taxData.amortization) || { building_share: 0.7, annual_rate: 0.03 };
+    return this.ownedAssets
+      .filter(a => a.category === 'real_estate')
+      .reduce((s, a) => s + a.financials.total_price * cfg.building_share * cfg.annual_rate / 12, 0);
+  }
+
+  /**
+   * Base imponible mensual partida en dos, como en el IRPF real:
+   *  - general: alquileres y negocios (escala hasta el 47%)
+   *  - ahorro: dividendos y plusvalías (escala 19-30%)
+   * Las amortizaciones descuentan de la general, que es donde están los pisos.
+   */
+  taxableBaseSplit() {
+    const savingsCats = (this.taxData && this.taxData.savings_categories) || ['financial'];
+    let general = 0, savings = 0;
+    this.ownedAssets.forEach(a => {
+      const net = this.assetNetIncome(a);
+      if (savingsCats.includes(a.category)) savings += net; else general += net;
+    });
+    return {
+      general: Math.max(0, general - this.monthlyAmortization()),
+      savings: Math.max(0, savings),
+    };
+  }
+
+  /** Base imponible total del mes (lo que se enseña en el dashboard). */
+  taxableBase() {
+    const b = this.taxableBaseSplit();
+    return b.general + b.savings;
+  }
+
+  /** Cuota mensual de IRPF sobre una renta mensual, por tramos anuales. */
+  irpfOn(monthlyBase, scale = 'general') {
+    const key = scale === 'savings' ? 'irpf_savings_annual' : 'irpf_general_annual';
+    const brackets = (this.taxData && this.taxData[key]) || [{ upTo: null, rate: 0.25 }];
+    let annual = Math.max(0, monthlyBase) * 12;
+    let prev = 0, due = 0;
+    for (const b of brackets) {
+      const top = b.upTo == null ? Infinity : b.upTo;
+      const slice = Math.max(0, Math.min(annual, top) - prev);
+      due += slice * b.rate;
+      prev = top;
+      if (annual <= top) break;
+    }
+    return due / 12;
+  }
+
+  /** Coste fiscal mensual de una estructura concreta con TU situación actual. */
+  taxCostFor(id) {
+    const s = this.taxStructure(id);
+    const split = this.taxableBaseSplit();
+    const base = split.general + split.savings;
+    if (!s) {
+      // sin datos cargados: IRPF plano de respaldo
+      return Math.max(0, base - 2000) * 0.25;
+    }
+    // persona física: cada base por su escala, tras el mínimo personal exento
+    if (s.kind === 'irpf') {
+      const allowance = ((this.taxData && this.taxData.personal_allowance_annual) || 0) / 12;
+      const general = Math.max(0, split.general - allowance);
+      const savings = Math.max(0, split.savings - Math.max(0, allowance - split.general));
+      return this.irpfOn(general, 'general') + this.irpfOn(savings, 'savings');
+    }
+    // sociedades: tipo fijo sobre la base tras gastos deducibles + coste fijo
+    return base * (1 - (s.baseCut || 0)) * (s.rate || 0) + (s.monthly || 0);
+  }
+
+  /** Coste fiscal mensual de la estructura vigente. */
+  taxCost() { return this.taxCostFor(this.taxVehicle); }
+
+  /** Tipo efectivo (%) que estás pagando sobre tu renta pasiva. */
+  effectiveTaxRate() {
+    const gross = this.totalPassiveIncome();
+    return gross > 0 ? (this.taxCost() / gross) * 100 : 0;
+  }
+
+  /** ¿Cumples los requisitos para constituir esta estructura? */
+  taxRequirementsMet(id) {
+    const s = this.taxStructure(id);
+    if (!s) return { ok: false, reason: 'Estructura desconocida' };
+    const req = s.requires || {};
+    if (req.structure && this.taxTier() < this.taxTier(req.structure)) {
+      const prev = this.taxStructure(req.structure);
+      return { ok: false, reason: `Antes necesitas constituir la ${prev ? prev.label : req.structure}` };
+    }
+    if (req.passiveIncome && this.totalPassiveIncome() < req.passiveIncome) {
+      return { ok: false, reason: `Necesitas ${Math.round(req.passiveIncome).toLocaleString('es-ES')} €/mes de renta pasiva` };
+    }
+    if (req.realEstateAssets) {
+      const n = this.ownedAssets.filter(a => a.category === 'real_estate').length;
+      if (n < req.realEstateAssets) {
+        return { ok: false, reason: `Necesitas ${req.realEstateAssets} inmuebles (tienes ${n})` };
+      }
+    }
+    return { ok: true };
+  }
+
+  /** ¿Puedes dar el salto a esta estructura ahora mismo? */
+  canAdoptTax(id) {
+    if (id === this.taxVehicle) return { ok: false, reason: 'Ya es tu estructura actual' };
+    if (this.taxTier(id) < this.taxTier()) return { ok: false, reason: 'No se puede bajar de estructura' };
+    const req = this.taxRequirementsMet(id);
+    if (!req.ok) return req;
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason };
+    const cost = (this.taxStructure(id) || {}).setup || 0;
+    return { ok: this.cash >= cost, reason: 'Liquidez insuficiente para la constitución', cost };
+  }
+
+  /** Constituye la estructura: paga el coste único y cambia de régimen. */
+  adoptTax(id) {
+    const c = this.canAdoptTax(id);
+    if (!c.ok) return { ok: false, reason: c.reason };
+    this.spendAction();
+    this.cash -= c.cost;
+    this.taxVehicle = id;
+    return { ok: true, cost: c.cost, structure: this.taxStructure(id) };
+  }
+
+  /**
+   * El asesor fiscal: compara todas las estructuras con TU renta de hoy y dice
+   * cuál es la óptima, cuánto ahorrarías y, si aún no compensa, qué falta.
+   */
+  taxAdvice() {
+    const list = this.taxStructures();
+    if (!list.length) return null;
+    const current = this.taxCost();
+    const options = list.map(s => {
+      const req = this.taxRequirementsMet(s.id);
+      const cost = this.taxCostFor(s.id);
+      return {
+        structure: s,
+        monthlyCost: cost,
+        saving: current - cost,               // €/mes que te ahorrarías
+        eligible: req.ok,
+        blockedBy: req.ok ? null : req.reason,
+        setup: s.setup || 0,
+        // meses en recuperar el coste de constitución
+        payback: current - cost > 0 ? Math.ceil((s.setup || 0) / (current - cost)) : null,
+        isCurrent: s.id === this.taxVehicle,
+      };
+    });
+    // el mejor movimiento: el que más ahorra, sea alcanzable y se amortice
+    const best = options
+      .filter(o => !o.isCurrent && o.eligible && o.saving > 0 && o.payback != null && o.payback <= 36)
+      .sort((a, b) => b.saving - a.saving)[0] || null;
+    // el siguiente peldaño aunque todavía no llegues (para saber a qué aspirar)
+    const next = options.find(o => this.taxTier(o.structure.id) === this.taxTier() + 1) || null;
+    return { options, best, next, current };
+  }
+
+  /* --- compat: la UI y la IA antiguas hablaban solo de "sociedad" --- */
+
+  /** Ahorro mensual estimado al pasar al siguiente peldaño recomendado. */
+  incorporationBenefit() {
+    const adv = this.taxAdvice();
+    return adv && adv.best ? adv.best.saving : 0;
+  }
+
+  canIncorporate() {
+    const adv = this.taxAdvice();
+    if (!adv || !adv.best) return { ok: false, reason: 'Ninguna estructura te compensa todavía' };
+    return this.canAdoptTax(adv.best.structure.id);
+  }
+
+  /** Adopta la estructura que recomiende el asesor. */
+  incorporate() {
+    const adv = this.taxAdvice();
+    if (!adv || !adv.best) return { ok: false, reason: 'Ninguna estructura te compensa todavía' };
+    return this.adoptTax(adv.best.structure.id);
   }
 
   /** Renta pasiva DESPUÉS de impuestos: lo que de verdad cuenta para el IE. */
@@ -731,32 +923,6 @@ export class EconomyEngine {
     return { ok: true, fee: c.fee };
   }
 
-  /* ------------------------- SOCIEDAD ------------------------------- */
-
-  /** Ahorro fiscal mensual estimado al pasar a sociedad (para decidir). */
-  incorporationBenefit() {
-    if (this.taxVehicle === 'company') return 0;
-    const excess = Math.max(0, this.totalPassiveIncome() - this.TAX_THRESHOLD);
-    return excess * this.PERSONAL_TAX - this.COMPANY_MONTHLY;
-  }
-
-  canIncorporate() {
-    if (this.taxVehicle === 'company') return { ok: false, reason: 'Ya eres sociedad' };
-    const act = this.canAct();
-    if (!act.ok) return { ok: false, reason: act.reason, cost: this.COMPANY_SETUP };
-    return { ok: this.cash >= this.COMPANY_SETUP, reason: 'Liquidez insuficiente', cost: this.COMPANY_SETUP };
-  }
-
-  /** Constituye una sociedad: coste único, cambia el régimen fiscal. */
-  incorporate() {
-    const c = this.canIncorporate();
-    if (!c.ok) return { ok: false, reason: c.reason };
-    this.spendAction();
-    this.cash -= this.COMPANY_SETUP;
-    this.taxVehicle = 'company';
-    return { ok: true };
-  }
-
   /* --------------------------- EVENTOS ------------------------------ */
 
   /** ¿Se cumple la condición 'requires' de un evento en el estado actual? */
@@ -965,6 +1131,11 @@ export class EconomyEngine {
       netPassiveIncome: Math.round(this.netPassiveIncome()),
       taxCost: Math.round(this.taxCost()),
       taxVehicle: this.taxVehicle,
+      taxLabel: (this.taxStructure() || {}).label || 'Persona física',
+      taxEmoji: (this.taxStructure() || {}).emoji || '👤',
+      taxRate: Math.round(this.effectiveTaxRate() * 10) / 10,
+      amortization: Math.round(this.monthlyAmortization()),
+      taxableBase: Math.round(this.taxableBase()),
       fixedExpenses: this.fixedExpenses(),
       greenDebt: Math.round(this.totalGreenDebtPayment()),
       redDebt: Math.round(this.totalRedDebtPayment()),

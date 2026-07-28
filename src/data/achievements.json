@@ -276,9 +276,33 @@
       "id": "tax_optimizer",
       "emoji": "🧾",
       "title": "Optimizador fiscal",
-      "desc": "Ahorra más de 1.000 €/mes en impuestos gracias a tu estructura.",
+      "desc": "Baja tu tipo efectivo por debajo del 15% teniendo renta pasiva de sobra.",
       "cat": "estrategia", "tier": "oro",
-      "rules": [{ "run": "tax_savings", "gte": 1000 }]
+      "rules": [{ "stat": "taxRate", "lte": 15 }, { "stat": "netPassiveIncome", "gte": 4000 }]
+    },
+    {
+      "id": "tax_holding",
+      "emoji": "🏛️",
+      "title": "Estructura de grupo",
+      "desc": "Constituye una holding sobre tus sociedades.",
+      "cat": "estrategia", "tier": "oro",
+      "rules": [{ "life": "tax_holding", "gte": 1 }]
+    },
+    {
+      "id": "tax_socimi",
+      "emoji": "🏗️",
+      "title": "SOCIMI",
+      "desc": "Llega al régimen fiscal más eficiente del sistema: 5 inmuebles y una SOCIMI.",
+      "cat": "estrategia", "tier": "platino",
+      "rules": [{ "life": "tax_socimi", "gte": 1 }]
+    },
+    {
+      "id": "amortizer",
+      "emoji": "🧱",
+      "title": "El ladrillo desgrava",
+      "desc": "Acumula 1.000 €/mes de amortizaciones deducibles con tus inmuebles.",
+      "cat": "estrategia", "tier": "plata",
+      "rules": [{ "stat": "amortization", "gte": 1000 }]
     },
     {
       "id": "first_p2p",

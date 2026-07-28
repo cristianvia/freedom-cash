@@ -23,6 +23,7 @@ const L = data('lifestyle.json').actions;
 const V = data('vehicles.json').vehicles;
 const G = data('gigs.json').gigs;
 const MODES = data('difficulty.json').modes;
+const TAX = data('tax.json');
 
 const RUNS = parseInt(process.argv[2], 10) || 60;
 const MODE = MODES.find(m => m.id === process.argv[3]) || MODES[0];
@@ -37,6 +38,7 @@ for (const profile of P) {
   let wins = 0;
   for (let n = 0; n < RUNS; n++) {
     const e = new EconomyEngine(profile, E, MODE);
+    e.setTaxData(TAX);
     let m = 0;
     while (m < MAX_MONTHS && !e.hasWon() && !e.hasLost()) {
       takeBotTurn(e, A, L, V, 0.7, G);

@@ -134,15 +134,27 @@
       </div>
 
       <div class="panel" id="panel-tax" data-tab="money">
-        <h2>Régimen fiscal</h2>
+        <h2>Fiscalidad</h2>
+        <div class="tax-ladder" id="tax-ladder"></div>
         <div class="stat">
           <span class="label">Estructura</span><span class="val" id="tax-vehicle">Persona física</span>
         </div>
         <div class="stat">
-          <span class="label">Impuestos / mes</span><span class="val red" id="tax-cost">0 €</span>
+          <span class="label">Renta pasiva bruta</span><span class="val" id="tax-gross">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label">− Amortizaciones <small style="opacity:.6">(deducible)</small></span>
+          <span class="val green" id="tax-amort">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label">= Base imponible</span><span class="val" id="tax-base">0 €</span>
+        </div>
+        <div class="stat">
+          <span class="label">Impuestos / mes <small style="opacity:.6">(tipo efectivo <span id="tax-rate">0</span>%)</small></span>
+          <span class="val red" id="tax-cost">0 €</span>
         </div>
         <button class="btn-ghost btn-sm" id="btn-incorporate" style="width:100%;margin-top:10px">
-          Constituir sociedad · 4.000 €</button>
+          Ver estructuras fiscales</button>
         <div class="hint" id="tax-hint"></div>
       </div>
 

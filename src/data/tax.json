@@ -1,0 +1,92 @@
+{
+  "$schema_note": "Escalera de estructuras fiscales, de menor a mayor. Todo es optimización LEGAL: cada peldaño existe de verdad, tiene un coste de constitución y de mantenimiento, y solo compensa a partir de cierta renta. 'rate' es el tipo efectivo sobre la base imponible mensual; 'baseCut' es la reducción de base propia de la estructura.",
+
+  "$irpf_note": "En España NO toda la renta pasiva tributa igual. Alquileres y negocios van a la BASE GENERAL (escala progresiva hasta el 47%); dividendos y plusvalías van a la BASE DEL AHORRO (19-30%). Esa diferencia es justo la que hace que a partir de cierta renta inmobiliaria compense una sociedad.",
+
+  "personal_allowance_annual": 5550,
+  "$allowance_note": "Mínimo personal y familiar: los primeros 5.550 €/año no tributan. Solo lo tiene la persona física — una sociedad paga desde el primer euro.",
+
+  "irpf_general_annual": [
+    { "upTo": 12450, "rate": 0.19 },
+    { "upTo": 20200, "rate": 0.24 },
+    { "upTo": 35200, "rate": 0.30 },
+    { "upTo": 60000, "rate": 0.37 },
+    { "upTo": 300000, "rate": 0.45 },
+    { "upTo": null, "rate": 0.47 }
+  ],
+
+  "irpf_savings_annual": [
+    { "upTo": 6000, "rate": 0.19 },
+    { "upTo": 50000, "rate": 0.21 },
+    { "upTo": 200000, "rate": 0.23 },
+    { "upTo": 300000, "rate": 0.27 },
+    { "upTo": null, "rate": 0.30 }
+  ],
+
+  "$base_note": "Qué categoría de activo va a cada base imponible.",
+  "savings_categories": ["financial"],
+
+  "amortization": {
+    "building_share": 0.7,
+    "annual_rate": 0.03,
+    "note": "Amortización del inmueble: solo la construcción (≈70% del precio) se amortiza, al 3% anual. Es gasto deducible sin salida de caja — la razón fiscal de que el ladrillo sea tan eficiente."
+  },
+
+  "structures": [
+    {
+      "id": "personal",
+      "emoji": "👤",
+      "label": "Persona física",
+      "short": "IRPF",
+      "setup": 0,
+      "monthly": 0,
+      "kind": "irpf",
+      "baseCut": 0,
+      "desc": "Tributas por IRPF. Ojo: alquileres y negocios van a la base general (19% → 47%), solo dividendos y plusvalías van a la del ahorro (19% → 30%). Sin costes fijos.",
+      "lesson": "Con renta baja, la estructura más simple es la más rentable: cualquier sociedad tiene costes fijos que te comerían el ahorro.",
+      "requires": {}
+    },
+    {
+      "id": "company",
+      "emoji": "🏢",
+      "label": "Sociedad (SL)",
+      "short": "SL",
+      "setup": 4000,
+      "monthly": 220,
+      "kind": "flat",
+      "rate": 0.25,
+      "baseCut": 0.18,
+      "desc": "Impuesto de Sociedades al 25% fijo, en vez de una escala que sube hasta el 47%. Además la gestoría, el asesor y los gastos de la actividad pasan a ser deducibles (−18% de base).",
+      "lesson": "La sociedad no es un truco: cambias una escala que llega al 47% por un tipo fijo del 25%, y a cambio pagas gestoría todos los meses. Solo gana cuando tu renta pasiva es alta y estable.",
+      "requires": { "passiveIncome": 2500 }
+    },
+    {
+      "id": "holding",
+      "emoji": "🏛️",
+      "label": "Holding",
+      "short": "Holding",
+      "setup": 18000,
+      "monthly": 560,
+      "kind": "flat",
+      "rate": 0.25,
+      "baseCut": 0.35,
+      "desc": "Una matriz sobre tus sociedades. Los dividendos y plusvalías que suben de una filial a la matriz están exentos al 95%, así que reinvertir entre tus empresas ya no paga peaje (−35% de base).",
+      "lesson": "El holding no baja el tipo: elimina la doble imposición al mover dinero entre tus propias sociedades. Su valor está en reinvertir, no en sacar el dinero.",
+      "requires": { "passiveIncome": 8000, "structure": "company" }
+    },
+    {
+      "id": "socimi",
+      "emoji": "🏗️",
+      "label": "SOCIMI",
+      "short": "SOCIMI",
+      "setup": 65000,
+      "monthly": 1600,
+      "kind": "flat",
+      "rate": 0.02,
+      "baseCut": 0.10,
+      "desc": "Sociedad cotizada de inversión inmobiliaria: tributa al 0% en Sociedades a cambio de mantener los inmuebles 3 años y repartir la mayor parte del beneficio. Costes de cumplimiento altísimos.",
+      "lesson": "El régimen más eficiente del sistema español existe… y exige un patrimonio inmobiliario grande y mucha burocracia. La optimización fiscal escala con el tamaño.",
+      "requires": { "passiveIncome": 25000, "realEstateAssets": 5, "structure": "holding" }
+    }
+  ]
+}

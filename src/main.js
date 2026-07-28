@@ -36,8 +36,8 @@ const TUTORIAL_STEPS = [
     text: 'Cada activo que compras aparece construido aquí, organizado por distritos: 🏠 inmuebles, 💻 negocios y 📈 financiero.' },
   { sel: '#panel-debt', title: 'Deuda verde vs roja',
     text: 'La <b style="color:#2ee6a0">deuda verde</b> (hipotecas de activos) se autopaga: es buena. La <b style="color:#ff5d6c">deuda roja</b> (préstamos de consumo) resta liquidez y penaliza tu IE.' },
-  { sel: '#panel-tax', title: 'Estrategia: fiscalidad y refi',
-    text: 'Con renta pasiva alta, constituir una <b>sociedad</b> baja tus impuestos. Y desde tu portfolio puedes <b>refinanciar</b> hipotecas para reducir cuotas.' },
+  { sel: '#panel-tax', title: 'Estrategia: fiscalidad',
+    text: 'Los impuestos son media partida. Hay una <b>escalera</b> de estructuras legales — persona física → sociedad → holding → SOCIMI — y tu asesor te dice cuándo compensa subir… y cuándo subir te haría perder dinero. Los inmuebles además <b>amortizan</b>: deducen sin que salga dinero de tu bolsillo.' },
   { sel: '#panel-rank', title: 'La carrera por la libertad',
     text: 'No juegas solo: compites contra bots rivales. Quien alcance la libertad financiera <b>primero</b>, gana la partida.' },
   { sel: '#btn-endturn', title: 'Pasa de mes y cobra',
@@ -73,7 +73,7 @@ const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
 async function loadData() {
-  const [a, p, e, l, v, d, g, pr, ac] = await Promise.all([
+  const [a, p, e, l, v, d, g, pr, ac, tx] = await Promise.all([
     fetch('src/data/assets_database.json').then(r => r.json()),
     fetch('src/data/profiles.json').then(r => r.json()),
     fetch('src/data/events.json').then(r => r.json()),
@@ -83,6 +83,7 @@ async function loadData() {
     fetch('src/data/gigs.json').then(r => r.json()),
     fetch('src/data/professions.json').then(r => r.json()),
     fetch('src/data/achievements.json').then(r => r.json()),
+    fetch('src/data/tax.json').then(r => r.json()),
   ]);
   ach = new Achievements(ac);
   DATA.assets = a.assets;
@@ -93,6 +94,7 @@ async function loadData() {
   DATA.modes = d.modes;
   DATA.gigs = g.gigs;
   DATA.professions = pr.professions;
+  DATA.tax = tx;
 
   // todos los sprites (suelo, decoración, edificios y coches) por su clave
   const TILE_KEYS = ['t_ground', 't_grass', 't_plaza', 't_tree', 't_water', 't_road'];
@@ -212,6 +214,7 @@ async function startGame(profile, mode = null, profession = null) {
   mode = mode || DATA.modes[0];
   profession = profession || DATA.professions[0];
   engine = new EconomyEngine(profile, DATA.events, mode);
+  engine.setTaxData(DATA.tax);
   engine.professionId = profession.id;
   buildCatalog();
   ended = false;
@@ -230,6 +233,7 @@ async function startGame(profile, mode = null, profession = null) {
   const rivalNames = shuffleArr(['Ana', 'Marcos', 'Lucía', 'Diego', 'Sara', 'Javi', 'Nora', 'Pablo']);
   bots = others.map((bp, i) => {
     const be = new EconomyEngine(bp, DATA.events, mode);
+    be.setTaxData(DATA.tax);
     be.professionId = profPool.length ? profPool[Math.floor(Math.random() * profPool.length)].id : 'none';
     return { name: rivalNames[i] || 'Rival', emoji: bp.emoji, engine: be, aggr: 0.5 + i * 0.15 };
   });
@@ -508,6 +512,7 @@ function doBuy(assetId, financing) {
   if (engine.ownedAssets.length === 1) showTip('first_asset');
   if (financing === 'leverage') showTip('leverage');
   if (engine.ownedAssets.length === 2) showTip('yield_band');
+  if (asset.category === 'real_estate') showTip('amortization');
   renderMarket();
   render();
 }
@@ -1031,12 +1036,7 @@ function wireDebtButtons() {
     if (r.ok) { toast('Deuda roja amortizada', 'Has cancelado un préstamo de consumo.', 'good'); render(); }
     else toast('No se pudo amortizar', r.reason, 'bad');
   };
-  $('btn-incorporate').onclick = () => {
-    const r = engine.incorporate();
-    if (r.ok) ach.bumpLife('incorporations');
-    if (r.ok) { toast('🏢 Sociedad constituida', 'A partir de ahora tributas como sociedad: impuestos fijos en lugar de recargo por renta alta.', 'good'); showTip('incorporate'); render(); }
-    else toast('No se pudo constituir', r.reason, 'bad');
-  };
+  $('btn-incorporate').onclick = () => showTaxAdvisor();
   $('btn-vehicle').onclick = showVehicleChooser;
 }
 
@@ -1075,26 +1075,7 @@ function render() {
   $('flow-vehicle').textContent = '−' + euro(s.vehicleCost);
   $('flow-red').textContent = '−' + euro(s.redDebt);
 
-  // Régimen fiscal
-  $('tax-vehicle').textContent = s.taxVehicle === 'company' ? '🏢 Sociedad' : '👤 Persona física';
-  $('tax-cost').textContent = '−' + euro(s.taxCost);
-  const incBtn = $('btn-incorporate');
-  const hint = $('tax-hint');
-  if (s.taxVehicle === 'company') {
-    incBtn.style.display = 'none';
-    hint.className = 'hint good';
-    hint.textContent = '✓ Estructura optimizada. Impuestos fijos de sociedad.';
-  } else {
-    incBtn.style.display = '';
-    const benefit = Math.round(engine.incorporationBenefit());
-    const affordable = engine.cash >= engine.COMPANY_SETUP;
-    incBtn.disabled = !affordable;
-    incBtn.classList.toggle('hot', benefit > 0 && affordable);
-    hint.className = 'hint' + (benefit > 0 ? ' good' : '');
-    hint.textContent = benefit > 0
-      ? `Como sociedad ahorrarías ~${euro(benefit)}/mes en impuestos.`
-      : 'Con renta pasiva alta, la sociedad reduce impuestos. Aún no compensa.';
-  }
+  renderTax(s);
   const netEl = $('flow-net');
   netEl.textContent = (cf >= 0 ? '+' : '−') + euro(Math.abs(cf));
   netEl.className = 'val ' + (cf >= 0 ? 'green' : 'red');
@@ -1144,6 +1125,115 @@ function render() {
   drawSparkline();
   refreshView();
   saveGame();
+}
+
+/* --------------------------- FISCALIDAD --------------------------- */
+/*
+ * Los impuestos son la mitad del juego de las finanzas personales, así que
+ * aquí se ven: base imponible, amortizaciones deducibles, tipo efectivo, y un
+ * asesor que dice cuándo compensa subir de estructura — y cuándo NO, que es la
+ * lección que más se salta la gente.
+ */
+function renderTax(s) {
+  const adv = engine.taxAdvice();
+  $('tax-vehicle').textContent = `${s.taxEmoji} ${s.taxLabel}`;
+  $('tax-gross').textContent = euro(s.passiveIncome);
+  $('tax-amort').textContent = '−' + euro(s.amortization);
+  $('tax-base').textContent = euro(s.taxableBase);
+  $('tax-cost').textContent = '−' + euro(s.taxCost);
+  $('tax-rate').textContent = s.taxRate;
+
+  // escalera: en qué peldaño estás y cuáles quedan
+  const tier = engine.taxTier();
+  $('tax-ladder').innerHTML = engine.taxStructures().map((st, i) => `
+    <span class="tax-step ${i === tier ? 'on' : ''} ${i < tier ? 'past' : ''}"
+          title="${st.label}: ${st.desc}">${st.emoji}<small>${st.short}</small></span>`).join('');
+
+  const btn = $('btn-incorporate');
+  const hint = $('tax-hint');
+  if (!adv) { btn.style.display = 'none'; hint.textContent = ''; return; }
+  btn.style.display = '';
+  btn.disabled = false;
+  const best = adv.best;
+  btn.classList.toggle('hot', !!best);
+  btn.textContent = best
+    ? `${best.structure.emoji} Constituir ${best.structure.label} · ${euro(best.setup)}`
+    : 'Ver estructuras fiscales';
+  if (best) {
+    hint.className = 'hint good';
+    hint.innerHTML = `Tu asesor lo tiene claro: la <b>${best.structure.label}</b> te ahorraría
+      <b>${euro(best.saving)}/mes</b>. Recuperas la constitución en ${best.payback} meses.`;
+  } else if (adv.next && adv.next.blockedBy) {
+    hint.className = 'hint';
+    hint.innerHTML = `Siguiente peldaño: <b>${adv.next.structure.label}</b>. ${adv.next.blockedBy}.`;
+  } else if (adv.next) {
+    hint.className = 'hint';
+    hint.innerHTML = `La <b>${adv.next.structure.label}</b> aún no compensa: sus costes fijos
+      se comerían el ahorro. Crece primero.`;
+  } else {
+    hint.className = 'hint good';
+    hint.textContent = '✓ Estás en la estructura más eficiente que existe.';
+  }
+}
+
+/** Modal del asesor: compara todas las estructuras con tu renta de hoy. */
+function showTaxAdvisor() {
+  const adv = engine.taxAdvice();
+  if (!adv) return;
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="modal tax-modal">
+      <h2>🧾 Tu asesor fiscal</h2>
+      <p class="lead">Todo esto es optimización <b>legal</b>: cada estructura existe, tiene su
+        coste de constitución y de mantenimiento, y solo compensa a partir de cierta renta.
+        Con tu base imponible de <b>${euro(engine.taxableBase())}/mes</b>, así queda hoy:</p>
+      <div class="tax-list">
+        ${adv.options.map(o => {
+          const st = o.structure;
+          const state = o.isCurrent ? 'current' : o.eligible ? (o.saving > 0 ? 'better' : 'worse') : 'locked';
+          const badge = o.isCurrent ? '<span class="tx-b now">Tu estructura</span>'
+            : !o.eligible ? `<span class="tx-b lock">🔒 ${o.blockedBy}</span>`
+            : o.saving > 0 ? `<span class="tx-b good">Ahorras ${euro(o.saving)}/mes</span>`
+            : `<span class="tx-b bad">Te costaría ${euro(-o.saving)}/mes más</span>`;
+          const canDo = engine.canAdoptTax(st.id);
+          return `
+          <div class="tax-opt ${state}">
+            <div class="tx-head">
+              <span class="tx-em">${st.emoji}</span>
+              <div class="tx-title"><b>${st.label}</b>${badge}</div>
+            </div>
+            <div class="tx-desc">${st.desc}</div>
+            <div class="tx-lesson">💡 ${st.lesson}</div>
+            <div class="tx-nums">
+              <span>Impuestos<b>${euro(o.monthlyCost)}/mes</b></span>
+              <span>Constitución<b>${o.setup ? euro(o.setup) : '—'}</b></span>
+              <span>Recuperas en<b>${o.payback != null ? `${o.payback} meses` : '—'}</b></span>
+            </div>
+            ${o.isCurrent ? '' : `<button class="btn-lever btn-sm tx-go" data-tax="${st.id}"
+              ${canDo.ok ? '' : 'disabled'} title="${canDo.ok ? 'Constituir' : canDo.reason}">
+              ${canDo.ok ? `Constituir · ${euro(o.setup)}` : canDo.reason}</button>`}
+          </div>`;
+        }).join('')}
+      </div>
+      <button class="btn-primary" id="tax-close" style="width:100%;margin-top:14px">Cerrar</button>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#tax-close').onclick = () => ov.remove();
+  ov.querySelectorAll('button[data-tax]').forEach(b => {
+    b.onclick = () => {
+      const r = engine.adoptTax(b.dataset.tax);
+      if (!r.ok) { toast('No se pudo constituir', r.reason, 'bad'); return; }
+      ov.remove();
+      ach.bumpLife('incorporations');
+      ach.bumpLife(`tax_${r.structure.id}`);
+      toast(`${r.structure.emoji} ${r.structure.label}`,
+        `Constituida por ${euro(r.cost)}. ${r.structure.lesson}`, 'good');
+      logActivity(`${r.structure.emoji} Constituyes: ${r.structure.label}`, 'good');
+      showTip('tax_ladder');
+      render();
+    };
+  });
 }
 
 /* ------------------------ CICLO ECONÓMICO ------------------------- */
@@ -1507,6 +1597,7 @@ function clearSave() {
 async function resumeGame(save) {
   const profile = DATA.profiles.find(x => x.id === save.engine.profileId) || DATA.profiles[0];
   engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events);
+  engine.setTaxData(DATA.tax);
   buildCatalog();
   ended = false;
   ach.newRun();
@@ -1520,7 +1611,9 @@ async function resumeGame(save) {
 
   bots = (save.bots || []).map(bs => ({
     name: bs.name, emoji: bs.emoji, aggr: bs.aggr,
-    engine: EconomyEngine.fromJSON(bs.engine, DATA.profiles.find(x => x.id === bs.profileId) || DATA.profiles[0], DATA.events),
+    engine: Object.assign(
+      EconomyEngine.fromJSON(bs.engine, DATA.profiles.find(x => x.id === bs.profileId) || DATA.profiles[0], DATA.events),
+      { taxData: DATA.tax }),
   }));
 
   const canvas = $('city');
@@ -1603,6 +1696,8 @@ const TIPS = {
   red_debt: { t: '⚠️ Deuda roja (deuda mala)', d: 'Un préstamo de consumo resta liquidez cada mes y no te da nada a cambio. Penaliza tu IE. Úsalo solo si es imprescindible.' },
   car_finance: { t: '⚠️ Un coche es un pasivo', d: 'Financiar un coche crea deuda roja y su coste mensual sube tu listón de libertad. Un coche saca dinero de tu bolsillo: es un pasivo, no un activo.' },
   incorporate: { t: '💡 Optimización fiscal', d: 'Con rentas altas, una sociedad paga impuestos fijos en vez de un recargo. Estructurar bien tus inversiones protege tu flujo de caja.' },
+  tax_ladder: { t: '💡 La escalera fiscal', d: 'Cada estructura tiene costes fijos, así que subir antes de tiempo te hace PERDER dinero. La regla es siempre la misma: solo compensa cuando el ahorro mensual supera el coste de mantenerla, y la constitución se recupera en un plazo razonable.' },
+  amortization: { t: '💡 Amortizar sin pagar', d: 'Un inmueble te deja deducir cada año un 3% del valor de la construcción. Es un gasto que resta impuestos pero NO sale de tu bolsillo: por eso el ladrillo es tan eficiente fiscalmente.' },
   p2p_assume: { t: '💡 Traspaso: compras capital, no el inmueble', d: 'En un traspaso pagas solo el capital que el vendedor había puesto y te subrogas en su hipoteca: la deuda pasa a ser tuya. Por eso el precio parece bajo — el inmueble sigue costando lo que costaba.' },
   cycle_buy: { t: '💡 Se compra en la recesión', d: 'Cuando todo el mundo tiene miedo, los precios caen y las entradas se abaratan. Si has guardado caja, es tu momento: el activo que compres barato mantendrá su hipoteca barata para siempre.' },
   cycle_sell: { t: '💡 Se vende en el pico', d: 'En la burbuja los activos valen más de lo que rinden. Vender ahora lo que compraste barato realiza la plusvalía… y te deja liquidez para la próxima recesión.' },
