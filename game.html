@@ -109,6 +109,9 @@
           <span class="label">Coche / transporte</span><span class="val red" id="flow-vehicle">0 €</span>
         </div>
         <div class="stat">
+          <span class="label">Seguros</span><span class="val red" id="flow-insurance">0 €</span>
+        </div>
+        <div class="stat">
           <span class="label">Deuda roja (consumo)</span><span class="val red" id="flow-red">0 €</span>
         </div>
         <div class="stat" style="border-top:1px solid var(--line);margin-top:2px;padding-top:10px">
@@ -131,6 +134,17 @@
           <button class="btn-ghost btn-sm" id="btn-loan" style="flex:1">+ Préstamo 5.000 €</button>
           <button class="btn-ghost btn-sm" id="btn-repay" style="flex:1">Amortizar roja</button>
         </div>
+      </div>
+
+      <div class="panel" id="panel-insurance" data-tab="money">
+        <h2>Seguros · Gestión del riesgo</h2>
+        <div id="insurance"></div>
+        <div class="hint" id="ins-hint"></div>
+      </div>
+
+      <div class="panel" id="panel-districts" data-tab="stats">
+        <h2>Distritos · Economías de escala</h2>
+        <div id="districts"></div>
       </div>
 
       <div class="panel" id="panel-tax" data-tab="money">

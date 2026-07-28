@@ -217,6 +217,30 @@
       "rules": [{ "run": "leveraged_count", "gte": 5 }, { "stat": "redDebt", "eq": 0 }]
     },
     {
+      "id": "insured",
+      "emoji": "🛡️",
+      "title": "Cinturón puesto",
+      "desc": "Ten las tres pólizas activas a la vez.",
+      "cat": "deuda", "tier": "plata",
+      "rules": [{ "run": "policies_active", "gte": 3 }]
+    },
+    {
+      "id": "district_master",
+      "emoji": "🏗️",
+      "title": "Dueño del distrito",
+      "desc": "Llega a 8 activos de una misma categoría y desbloquea su bonus máximo.",
+      "cat": "cartera", "tier": "oro",
+      "rules": [{ "run": "max_category_count", "gte": 8 }]
+    },
+    {
+      "id": "liquid",
+      "emoji": "💧",
+      "title": "Siempre líquido",
+      "desc": "Ten 4 activos financieros: los que puedes vender el mismo día.",
+      "cat": "cartera", "tier": "bronce",
+      "rules": [{ "run": "financial_count", "gte": 4 }]
+    },
+    {
       "id": "burnout_recover",
       "emoji": "🔋",
       "title": "De vuelta",

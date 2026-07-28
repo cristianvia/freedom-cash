@@ -1,0 +1,34 @@
+{
+  "$schema_note": "Seguros: pagas una cuota fija todos los meses para que los imprevistos no te revienten la caja. 'coverage' es la fracción del golpe que absorbe la póliza. Ojo: la cuota entra en tus gastos fijos, así que SUBE tu listón de libertad — proteger tiene precio.",
+  "max_coverage": 0.8,
+  "policies": [
+    {
+      "id": "home",
+      "emoji": "🏠",
+      "label": "Hogar y alquiler",
+      "monthly": 70,
+      "coverage": 0.35,
+      "desc": "Cubre destrozos, impagos de inquilino y derramas. Solo tiene sentido si tienes inmuebles.",
+      "lesson": "Un seguro no te hace ganar dinero: evita que un mal mes se lleve dos años de ahorro."
+    },
+    {
+      "id": "health",
+      "emoji": "❤️",
+      "label": "Salud privada",
+      "monthly": 95,
+      "coverage": 0.25,
+      "happiness": 2,
+      "desc": "Amortigua los gastos médicos imprevistos y te quita la ansiedad de encima (+2 😊/mes).",
+      "lesson": "El riesgo que más gente ignora es el propio. Sin salud no hay plan financiero que aguante."
+    },
+    {
+      "id": "liability",
+      "emoji": "🛡️",
+      "label": "Responsabilidad civil",
+      "monthly": 130,
+      "coverage": 0.3,
+      "desc": "Te protege de reclamaciones y sanciones asociadas a tus negocios y activos.",
+      "lesson": "Cuanto más patrimonio tienes, más tienes que perder en un pleito. Proteger escala con el tamaño."
+    }
+  ]
+}

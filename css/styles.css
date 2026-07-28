@@ -307,6 +307,39 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .ach-txt small { display: block; font-size: 10.5px; color: var(--txt-dim); line-height: 1.3; }
 .ach-pts { font-size: 11px; font-weight: 800; color: var(--tier); flex-shrink: 0; }
 
+/* ---------- Seguros ---------- */
+.ins-btn { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 9px 11px; margin-bottom: 7px; color: var(--txt); font-weight: 400; }
+.ins-btn:hover { border-color: var(--green-dim); }
+.ins-btn.on { border-color: var(--green); background: rgba(46,230,160,.07); }
+.ins-em { font-size: 20px; flex-shrink: 0; }
+.ins-txt { flex: 1; min-width: 0; }
+.ins-txt b { display: block; font-size: 12.5px; }
+.ins-txt small { display: block; font-size: 10.5px; color: var(--txt-dim); line-height: 1.35; }
+.ins-side { text-align: right; flex-shrink: 0; }
+.ins-side b { display: block; font-size: 12px; }
+.ins-side small { display: block; font-size: 10px; color: var(--txt-dim); }
+.ins-side em { font-style: normal; font-size: 9.5px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .4px; color: var(--txt-dim); }
+.ins-btn.on .ins-side em { color: var(--green); }
+
+/* ---------- Distritos ---------- */
+.dist-row { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px;
+  align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.dist-name { font-size: 12px; }
+.dist-name b { color: var(--txt); font-variant-numeric: tabular-nums; }
+.dist-bar { height: 6px; background: #0d1320; border-radius: 4px; overflow: hidden;
+  border: 1px solid var(--line); }
+.dist-bar > i { display: block; height: 100%; background: var(--txt-dim); }
+.dist-bar > i.t1 { background: var(--blue); }
+.dist-bar > i.t2 { background: var(--violet); }
+.dist-bar > i.t3 { background: linear-gradient(90deg, var(--green-dim), var(--green)); }
+.dist-bonus { grid-column: 1 / -1; font-size: 10.5px; color: var(--txt-dim); }
+.dist-bonus.on { color: var(--green); font-weight: 700; }
+.dist-next { grid-column: 1 / -1; font-size: 10px; color: var(--txt-dim); opacity: .75; }
+.btn-ghost.cancel { border-color: rgba(255,178,62,.4); color: var(--amber); }
+
 /* ---------- Escalera fiscal ---------- */
 .tax-ladder { display: flex; gap: 5px; margin-bottom: 12px; }
 .tax-step { flex: 1; text-align: center; font-size: 17px; line-height: 1.1;

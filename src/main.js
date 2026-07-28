@@ -79,7 +79,7 @@ const loadJSON = (file) =>
   fetch(`src/data/${file}`, { cache: 'no-cache' }).then(r => r.json());
 
 async function loadData() {
-  const [a, p, e, l, v, d, g, pr, ac, tx] = await Promise.all([
+  const [a, p, e, l, v, d, g, pr, ac, tx, ins] = await Promise.all([
     loadJSON('assets_database.json'),
     loadJSON('profiles.json'),
     loadJSON('events.json'),
@@ -90,6 +90,7 @@ async function loadData() {
     loadJSON('professions.json'),
     loadJSON('achievements.json'),
     loadJSON('tax.json'),
+    loadJSON('insurance.json'),
   ]);
   ach = new Achievements(ac);
   DATA.assets = a.assets;
@@ -101,6 +102,7 @@ async function loadData() {
   DATA.gigs = g.gigs;
   DATA.professions = pr.professions;
   DATA.tax = tx;
+  DATA.insurance = ins;
 
   // todos los sprites (suelo, decoración, edificios y coches) por su clave
   const TILE_KEYS = ['t_ground', 't_grass', 't_plaza', 't_tree', 't_water', 't_road'];
@@ -221,6 +223,7 @@ async function startGame(profile, mode = null, profession = null) {
   profession = profession || DATA.professions[0];
   engine = new EconomyEngine(profile, DATA.events, mode);
   engine.setTaxData(DATA.tax);
+  engine.setInsuranceData(DATA.insurance);
   engine.professionId = profession.id;
   buildCatalog();
   ended = false;
@@ -240,6 +243,7 @@ async function startGame(profile, mode = null, profession = null) {
   bots = others.map((bp, i) => {
     const be = new EconomyEngine(bp, DATA.events, mode);
     be.setTaxData(DATA.tax);
+    be.setInsuranceData(DATA.insurance);
     be.professionId = profPool.length ? profPool[Math.floor(Math.random() * profPool.length)].id : 'none';
     return { name: rivalNames[i] || 'Rival', emoji: bp.emoji, engine: be, aggr: 0.5 + i * 0.15 };
   });
@@ -285,7 +289,9 @@ function eraCatalog(assets, era, inflation = 1) {
     const f = a.financials;
     return {
       ...a,
-      id: `${a.id}@e${era}`,
+      // el id SOLO depende de la era: si cambiase con la inflación, las
+      // referencias guardadas (tablón, partida salvada) dejarían de resolver
+      id: era > 1 ? `${a.id}@e${era}` : a.id,
       baseId: a.baseId || a.id,
       title: era > 1 ? `${a.title} · ${tier}` : a.title,
       era,
@@ -540,8 +546,10 @@ function renderMarket() {
 }
 
 function doBuy(assetId, financing) {
-  const asset = catalog.find(a => a.id === assetId);
   const entry = market.find(m => m.asset.id === assetId);
+  // el tablón manda: es el precio que el jugador está viendo
+  const asset = (entry && entry.asset) || catalog.find(a => a.id === assetId);
+  if (!asset) { toast('Oportunidad no disponible', 'Ya no está en el tablón.', 'bad'); return; }
   const res = engine.buyAsset(asset, financing);
   if (!res.ok) { toast('No se pudo comprar', res.reason, 'bad'); return; }
 
@@ -583,6 +591,8 @@ function renderPortfolio() {
     const band = engine.incomeBand(a);
     const delta = engine.assetYieldDelta(a);
     const gain = engine.assetGainPct(a);   // plusvalía latente si vendieras hoy
+    const wait = engine.liquidityMonths(a);            // lo que tarda en venderse
+    const selling = engine.pendingSales.find(x => x.instanceId === a.instanceId);
     // flecha del mes: cómo ha salido este activo dentro de su horquilla
     const arrow = delta > 3 ? `<span class="pf-d up" title="Buen mes: +${delta}% sobre su media">▲</span>`
                 : delta < -3 ? `<span class="pf-d down" title="Mal mes: ${delta}% bajo su media">▼</span>`
@@ -607,10 +617,14 @@ function renderPortfolio() {
         ${cf >= 0 ? '+' : ''}${euro(cf)} ${arrow}</div>
       <div class="pf-actions">
         ${refiBtn}
-        <button class="btn-ghost btn-sm sell ${gain > 4 ? 'gain' : gain < -4 ? 'loss' : ''}"
+        ${selling
+          ? `<button class="btn-ghost btn-sm cancel" data-cancel="${a.instanceId}"
+               title="Retirar del mercado y quedártelo">En venta · ${selling.months}m ✕</button>`
+          : `<button class="btn-ghost btn-sm sell ${gain > 4 ? 'gain' : gain < -4 ? 'loss' : ''}"
           data-sell="${a.instanceId}"
-          title="Recuperarías ${euro(engine.assetTransferValue(a) * 0.95)} (${gain >= 0 ? '+' : ''}${gain}% sobre tu capital, con 5% de costes de venta)">
-          Vender${gain ? ` <em>${gain > 0 ? '+' : ''}${gain}%</em>` : ''}</button>
+          title="Recuperarías ${euro(engine.assetTransferValue(a) * 0.95)} (${gain >= 0 ? '+' : ''}${gain}% sobre tu capital, con 5% de costes de venta).${
+            wait ? ` Tarda ${wait} ${wait === 1 ? 'mes' : 'meses'} en cerrarse: sigue rentando mientras tanto.` : ' Se liquida al instante.'}">
+          Vender${wait ? ` <em>${wait}m</em>` : ''}${gain ? ` <em>${gain > 0 ? '+' : ''}${gain}%</em>` : ''}</button>`}
       </div>`;
     wrap.appendChild(el);
   });
@@ -626,11 +640,24 @@ function renderPortfolio() {
       const inst = engine.ownedAssets.find(a => a.instanceId === btn.dataset.sell);
       const cell = inst && inst.cell;
       const r = engine.sellAsset(btn.dataset.sell);
-      if (r.ok) {
+      if (!r.ok) { toast('No se pudo vender', r.reason, 'bad'); return; }
+      if (r.immediate) {
         if (cell) city.removeBuilding(cell);
-        toast('Activo vendido', `Recuperas ${euro(r.proceeds)} de capital.`, 'good');
-        render();
+        toast('Activo vendido', `Recuperas ${euro(r.proceeds)} al instante: los financieros son líquidos.`, 'good');
+      } else {
+        toast('🏷️ Puesto en venta',
+          `${inst.title} tardará ${r.months} ${r.months === 1 ? 'mes' : 'meses'} en colocarse. Sigue rentando hasta que cierre, pero los ${euro(r.proceeds)} aún no están en tu caja.`,
+          'neutral');
+        showTip('liquidity');
       }
+      render();
+    };
+  });
+  wrap.querySelectorAll('button[data-cancel]').forEach(btn => {
+    btn.onclick = () => {
+      engine.cancelSale(btn.dataset.cancel);
+      toast('Venta retirada', 'Te quedas el activo.', 'neutral');
+      render();
     };
   });
 }
@@ -662,6 +689,12 @@ function resolveTurn(ev, choiceIndex) {
 
   city.emitCoins();
   $('hud-month').textContent = engine.month;
+
+  // ventas que se cierran este mes: entra el dinero y desaparece el edificio
+  (snap.salesClosed || []).forEach(sale => {
+    if (sale.cell) city.removeBuilding(sale.cell);
+    logActivity(`🏷️ Vendido: ${sale.title} (+${euro(sale.proceeds)})`, 'good');
+  });
 
   // ruinas y despegues: lo que pasa cuando una apuesta se resuelve
   (snap.outcomes || []).forEach((o, i) => {
@@ -1149,6 +1182,9 @@ function render() {
   $('flow-red').textContent = '−' + euro(s.redDebt);
 
   renderTax(s);
+  renderInsurance(s);
+  renderDistricts();
+  $('flow-insurance').textContent = '−' + euro(s.insuranceCost);
   const netEl = $('flow-net');
   netEl.textContent = (cf >= 0 ? '+' : '−') + euro(Math.abs(cf));
   netEl.className = 'val ' + (cf >= 0 ? 'green' : 'red');
@@ -1198,6 +1234,67 @@ function render() {
   drawSparkline();
   refreshView();
   saveGame();
+}
+
+/* ---------------------- SEGUROS Y DISTRITOS ----------------------- */
+/*
+ * Dos caras de la misma moneda: los seguros quitan cola de pérdidas a cambio de
+ * subir tu listón de libertad, y los distritos premian concentrar activos de la
+ * misma categoría — que es lo que convierte la ciudad isométrica en decisión.
+ */
+function renderInsurance(s) {
+  const wrap = $('insurance');
+  if (!wrap || !DATA.insurance) return;
+  wrap.innerHTML = engine.insurancePolicies().map(p => {
+    const on = engine.hasInsurance(p.id);
+    return `<button class="ins-btn ${on ? 'on' : ''}" data-ins="${p.id}" title="${p.lesson}">
+        <span class="ins-em">${p.emoji}</span>
+        <span class="ins-txt"><b>${p.label}</b><small>${p.desc}</small></span>
+        <span class="ins-side">
+          <b>${euro(p.monthly)}/mes</b>
+          <small>cubre ${Math.round(p.coverage * 100)}%</small>
+          <em>${on ? '✓ activa' : 'contratar'}</em>
+        </span>
+      </button>`;
+  }).join('');
+  const hint = $('ins-hint');
+  hint.className = 'hint' + (s.insuranceCoverage ? ' good' : '');
+  hint.innerHTML = s.insuranceCoverage
+    ? `Tus pólizas absorben el <b>${s.insuranceCoverage}%</b> de cada imprevisto, y te cuestan
+       <b>${euro(s.insuranceCost)}/mes</b> que suben tu listón de libertad.`
+    : 'Sin seguros, cada imprevisto va entero contra tu caja. Protegerte cuesta libertad: ese es el trato.';
+  wrap.querySelectorAll('button[data-ins]').forEach(b => {
+    b.onclick = () => {
+      const r = engine.toggleInsurance(b.dataset.ins);
+      if (!r.ok) { toast('No se pudo', r.reason, 'bad'); return; }
+      if (r.active) ach.bumpLife('policies');
+      toast(`${r.policy.emoji} ${r.policy.label}`,
+        r.active ? `Póliza contratada. ${r.policy.lesson}` : 'Póliza cancelada: vuelves a estar expuesto.',
+        r.active ? 'good' : 'neutral');
+      if (r.active) showTip('insurance');
+      render();
+    };
+  });
+}
+
+const CAT_LABEL = { real_estate: '🏠 Inmuebles', digital_business: '💻 Negocios', financial: '📈 Financiero' };
+
+function renderDistricts() {
+  const wrap = $('districts');
+  if (!wrap) return;
+  wrap.innerHTML = Object.keys(CAT_LABEL).map(cat => {
+    const d = engine.districtBonus(cat);
+    const pct = d.next ? Math.min(100, d.n / d.next * 100) : 100;
+    const bonus = d.tier
+      ? `−${Math.round((1 - d.maint) * 100)}% mantenimiento${d.gross > 1 ? ` · +${Math.round((d.gross - 1) * 100)}% renta` : ''}`
+      : 'sin bonus todavía';
+    return `<div class="dist-row">
+        <span class="dist-name">${CAT_LABEL[cat]} <b>${d.n}</b></span>
+        <div class="dist-bar"><i class="t${d.tier}" style="width:${pct}%"></i></div>
+        <span class="dist-bonus ${d.tier ? 'on' : ''}">${bonus}</span>
+        ${d.next ? `<span class="dist-next">faltan ${d.next - d.n} para el siguiente nivel</span>` : '<span class="dist-next">nivel máximo</span>'}
+      </div>`;
+  }).join('');
 }
 
 /* --------------------------- FISCALIDAD --------------------------- */
@@ -1357,6 +1454,8 @@ function achDerived() {
         ? Math.max(0, engine.totalPassiveIncome() - engine.TAX_THRESHOLD) * engine.PERSONAL_TAX - engine.COMPANY_MONTHLY
         : 0)),
     red_loans: ach.run.red_loans || 0,
+    policies_active: engine.insurance.size,
+    financial_count: byCat.financial || 0,
   };
 }
 
@@ -1671,6 +1770,7 @@ async function resumeGame(save) {
   const profile = DATA.profiles.find(x => x.id === save.engine.profileId) || DATA.profiles[0];
   engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events);
   engine.setTaxData(DATA.tax);
+  engine.setInsuranceData(DATA.insurance);
   buildCatalog();
   ended = false;
   ach.newRun();
@@ -1686,7 +1786,7 @@ async function resumeGame(save) {
     name: bs.name, emoji: bs.emoji, aggr: bs.aggr,
     engine: Object.assign(
       EconomyEngine.fromJSON(bs.engine, DATA.profiles.find(x => x.id === bs.profileId) || DATA.profiles[0], DATA.events),
-      { taxData: DATA.tax }),
+      { taxData: DATA.tax, insuranceData: DATA.insurance }),
   }));
 
   const canvas = $('city');
@@ -1772,6 +1872,9 @@ const TIPS = {
   tax_ladder: { t: '💡 La escalera fiscal', d: 'Cada estructura tiene costes fijos, así que subir antes de tiempo te hace PERDER dinero. La regla es siempre la misma: solo compensa cuando el ahorro mensual supera el coste de mantenerla, y la constitución se recupera en un plazo razonable.' },
   amortization: { t: '💡 Amortizar sin pagar', d: 'Un inmueble te deja deducir cada año un 3% del valor de la construcción. Es un gasto que resta impuestos pero NO sale de tu bolsillo: por eso el ladrillo es tan eficiente fiscalmente.' },
   p2p_assume: { t: '💡 Traspaso: compras capital, no el inmueble', d: 'En un traspaso pagas solo el capital que el vendedor había puesto y te subrogas en su hipoteca: la deuda pasa a ser tuya. Por eso el precio parece bajo — el inmueble sigue costando lo que costaba.' },
+  insurance: { t: '💡 El seguro no es una inversión', d: 'Un seguro nunca te hace ganar dinero: te quita la posibilidad de perderlo todo de golpe. Y como su cuota es un gasto fijo más, sube tu listón de libertad. Ese es el trato: pagas tranquilidad con tiempo.' },
+  liquidity: { t: '💡 Liquidez: no todo se vende hoy', d: 'Un fondo se liquida en el acto; un local tarda meses en colocarse. Por eso una cartera solo de ladrillo puede ser rentable y aun así dejarte sin poder pagar un imprevisto. Tener algo líquido no es ser conservador: es poder aguantar.' },
+  district: { t: '💡 Economías de escala', d: 'Concentrar activos de la misma categoría abarata su gestión: un mismo proveedor, un mismo contrato marco. A partir de 3 del mismo tipo baja tu mantenimiento; a partir de 5 y de 8, más. Especializarse tiene premio.' },
   scam: { t: '🚨 Si parece demasiado bueno…', d: 'Nadie regala un 9% mensual garantizado. Las señales estaban en la ficha: rentabilidad imposible, cero gastos declarados y ningún banco dispuesto a financiarlo. Analizar cuesta calderilla; caer cuesta el capital entero.' },
   cycle_buy: { t: '💡 Se compra en la recesión', d: 'Cuando todo el mundo tiene miedo, los precios caen y las entradas se abaratan. Si has guardado caja, es tu momento: el activo que compres barato mantendrá su hipoteca barata para siempre.' },
   cycle_sell: { t: '💡 Se vende en el pico', d: 'En la burbuja los activos valen más de lo que rinden. Vender ahora lo que compraste barato realiza la plusvalía… y te deja liquidez para la próxima recesión.' },

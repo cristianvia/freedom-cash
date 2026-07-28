@@ -18,6 +18,7 @@ const E = data('events.json').events, L = data('lifestyle.json').actions;
 const V = data('vehicles.json').vehicles, G = data('gigs.json').gigs;
 const MODES = data('difficulty.json').modes;
 const TAX = data('tax.json');
+const INS = data('insurance.json');
 
 const TIERS = ['', 'Plus', 'Prime', 'Élite', 'Legendario', 'Mítico', 'Ancestral', 'Absoluto'];
 
@@ -56,6 +57,7 @@ for (const profile of [P[0]]) {
   for (let n = 0; n < RUNS; n++) {
     const e = new EconomyEngine(profile, E, MODES[0]);
     e.setTaxData(TAX);
+    e.setInsuranceData(INS);
     for (let era = 1; era <= MAX_ERA; era++) {
       const start = e.month;
       let guard = CAP;

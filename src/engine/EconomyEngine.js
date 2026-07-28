@@ -103,6 +103,13 @@ export class EconomyEngine {
     this.REFI_FEE_PCT = 0.03;   // comisión (sobre la hipoteca) por refinanciar
     this.REFI_REDUCTION = 0.25; // reducción de la cuota tras refinanciar
 
+    // --- Seguros: pagar todos los meses para que un mal mes no te hunda ---
+    this.insurance = new Set();
+    this.insuranceData = null;
+
+    // --- Ventas en curso: no todo se vende el mismo día ---
+    this.pendingSales = [];
+
     // --- Due diligence: investigar antes de firmar ---
     this.investigated = new Set();   // ids de activos ya analizados
     this.DD_PCT = 0.012;             // coste del análisis (% del precio)
@@ -404,7 +411,10 @@ export class EconomyEngine {
 
   /** Renta pasiva neta de un activo (bruto del mes - mantenimiento - hipoteca efectiva). */
   assetNetIncome(a) {
-    return this.grossIncomeOf(a) - a.financials.maintenance_and_taxes - this.mortgageCostOf(a);
+    const d = this.districtBonus(a.category);   // economías de escala del distrito
+    return this.grossIncomeOf(a) * d.gross
+      - a.financials.maintenance_and_taxes * d.maint
+      - this.mortgageCostOf(a);
   }
 
   /** Desviación del mes respecto al rendimiento esperado (%). 0 = en la media. */
@@ -646,9 +656,13 @@ export class EconomyEngine {
     return Math.round(this.profile.fixed_expenses * this.expenseInflation) + this.lifeExpenses + this.extraRent;
   }
 
-  /** Indicador de Emancipación (%). El coste del coche sube tu listón de libertad. */
+  /**
+   * Indicador de Emancipación (%). El coche y los seguros suben tu listón de
+   * libertad: todo lo que pagas cada mes es vida que tus activos deben cubrir.
+   */
   emancipationIndex() {
-    const denom = this.fixedExpenses() + this.vehicleMonthlyCost() + this.totalRedDebtPayment();
+    const denom = this.fixedExpenses() + this.vehicleMonthlyCost() +
+      this.insuranceMonthlyCost() + this.totalRedDebtPayment();
     if (denom <= 0) return 0;
     return (this.netPassiveIncome() / denom) * 100;
   }
@@ -658,7 +672,8 @@ export class EconomyEngine {
     // netPassiveIncome() YA descuenta hipotecas (dentro de assetNetIncome) e
     // impuestos (taxCost). Restamos gastos fijos, coste del coche y deuda roja.
     const income = salary + this.netPassiveIncome();
-    const outflow = this.fixedExpenses() + this.vehicleMonthlyCost() + this.totalRedDebtPayment();
+    const outflow = this.fixedExpenses() + this.vehicleMonthlyCost() +
+      this.insuranceMonthlyCost() + this.totalRedDebtPayment();
     return income - outflow;
   }
 
@@ -811,6 +826,99 @@ export class EconomyEngine {
     return { ok: true, instance };
   }
 
+  /* ---------------------------- SEGUROS ----------------------------- */
+  /*
+   * La otra mitad de la gestión del riesgo. No dan rentabilidad: quitan cola de
+   * pérdidas. Y como su cuota entra en tus gastos fijos, protegerte SUBE tu
+   * listón de libertad — que es exactamente el dilema real.
+   */
+
+  setInsuranceData(data) { this.insuranceData = data; }
+
+  insurancePolicies() { return (this.insuranceData && this.insuranceData.policies) || []; }
+
+  hasInsurance(id) { return this.insurance.has(id); }
+
+  insuranceMonthlyCost() {
+    return this.insurancePolicies()
+      .filter(p => this.insurance.has(p.id))
+      .reduce((s, p) => s + p.monthly, 0);
+  }
+
+  /** Fracción del golpe que absorben tus pólizas (con tope). */
+  insuranceCoverage() {
+    const max = (this.insuranceData && this.insuranceData.max_coverage) || 0.8;
+    const sum = this.insurancePolicies()
+      .filter(p => this.insurance.has(p.id))
+      .reduce((s, p) => s + p.coverage, 0);
+    return Math.min(max, sum);
+  }
+
+  /** Contrata o cancela una póliza. Contratar cuesta una acción. */
+  toggleInsurance(id) {
+    const p = this.insurancePolicies().find(x => x.id === id);
+    if (!p) return { ok: false, reason: 'Póliza desconocida' };
+    if (this.insurance.has(id)) { this.insurance.delete(id); return { ok: true, active: false, policy: p }; }
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason };
+    this.spendAction();
+    this.insurance.add(id);
+    return { ok: true, active: true, policy: p };
+  }
+
+  /* ----------------------- SINERGIAS DE DISTRITO -------------------- */
+  /*
+   * Concentrar activos de la misma categoría da economías de escala: un mismo
+   * gestor, un mismo proveedor, un mismo contrato marco. La ciudad isométrica
+   * deja de ser decorado y pasa a ser una decisión.
+   */
+
+  categoryCount(cat) {
+    return this.ownedAssets.filter(a => a.category === cat && !a.ruined).length;
+  }
+
+  /** Bonus del distrito de una categoría: menos mantenimiento y algo más de renta. */
+  districtBonus(cat) {
+    const n = this.categoryCount(cat);
+    if (n >= 8) return { maint: 0.75, gross: 1.08, tier: 3, next: null, n };
+    if (n >= 5) return { maint: 0.85, gross: 1.04, tier: 2, next: 8, n };
+    if (n >= 3) return { maint: 0.92, gross: 1.00, tier: 1, next: 5, n };
+    return { maint: 1, gross: 1, tier: 0, next: 3, n };
+  }
+
+  /* ------------------------ LIQUIDEZ / VENTAS ----------------------- */
+  /*
+   * Un ETF se vende hoy; un local tarda meses en colocarse. La liquidez es una
+   * dimensión del riesgo que casi ningún juego modela y que en la vida real
+   * decide si sobrevives a un apuro.
+   */
+
+  /** Meses que tarda en cerrarse la venta de un activo. */
+  liquidityMonths(a) {
+    if (a.category === 'financial') return 0;
+    if (a.category === 'digital_business') return 1;
+    return 2;
+  }
+
+  /** ¿Tiene este activo una venta ya en curso? */
+  isForSale(instanceId) {
+    return this.pendingSales.some(s => s.instanceId === instanceId);
+  }
+
+  /** Cobra las ventas que se cierran este mes. */
+  settlePendingSales() {
+    const closed = [];
+    this.pendingSales = this.pendingSales.filter(s => {
+      s.months -= 1;
+      if (s.months > 0) return true;
+      this.cash += s.proceeds;
+      this.ownedAssets = this.ownedAssets.filter(a => a.instanceId !== s.instanceId);
+      closed.push(s);
+      return false;
+    });
+    return closed;
+  }
+
   /* --------------------- DUE DILIGENCE / CALIDAD -------------------- */
   /*
    * No todas las oportunidades son buenas, y algunas son directamente estafas.
@@ -959,15 +1067,32 @@ export class EconomyEngine {
     return instance;
   }
 
-  /** Vende un activo por su valor de traspaso menos la fricción de la venta. */
+  /**
+   * Pone un activo a la venta por su valor de traspaso menos la fricción. Los
+   * financieros se liquidan en el acto; un negocio tarda un mes y un inmueble
+   * dos: hasta que cierra la venta sigue rentando, pero el dinero no está.
+   */
   sellAsset(instanceId) {
-    const idx = this.ownedAssets.findIndex(a => a.instanceId === instanceId);
-    if (idx === -1) return { ok: false, reason: 'Activo no encontrado' };
-    const a = this.ownedAssets[idx];
+    const a = this.ownedAssets.find(x => x.instanceId === instanceId);
+    if (!a) return { ok: false, reason: 'Activo no encontrado' };
+    if (this.isForSale(instanceId)) return { ok: false, reason: 'Ya está en venta' };
     const proceeds = Math.round(this.assetTransferValue(a) * 0.95); // 5% de costes de venta
-    this.cash += proceeds;
-    this.ownedAssets.splice(idx, 1);
-    return { ok: true, proceeds };
+    const months = this.liquidityMonths(a);
+    if (months <= 0) {
+      this.cash += proceeds;
+      this.ownedAssets = this.ownedAssets.filter(x => x.instanceId !== instanceId);
+      return { ok: true, proceeds, months: 0, immediate: true };
+    }
+    // se guarda la celda para poder derribar el edificio cuando cierre la venta
+    this.pendingSales.push({ instanceId, months, proceeds, title: a.title, cell: a.cell });
+    return { ok: true, proceeds, months, immediate: false };
+  }
+
+  /** Retira un activo del mercado antes de que se cierre la venta. */
+  cancelSale(instanceId) {
+    const before = this.pendingSales.length;
+    this.pendingSales = this.pendingSales.filter(s => s.instanceId !== instanceId);
+    return { ok: this.pendingSales.length < before };
   }
 
   /** Pide un préstamo de consumo (DEUDA ROJA): entra caja, resta liquidez cada mes. */
@@ -1146,7 +1271,15 @@ export class EconomyEngine {
     }
     // Modo Legado: los golpes en caja escalan con la era. Los shocks de ingresos
     // (vacancia, sector a cero) ya escalan solos porque dependen del portfolio.
-    if (adj.cashDelta < 0) adj.cashDelta = Math.round(adj.cashDelta * this.eraRisk);
+    if (adj.cashDelta < 0) {
+      adj.cashDelta = Math.round(adj.cashDelta * this.eraRisk);
+      // los seguros absorben su parte del golpe: para esto los pagas
+      const cov = this.insuranceCoverage();
+      if (cov > 0) {
+        adj._covered = Math.round(-adj.cashDelta * cov);
+        adj.cashDelta = Math.round(adj.cashDelta * (1 - cov));
+      }
+    }
     // efectos de bienestar de cualquier evento (los dilemas ya aplican los de su opción)
     if (ev.type !== 'dilemma') this._applyWellbeingEffects(ev);
     // hitos de vida: gasto permanente y marca de evento único
@@ -1211,12 +1344,21 @@ export class EconomyEngine {
     // se resuelve el destino de las apuestas: ruinas y despegues
     const outcomes = this.rollOutcomes();
 
+    // se cierran las ventas que ya han cumplido su plazo
+    const salesClosed = this.settlePendingSales();
+
+    // las pólizas de salud también cuidan la cabeza
+    this.insurancePolicies().forEach(p => {
+      if (this.insurance.has(p.id) && p.happiness) this.happiness += p.happiness;
+    });
+    this._clampWellbeing();
+
     // el mes que empieza ya tiene su rendimiento sorteado dentro de la horquilla:
     // el dashboard enseña exactamente lo que vas a cobrar, no una media teórica
     this.rollYields();
 
     const snap = this.recordSnapshot({
-      salary, event, adj, newPhase, outcomes,
+      salary, event, adj, newPhase, outcomes, salesClosed,
       cashflow: monthResult,
       baseCashflow,
     });
@@ -1252,6 +1394,9 @@ export class EconomyEngine {
       salaryBoost: Math.round((this.salaryBoost - 1) * 100),
       vehicle: this.vehicle,
       vehicleCost: this.vehicleMonthlyCost(),
+      insuranceCost: Math.round(this.insuranceMonthlyCost()),
+      insuranceCoverage: Math.round(this.insuranceCoverage() * 100),
+      pendingSales: this.pendingSales.length,
       extraRent: this.extraRent,
       gigsEnabled: this.gigsEnabled(),
       actionsLeft: this.actionsLeft(),
@@ -1310,6 +1455,8 @@ export class EconomyEngine {
       cycleIndex: this.cycleIndex,
       cycleLeft: this.cycleLeft,
       investigated: [...this.investigated],
+      insurance: [...this.insurance],
+      pendingSales: this.pendingSales,
       firedOnce: [...this.firedOnce],
       lifestyleUsed: [...this.lifestyleUsed],
       history: this.history,
@@ -1342,6 +1489,8 @@ export class EconomyEngine {
     e.cycleIndex = data.cycleIndex ?? 3;
     e.cycleLeft = data.cycleLeft ?? 4;
     e.investigated = new Set(data.investigated || []);
+    e.insurance = new Set(data.insurance || []);
+    e.pendingSales = data.pendingSales || [];
     e.firedOnce = new Set(data.firedOnce || []);
     e.lifestyleUsed = new Set(data.lifestyleUsed || []);
     e.history = data.history || [];
