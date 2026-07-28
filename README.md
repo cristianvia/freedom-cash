@@ -24,6 +24,22 @@ activo que compras.
 
 Gana cuando `IE ≥ 120%` **y** `caja ≥ 6 × gastos fijos`.
 
+### 🚀 Modo Legado (partida sin fin)
+
+Al ganar no tienes que parar: el modal de victoria ofrece **Continuar · Nueva era**.
+Conservas caja, activos y patrimonio, y el juego sube de nivel en ambos sentidos:
+
+| Sube la exigencia | Sube tu capacidad |
+| --- | --- |
+| Meta de IE **+35%** por era (120 → 162 → 204…) | Límite de crédito **×1,7** por era |
+| Coste de vida permanente **+12%** de tus gastos base | Mercado con activos **~55% mayores** y mejor yield |
+| Imprevistos **+25%** de impacto en caja | **Trabajos extra** disponibles a partir de la era 2 |
+| Inflación mensual acelerada | Multiplicador de puntuación **×1,25** por era |
+
+Los hitos de vida "de una sola vez" se rearman en cada era, y **los rivales suben contigo**.
+Cada era superada puntúa en la liga, así que encadenar eras es la forma de escalar la
+clasificación. Cerrar la partida en cualquier momento sigue siendo una opción.
+
 ---
 
 ## ▶️ Ejecutar en local
@@ -40,6 +56,7 @@ python -m http.server 8765
 **Atajos de demo/test** (parámetros de URL):
 - `?auto=corporate|freelance|investor` → arranca directo con ese perfil.
 - `&demo=1` → además compra las oportunidades asequibles y pasa un mes (para pruebas).
+- `&win=1` → fuerza la victoria para probar el **Modo Legado** (encadenado de eras).
 
 ---
 

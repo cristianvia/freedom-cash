@@ -10,8 +10,25 @@
  * ------------------------------------------------------------------
  */
 
-export const WIN_IE = 120;          // Indicador de Emancipación objetivo (%)
+export const WIN_IE = 120;          // Indicador de Emancipación objetivo (%) en la era 1
 export const WIN_MONTHS_CUSHION = 6; // colchón de tesorería (meses de gastos)
+
+/* --- Modo Legado: al ganar puedes encadenar "eras" cada vez más exigentes --- */
+export const ERA_IE_STEP = 0.35;    // el listón de IE sube un 35% por era
+export const ERA_RISK_STEP = 1.25;  // los eventos negativos pegan un 25% más fuerte
+export const ERA_CREDIT_STEP = 1.7; // pero tu límite de crédito crece un 70%
+export const ERA_LIFE_COST = 0.12;  // tu nivel de vida sube un 12% de los gastos base
+export const ERA_ASSET_STEP = 1.55; // el mercado ofrece activos ~55% mayores por era
+
+/** Nombre narrativo de cada era (se repite el último si se pasa de la lista). */
+export const ERA_NAMES = [
+  'Emancipación', 'Consolidación', 'Expansión', 'Patrimonio', 'Imperio', 'Legado',
+];
+
+/** Etiqueta legible de una era ("Era 3 · Expansión"). */
+export function eraLabel(era) {
+  return `Era ${era} · ${ERA_NAMES[Math.min(era, ERA_NAMES.length) - 1]}`;
+}
 
 export class EconomyEngine {
   /**
@@ -64,6 +81,13 @@ export class EconomyEngine {
     this.expenseInflation = 1;   // ~4,9%/año; obliga a no quedarte quieto
     this.lifeExpenses = 0;       // gasto extra permanente por hitos (pareja, hijos...)
     this.firedOnce = new Set();  // eventos "once" ya disparados
+    this.INFLATION_BASE = 1.003; // inflación mensual de la era 1
+
+    // --- Modo Legado: era actual y sus modificadores acumulados ---
+    this.era = 1;
+    this.eraRisk = 1;      // multiplica los golpes negativos de los eventos
+    this.creditBoost = 1;  // multiplica tu límite de crédito
+    this.eraStartMonth = 1; // mes en el que empezó la era actual
 
     // --- Coste de arranque (fianza + mudanza): el principio pesa ---
     this.cash -= Math.round(profile.fixed_expenses * 1.5);
@@ -256,8 +280,64 @@ export class EconomyEngine {
     return fx > 0 ? this.cash / fx : 0;
   }
 
+  /* --------------------------- MODO LEGADO -------------------------- */
+
+  /** Listón de IE que hay que superar en la era actual (120, 162, 204...). */
+  winTargetIE() {
+    return Math.round(WIN_IE * (1 + ERA_IE_STEP * (this.era - 1)));
+  }
+
+  /** Límite de crédito efectivo: crece con cada era superada. */
+  creditLimit() {
+    return Math.round(this.profile.credit_limit * this.creditBoost);
+  }
+
+  /** Inflación mensual: se acelera con la era (el suelo se mueve más rápido). */
+  inflationRate() {
+    return 1 + (this.INFLATION_BASE - 1) * (1 + 0.5 * (this.era - 1));
+  }
+
+  /**
+   * Encadena la siguiente era: sube el listón y las apuestas, pero también
+   * tu capacidad de maniobra. Conservas caja, activos y aprendizajes.
+   * @returns {object} resumen de los cambios, para mostrarlo en la UI
+   */
+  startNewEra() {
+    const before = { target: this.winTargetIE(), credit: this.creditLimit() };
+
+    this.era += 1;
+    this.eraStartMonth = this.month;
+    this.eraRisk *= ERA_RISK_STEP;
+    this.creditBoost *= ERA_CREDIT_STEP;
+
+    // tu nivel de vida sube contigo: más gasto fijo permanente
+    const lifeAdd = Math.round(this.profile.fixed_expenses * ERA_LIFE_COST);
+    this.lifeExpenses += lifeAdd;
+
+    // los hitos "once" vuelven a estar disponibles: nueva etapa, nuevos imprevistos
+    this.firedOnce = new Set();
+
+    // respiro entre etapas: celebras el logro y recargas (sin llegar al tope)
+    this.happiness = Math.min(100, this.happiness + 15);
+    this.energy = Math.min(100, this.energy + 15);
+
+    // los trabajos extra quedan disponibles de aquí en adelante
+    this.mode = { ...this.mode, gigs: true, scoreMult: (this.mode.scoreMult || 1) * 1.25 };
+
+    return {
+      era: this.era,
+      label: eraLabel(this.era),
+      targetFrom: before.target,
+      targetTo: this.winTargetIE(),
+      creditFrom: before.credit,
+      creditTo: this.creditLimit(),
+      lifeAdd,
+      riskPct: Math.round((ERA_RISK_STEP - 1) * 100),
+    };
+  }
+
   hasWon() {
-    return this.emancipationIndex() >= WIN_IE &&
+    return this.emancipationIndex() >= this.winTargetIE() &&
            this.cash >= WIN_MONTHS_CUSHION * this.fixedExpenses();
   }
 
@@ -287,7 +367,7 @@ export class EconomyEngine {
     const f = asset.financials;
     if (financing === 'leverage') {
       if (!asset.leverage_allowed) return { ok: false, reason: 'Sin apalancamiento disponible', cost: f.total_price };
-      if (f.mortgage_available > this.profile.credit_limit) {
+      if (f.mortgage_available > this.creditLimit()) {
         return { ok: false, reason: 'Supera tu límite de crédito', cost: f.down_payment_required };
       }
       const cost = f.down_payment_required;
@@ -523,6 +603,9 @@ export class EconomyEngine {
         break;
       }
     }
+    // Modo Legado: los golpes en caja escalan con la era. Los shocks de ingresos
+    // (vacancia, sector a cero) ya escalan solos porque dependen del portfolio.
+    if (adj.cashDelta < 0) adj.cashDelta = Math.round(adj.cashDelta * this.eraRisk);
     // efectos de bienestar de cualquier evento (los dilemas ya aplican los de su opción)
     if (ev.type !== 'dilemma') this._applyWellbeingEffects(ev);
     // hitos de vida: gasto permanente y marca de evento único
@@ -567,8 +650,8 @@ export class EconomyEngine {
     // deriva de bienestar del mes
     this.applyWellbeingDrift();
 
-    // inflación: tu coste de vida sube poco a poco (~3,7%/año)
-    this.expenseInflation *= 1.003;
+    // inflación: tu coste de vida sube poco a poco (~3,7%/año, más rápido cada era)
+    this.expenseInflation *= this.inflationRate();
 
     // amortización de saldo de deudas rojas (reduce balance según cuota)
     this.redDebts.forEach(d => { d.balance = Math.max(0, d.balance - d.monthly_payment); });
@@ -614,6 +697,10 @@ export class EconomyEngine {
       extraRent: this.extraRent,
       gigsEnabled: this.gigsEnabled(),
       mode: this.mode.id,
+      era: this.era,
+      eraLabel: eraLabel(this.era),
+      targetIE: this.winTargetIE(),
+      creditLimit: this.creditLimit(),
       won: this.hasWon(),
       lost: this.hasLost(),
       lossReason: this.lossReason(),
@@ -653,6 +740,10 @@ export class EconomyEngine {
       vehicle: this.vehicle,
       expenseInflation: this.expenseInflation,
       lifeExpenses: this.lifeExpenses,
+      era: this.era,
+      eraRisk: this.eraRisk,
+      creditBoost: this.creditBoost,
+      eraStartMonth: this.eraStartMonth,
       firedOnce: [...this.firedOnce],
       lifestyleUsed: [...this.lifestyleUsed],
       history: this.history,
@@ -677,6 +768,10 @@ export class EconomyEngine {
     e.vehicle = data.vehicle ?? null;
     e.expenseInflation = data.expenseInflation ?? 1;
     e.lifeExpenses = data.lifeExpenses ?? 0;
+    e.era = data.era ?? 1;
+    e.eraRisk = data.eraRisk ?? 1;
+    e.creditBoost = data.creditBoost ?? 1;
+    e.eraStartMonth = data.eraStartMonth ?? 1;
     e.firedOnce = new Set(data.firedOnce || []);
     e.lifestyleUsed = new Set(data.lifestyleUsed || []);
     e.history = data.history || [];

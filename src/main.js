@@ -2,7 +2,7 @@
  * main.js — Controlador principal de Freedom Cash.
  * Une EconomyEngine (lógica) + IsoCity (render) + DOM (UI fintech).
  */
-import { EconomyEngine, WIN_IE } from './engine/EconomyEngine.js';
+import { EconomyEngine, ERA_ASSET_STEP } from './engine/EconomyEngine.js';
 import { IsoCity } from './engine/IsoCity.js';
 import { takeBotTurn } from './engine/BotAI.js';
 import { Tutorial } from './ui/tutorial.js';
@@ -58,6 +58,7 @@ let engine = null;
 let city = null;
 let bots = [];              // oponentes IA: { name, emoji, engine, aggr }
 let DATA = { assets: [], profiles: [], events: [] };
+let catalog = [];           // catálogo vigente (DATA.assets escalado a la era actual)
 let market = [];            // oportunidades visibles este turno
 let p2pOffers = [];         // activos que los rivales ponen a la venta
 let p2pSeq = 0;             // contador de instancias compradas por P2P
@@ -207,6 +208,7 @@ async function startGame(profile, mode = null, profession = null) {
   profession = profession || DATA.professions[0];
   engine = new EconomyEngine(profile, DATA.events, mode);
   engine.professionId = profession.id;
+  buildCatalog();
   ended = false;
   $('profile-overlay').style.display = 'none';
   $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.short || profile.name);
@@ -239,6 +241,51 @@ async function startGame(profile, mode = null, profession = null) {
   maybeTutorial();
 }
 
+/* ---------------------- CATÁLOGO POR ERA -------------------------- */
+/**
+ * En el Modo Legado el listón sube, así que el mercado también: cada era
+ * ofrece una versión mayor de cada activo (más precio, pero mejor yield).
+ * Los activos ya comprados no cambian — se guardan enteros en la partida.
+ */
+const ERA_TIER = ['', 'Plus', 'Prime', 'Élite', 'Legendario'];
+
+function eraCatalog(assets, era) {
+  if (era <= 1) return assets;
+  const k = Math.pow(ERA_ASSET_STEP, era - 1);   // escala de precio
+  const y = k * (1 + 0.06 * (era - 1));          // escala de renta (yield algo mejor)
+  const tier = ERA_TIER[Math.min(era, ERA_TIER.length) - 1];
+  const sc = (v, m) => Math.round((v || 0) * m);
+  return assets.map(a => {
+    const f = a.financials;
+    return {
+      ...a,
+      id: `${a.id}@e${era}`,
+      baseId: a.baseId || a.id,
+      title: `${a.title} · ${tier}`,
+      era,
+      financials: {
+        total_price: sc(f.total_price, k),
+        down_payment_required: sc(f.down_payment_required, k),
+        mortgage_available: sc(f.mortgage_available, k),
+        monthly_mortgage_cost: sc(f.monthly_mortgage_cost, k),
+        gross_monthly_income: sc(f.gross_monthly_income, y),
+        maintenance_and_taxes: sc(f.maintenance_and_taxes, k),
+        net_monthly_cashflow: sc(f.gross_monthly_income, y) - sc(f.maintenance_and_taxes, k),
+      },
+      metrics: {
+        ...a.metrics,
+        // más tamaño, más exposición: el riesgo de vacancia/volatilidad sube
+        vacancy_rate_risk: Math.min(0.6, (a.metrics.vacancy_rate_risk || 0) * (1 + 0.12 * (era - 1))),
+      },
+    };
+  });
+}
+
+/** Recalcula el catálogo vigente a partir de la era del motor. */
+function buildCatalog() {
+  catalog = eraCatalog(DATA.assets, engine ? engine.era : 1);
+}
+
 /* -------------------------- MARKETPLACE --------------------------- */
 function affordable(a) {
   return engine.canBuy(a, 'cash').ok || (a.leverage_allowed && engine.canBuy(a, 'leverage').ok);
@@ -246,7 +293,7 @@ function affordable(a) {
 
 function refreshMarket() {
   // solo oportunidades elegibles (universales + de tu profesión)
-  const pool = DATA.assets.filter(a => engine.assetEligible(a));
+  const pool = catalog.filter(a => engine.assetEligible(a));
   market = [];
   while (market.length < 3 && pool.length) {
     const i = Math.floor(Math.random() * pool.length);
@@ -312,7 +359,7 @@ function renderMarket() {
 }
 
 function doBuy(assetId, financing) {
-  const asset = DATA.assets.find(a => a.id === assetId);
+  const asset = catalog.find(a => a.id === assetId);
   const res = engine.buyAsset(asset, financing);
   if (!res.ok) { toast('No se pudo comprar', res.reason, 'bad'); return; }
 
@@ -322,7 +369,7 @@ function doBuy(assetId, financing) {
 
   // reemplaza la tarjeta comprada por otra nueva del pool
   const idx = market.findIndex(m => m.id === assetId);
-  const remaining = DATA.assets.filter(a => engine.assetEligible(a) && !market.includes(a));
+  const remaining = catalog.filter(a => engine.assetEligible(a) && !market.includes(a));
   if (remaining.length) market[idx] = remaining[Math.floor(Math.random() * remaining.length)];
   else market.splice(idx, 1);
 
@@ -418,7 +465,7 @@ function resolveTurn(ev, choiceIndex) {
 
   // turno de los oponentes IA (compran, se cuidan y resuelven sus eventos)
   bots.forEach(b => {
-    const bought = takeBotTurn(b.engine, DATA.assets, DATA.lifestyle, DATA.vehicles, b.aggr, DATA.gigs) || [];
+    const bought = takeBotTurn(b.engine, catalog, DATA.lifestyle, DATA.vehicles, b.aggr, DATA.gigs) || [];
     b.engine.endTurn();
     bought.forEach(t => logActivity(`${b.emoji} ${b.name} compró ${t}`, 'neutral'));
     if (b.engine.hasLost()) logActivity(`${b.emoji} ${b.name} abandonó la partida 💥`, 'bad');
@@ -543,7 +590,7 @@ function renderStandings() {
     <div class="rank-row ${r.me ? 'me' : ''}">
       <span class="rk">${i + 1}</span>
       <span class="rk-name">${r.emoji} ${r.name}</span>
-      <div class="rk-bar"><i style="width:${Math.min(100, r.ie / WIN_IE * 100)}%"></i></div>
+      <div class="rk-bar"><i style="width:${Math.min(100, r.ie / engine.winTargetIE() * 100)}%"></i></div>
       <span class="rk-ie">${r.ie.toFixed(0)}%</span>
     </div>`).join('');
 }
@@ -553,9 +600,12 @@ function checkEnd() {
   const s = engine.status();
   if (s.won) {
     ended = true;
-    endModal('🏆 ¡Libertad alcanzada!',
+    const first = s.era === 1;
+    endModal(first ? '🏆 ¡Libertad alcanzada!' : `🏆 ${s.eraLabel} superada`,
       `Has llegado a un Indicador de Emancipación del <b>${s.ie}%</b> con
-       ${s.cushionMonths} meses de colchón. Tus activos pagan tu vida. Eres libre.`, true);
+       ${s.cushionMonths} meses de colchón. ${first
+         ? 'Tus activos pagan tu vida. Eres libre.'
+         : 'Tu patrimonio aguanta un nivel de vida que antes era inalcanzable.'}`, true, true);
     return;
   }
   if (s.lost) {
@@ -599,8 +649,12 @@ function computeEndStats() {
   };
 }
 
-function endModal(title, html, win) {
-  clearSave();
+/**
+ * @param {boolean} win          ¿victoria o derrota?
+ * @param {boolean} canContinue  ofrecer encadenar la siguiente era (Modo Legado)
+ */
+function endModal(title, html, win, canContinue = false) {
+  if (!canContinue) clearSave();
   const st = computeEndStats();
   const rankTxt = ['🥇 1º', '🥈 2º', '🥉 3º'][st.rank - 1] || `${st.rank}º`;
   const s = engine.status();
@@ -635,14 +689,66 @@ function endModal(title, html, win) {
         <div><span>Patrimonio</span><b>${euro(st.netWorth)}</b></div>
         <div><span>Puesto en la carrera</span><b>${rankTxt} de ${st.total}</b></div>
       </div>
+      ${canContinue ? `
+      <div class="era-teaser">
+        <b>¿Sigues?</b> Conservas caja, activos y patrimonio. Sube el listón a
+        <b>${Math.round(engine.winTargetIE() * (1 + 0.35))}%</b> de IE, tu nivel de vida
+        se encarece y los imprevistos pegan más fuerte — pero se abre un mercado
+        con activos mayores y más crédito.
+      </div>` : ''}
       <div class="end-actions">
         <button class="btn-ghost" id="btn-lb">🏆 Ver clasificación</button>
-        <button class="btn-primary" id="btn-again" style="flex:1">Jugar otra vez</button>
+        ${canContinue
+          ? `<button class="btn-primary" id="btn-continue" style="flex:1">▶️ Continuar · Nueva era</button>
+             <button class="btn-ghost" id="btn-again">Cerrar partida</button>`
+          : `<button class="btn-primary" id="btn-again" style="flex:1">Jugar otra vez</button>`}
       </div>
     </div>`;
   document.body.appendChild(ov);
   ov.querySelector('#btn-again').onclick = () => { clearSave(); location.href = location.pathname; };
   ov.querySelector('#btn-lb').onclick = () => showLeaderboard();
+  const contBtn = ov.querySelector('#btn-continue');
+  if (contBtn) contBtn.onclick = () => { ov.remove(); startNextEra(); };
+}
+
+/* --------------------------- MODO LEGADO -------------------------- */
+/**
+ * Encadena la siguiente era sin cortar la partida: sube el listón para ti y
+ * para los rivales, escala el mercado y sigue jugando con el mismo patrimonio.
+ */
+function startNextEra() {
+  const info = engine.startNewEra();
+  bots.forEach(b => b.engine.startNewEra());   // los rivales suben contigo
+  buildCatalog();
+  ended = false;
+
+  logActivity(`🚀 Comienza la ${info.label}: meta ${info.targetTo}% de IE.`, 'good');
+  refreshMarket();
+  render();
+  saveGame();
+
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="modal era-modal">
+      <div style="font-size:56px;text-align:center">🚀</div>
+      <h2 style="text-align:center">${info.label}</h2>
+      <p class="lead" style="text-align:center">
+        Conservas todo lo construido. El listón sube y el juego se pone serio.</p>
+      <div class="era-grid">
+        <div class="era-up"><span>Meta de IE</span><b>${info.targetFrom}% → ${info.targetTo}%</b></div>
+        <div class="era-up"><span>Coste de vida</span><b>+${euro(info.lifeAdd)}/mes</b></div>
+        <div class="era-up"><span>Imprevistos</span><b>+${info.riskPct}% de impacto</b></div>
+        <div class="era-down"><span>Límite de crédito</span><b>${euro(info.creditFrom)} → ${euro(info.creditTo)}</b></div>
+        <div class="era-down"><span>Mercado</span><b>Activos de mayor calibre</b></div>
+        <div class="era-down"><span>Trabajos extra</span><b>Disponibles</b></div>
+      </div>
+      <div class="end-actions">
+        <button class="btn-primary" id="btn-era-go" style="flex:1">Seguir construyendo</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#btn-era-go').onclick = () => ov.remove();
 }
 
 /* --------------------------- LIGA / RANKING ----------------------- */
@@ -701,8 +807,18 @@ function render() {
 
   // Barra de libertad
   $('ie-value').textContent = `${s.ie}%`;
-  const pct = Math.min(100, (s.ie / WIN_IE) * 100);
+  const pct = Math.min(100, (s.ie / s.targetIE) * 100);
   $('ie-bar').style.width = pct + '%';
+  $('ie-target-sub').textContent = s.targetIE;
+  $('ie-target-note').textContent = s.targetIE;
+
+  // Modo Legado: el chip de era solo aparece a partir de la segunda
+  const eraChip = $('hud-era-chip');
+  if (eraChip) {
+    eraChip.style.display = s.era > 1 ? '' : 'none';
+    $('hud-era').textContent = s.era;
+    eraChip.title = s.eraLabel;
+  }
 
   // Tesorería
   $('cash').textContent = euro(s.cash);
@@ -992,6 +1108,7 @@ function clearSave() {
 async function resumeGame(save) {
   const profile = DATA.profiles.find(x => x.id === save.engine.profileId) || DATA.profiles[0];
   engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events);
+  buildCatalog();
   ended = false;
   $('profile-overlay').style.display = 'none';
   $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.short || profile.name);
@@ -1021,7 +1138,7 @@ async function resumeGame(save) {
   });
   city.draw();
 
-  market = (save.market || []).map(id => DATA.assets.find(a => a.id === id)).filter(Boolean);
+  market = (save.market || []).map(id => catalog.find(a => a.id === id)).filter(Boolean);
   if (market.length) renderMarket(); else refreshMarket();
   p2pOffers = [];
   render();
@@ -1040,14 +1157,14 @@ function drawSparkline() {
   ctx.clearRect(0, 0, w, h);
 
   const hist = engine.history;
-  const maxIE = Math.max(WIN_IE, ...hist.map(p => p.ie), 10);
+  const maxIE = Math.max(engine.winTargetIE(), ...hist.map(p => p.ie), 10);
   const x = i => hist.length > 1 ? (i / (hist.length - 1)) * (w - 4) + 2 : w / 2;
   const y = ie => h - 4 - (ie / maxIE) * (h - 8);
 
   // línea de meta 120%
   ctx.strokeStyle = 'rgba(255,178,62,.5)';
   ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, y(WIN_IE)); ctx.lineTo(w, y(WIN_IE)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, y(engine.winTargetIE())); ctx.lineTo(w, y(engine.winTargetIE())); ctx.stroke();
   ctx.setLineDash([]);
 
   if (hist.length < 2) return;
@@ -1161,6 +1278,19 @@ function toast(title, desc, tone = 'neutral') {
     }
     // hook de test: ?veh=1 abre el selector de vehículo
     if (params.get('veh')) showVehicleChooser();
+    // hook de test: ?win=1 fuerza la victoria (para probar el Modo Legado)
+    if (params.get('win')) {
+      engine.cash = 5e7;
+      let safety = 40;
+      while (!engine.hasWon() && safety-- > 0) {
+        const best = catalog.filter(a => engine.assetEligible(a) && engine.canBuy(a, 'cash').ok)
+          .sort((x, y) => y.financials.net_monthly_cashflow - x.financials.net_monthly_cashflow)[0];
+        if (!best) break;
+        engine.buyAsset(best, 'cash');
+      }
+      engine.cash = 5e7;
+      render(); checkEnd();
+    }
     // hook de test: ?view=global abre la vista global
     if (params.get('view') === 'global') toggleView();
     // hook de test: ?tip=<id> muestra una tip (ignora AUTO_MODE)

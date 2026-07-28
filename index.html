@@ -29,9 +29,9 @@
       <div class="panel freedom" data-tab="hud">
         <h2>Indicador de Emancipación</h2>
         <div class="big" id="ie-value">0%</div>
-        <div class="sub">Objetivo: rentas pasivas ≥ 120% de tus gastos</div>
+        <div class="sub">Objetivo: rentas pasivas ≥ <b id="ie-target-sub">120</b>% de tus gastos</div>
         <div class="progress"><i id="ie-bar"></i><span class="goal" id="ie-goal"></span></div>
-        <div class="goal-note">meta 120%</div>
+        <div class="goal-note">meta <span id="ie-target-note">120</span>%</div>
         <canvas id="ie-spark" class="spark" height="52"></canvas>
       </div>
 
@@ -156,6 +156,7 @@
         <div class="chip"><span class="k">Perfil</span><span id="hud-profile">—</span></div>
         <div class="chip" id="hud-prof-chip"><span class="k">Profesión</span><span id="hud-prof" style="display:none">—</span></div>
         <div class="chip" id="hud-mode-chip"><span class="k">Modo</span><span id="hud-mode" style="display:none">—</span></div>
+        <div class="chip chip-era" id="hud-era-chip" style="display:none"><span class="k">Era</span><span id="hud-era">1</span></div>
         <div class="chip chip-activos"><span class="k">Activos</span><span id="hud-assets">0</span></div>
         <button class="chip chip-btn" id="btn-view"><span class="chip-ic">🌍</span><span class="chip-txt" id="view-txt"> Vista global</span></button>
         <button class="chip chip-btn" id="btn-help"><span class="chip-ic">❓</span><span class="chip-txt"> Cómo jugar</span></button>
