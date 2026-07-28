@@ -231,6 +231,396 @@
         "vacancy_rate_risk": 0.55
       },
       "leverage_allowed": false
+    },
+    {
+      "id": "re_trastero_12",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_sand_block.png",
+      "title": "Trastero en Alquiler",
+      "description": "Guardamuebles de bajo coste y cero complicaciones. Ideal para empezar.",
+      "financials": {
+        "total_price": 9000,
+        "down_payment_required": 2200,
+        "mortgage_available": 6800,
+        "monthly_mortgage_cost": 45,
+        "gross_monthly_income": 140,
+        "maintenance_and_taxes": 15,
+        "net_monthly_cashflow": 80
+      },
+      "metrics": {
+        "coc_return_percentage": 43.64,
+        "vacancy_rate_risk": 0.05
+      },
+      "leverage_allowed": true
+    },
+    {
+      "id": "re_nave_13",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_brick_twotier.png",
+      "title": "Nave Logística",
+      "description": "Almacén alquilado a empresa de e-commerce con contrato largo.",
+      "financials": {
+        "total_price": 210000,
+        "down_payment_required": 63000,
+        "mortgage_available": 147000,
+        "monthly_mortgage_cost": 720,
+        "gross_monthly_income": 2600,
+        "maintenance_and_taxes": 260,
+        "net_monthly_cashflow": 1620
+      },
+      "metrics": {
+        "coc_return_percentage": 30.86,
+        "vacancy_rate_risk": 0.09
+      },
+      "leverage_allowed": true
+    },
+    {
+      "id": "fin_indexado_14",
+      "category": "financial",
+      "sprite": "assets/sprites/fin_gold_tall.png",
+      "title": "Fondo Indexado S&P 500",
+      "description": "Inversión pasiva diversificada. Bajo coste, crecimiento a largo plazo.",
+      "financials": {
+        "total_price": 10000,
+        "down_payment_required": 10000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 95,
+        "maintenance_and_taxes": 8,
+        "net_monthly_cashflow": 87
+      },
+      "metrics": {
+        "coc_return_percentage": 10.44,
+        "vacancy_rate_risk": 0.12
+      },
+      "leverage_allowed": false
+    },
+    {
+      "id": "fin_bonos_15",
+      "category": "financial",
+      "sprite": "assets/sprites/fin_bronze_wide.png",
+      "title": "Bonos del Estado",
+      "description": "Renta fija muy segura. Poco rendimiento pero casi sin riesgo.",
+      "financials": {
+        "total_price": 12000,
+        "down_payment_required": 12000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 80,
+        "maintenance_and_taxes": 5,
+        "net_monthly_cashflow": 75
+      },
+      "metrics": {
+        "coc_return_percentage": 7.5,
+        "vacancy_rate_risk": 0.02
+      },
+      "leverage_allowed": false
+    },
+    {
+      "id": "biz_vending2_16",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_slate_shop.png",
+      "title": "Lavandería Automática",
+      "description": "Local self-service con máquinas. Ingresos estables, poco personal.",
+      "financials": {
+        "total_price": 60000,
+        "down_payment_required": 60000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1350,
+        "maintenance_and_taxes": 380,
+        "net_monthly_cashflow": 970
+      },
+      "metrics": {
+        "coc_return_percentage": 19.4,
+        "vacancy_rate_risk": 0.14
+      },
+      "leverage_allowed": false
+    },
+    {
+      "id": "biz_foodtruck_17",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_teal_office.png",
+      "title": "Food Truck",
+      "description": "Negocio móvil de comida. Escalable a más camiones si funciona.",
+      "financials": {
+        "total_price": 32000,
+        "down_payment_required": 32000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1250,
+        "maintenance_and_taxes": 520,
+        "net_monthly_cashflow": 730
+      },
+      "metrics": {
+        "coc_return_percentage": 27.38,
+        "vacancy_rate_risk": 0.3
+      },
+      "leverage_allowed": false
+    },
+    {
+      "id": "edu_academia_18",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_blue_twotier.png",
+      "title": "Academia de Repaso",
+      "description": "Clases de refuerzo por las tardes. Demanda constante en tu zona.",
+      "financials": {
+        "total_price": 35000,
+        "down_payment_required": 35000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1550,
+        "maintenance_and_taxes": 600,
+        "net_monthly_cashflow": 950
+      },
+      "metrics": {
+        "coc_return_percentage": 32.57,
+        "vacancy_rate_risk": 0.15
+      },
+      "leverage_allowed": false,
+      "profession": "education"
+    },
+    {
+      "id": "edu_curso_19",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_indigo_house.png",
+      "title": "Curso Online",
+      "description": "Infoproducto que grabas una vez y vendes en automático.",
+      "financials": {
+        "total_price": 12000,
+        "down_payment_required": 12000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 780,
+        "maintenance_and_taxes": 140,
+        "net_monthly_cashflow": 640
+      },
+      "metrics": {
+        "coc_return_percentage": 64,
+        "vacancy_rate_risk": 0.35
+      },
+      "leverage_allowed": false,
+      "profession": "education"
+    },
+    {
+      "id": "med_consulta_20",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_teal_block.png",
+      "title": "Consulta Privada",
+      "description": "Tu propia consulta con pacientes de pago. Alta rentabilidad por hora.",
+      "financials": {
+        "total_price": 55000,
+        "down_payment_required": 55000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 2100,
+        "maintenance_and_taxes": 650,
+        "net_monthly_cashflow": 1450
+      },
+      "metrics": {
+        "coc_return_percentage": 31.64,
+        "vacancy_rate_risk": 0.12
+      },
+      "leverage_allowed": false,
+      "profession": "health"
+    },
+    {
+      "id": "med_clinica_21",
+      "category": "real_estate",
+      "sprite": "assets/sprites/biz_blue_tall.png",
+      "title": "Participación en Clínica Dental",
+      "description": "Copropiedad de una clínica ya en marcha. Reparte beneficios.",
+      "financials": {
+        "total_price": 140000,
+        "down_payment_required": 42000,
+        "mortgage_available": 98000,
+        "monthly_mortgage_cost": 560,
+        "gross_monthly_income": 2400,
+        "maintenance_and_taxes": 300,
+        "net_monthly_cashflow": 1540
+      },
+      "metrics": {
+        "coc_return_percentage": 44,
+        "vacancy_rate_risk": 0.1
+      },
+      "leverage_allowed": true,
+      "profession": "health"
+    },
+    {
+      "id": "tech_saas_22",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_indigo_arched.png",
+      "title": "SaaS B2B",
+      "description": "Software de suscripción para empresas. Márgenes altísimos y escalable.",
+      "financials": {
+        "total_price": 70000,
+        "down_payment_required": 70000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 2600,
+        "maintenance_and_taxes": 420,
+        "net_monthly_cashflow": 2180
+      },
+      "metrics": {
+        "coc_return_percentage": 37.37,
+        "vacancy_rate_risk": 0.22
+      },
+      "leverage_allowed": false,
+      "profession": "tech"
+    },
+    {
+      "id": "tech_app_23",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_slate_wide.png",
+      "title": "App con Publicidad",
+      "description": "App gratuita monetizada con ads e in-app. Volátil pero barata.",
+      "financials": {
+        "total_price": 18000,
+        "down_payment_required": 18000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1050,
+        "maintenance_and_taxes": 260,
+        "net_monthly_cashflow": 790
+      },
+      "metrics": {
+        "coc_return_percentage": 52.67,
+        "vacancy_rate_risk": 0.4
+      },
+      "leverage_allowed": false,
+      "profession": "tech"
+    },
+    {
+      "id": "food_bar_24",
+      "category": "digital_business",
+      "sprite": "assets/sprites/re_rose_shop.png",
+      "title": "Bar de Tapas",
+      "description": "Bar de barrio con clientela fiel. Mucho trabajo pero buen flujo.",
+      "financials": {
+        "total_price": 65000,
+        "down_payment_required": 65000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 2050,
+        "maintenance_and_taxes": 900,
+        "net_monthly_cashflow": 1150
+      },
+      "metrics": {
+        "coc_return_percentage": 21.23,
+        "vacancy_rate_risk": 0.2
+      },
+      "leverage_allowed": false,
+      "profession": "hospitality"
+    },
+    {
+      "id": "food_dark_25",
+      "category": "digital_business",
+      "sprite": "assets/sprites/re_olive_house.png",
+      "title": "Dark Kitchen",
+      "description": "Cocina fantasma solo para delivery. Sin sala, costes bajos.",
+      "financials": {
+        "total_price": 40000,
+        "down_payment_required": 40000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1650,
+        "maintenance_and_taxes": 700,
+        "net_monthly_cashflow": 950
+      },
+      "metrics": {
+        "coc_return_percentage": 28.5,
+        "vacancy_rate_risk": 0.28
+      },
+      "leverage_allowed": false,
+      "profession": "hospitality"
+    },
+    {
+      "id": "trade_reformas_26",
+      "category": "digital_business",
+      "sprite": "assets/sprites/re_brick_tall.png",
+      "title": "Empresa de Reformas",
+      "description": "Cuadrilla que reforma pisos para alquilar o vender. Alta demanda.",
+      "financials": {
+        "total_price": 45000,
+        "down_payment_required": 45000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1900,
+        "maintenance_and_taxes": 780,
+        "net_monthly_cashflow": 1120
+      },
+      "metrics": {
+        "coc_return_percentage": 29.87,
+        "vacancy_rate_risk": 0.18
+      },
+      "leverage_allowed": false,
+      "profession": "trades"
+    },
+    {
+      "id": "trade_taller_27",
+      "category": "digital_business",
+      "sprite": "assets/sprites/re_sand_office.png",
+      "title": "Taller Mecánico",
+      "description": "Taller de coches con clientela local. Ingresos recurrentes.",
+      "financials": {
+        "total_price": 80000,
+        "down_payment_required": 80000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 2200,
+        "maintenance_and_taxes": 850,
+        "net_monthly_cashflow": 1350
+      },
+      "metrics": {
+        "coc_return_percentage": 20.25,
+        "vacancy_rate_risk": 0.14
+      },
+      "leverage_allowed": false,
+      "profession": "trades"
+    },
+    {
+      "id": "crea_youtube_28",
+      "category": "digital_business",
+      "sprite": "assets/sprites/fin_purple_office.png",
+      "title": "Canal de Contenido",
+      "description": "Monetizas vídeos con ads, patrocinios y afiliación. Escala enorme.",
+      "financials": {
+        "total_price": 15000,
+        "down_payment_required": 15000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 900,
+        "maintenance_and_taxes": 180,
+        "net_monthly_cashflow": 720
+      },
+      "metrics": {
+        "coc_return_percentage": 57.6,
+        "vacancy_rate_risk": 0.45
+      },
+      "leverage_allowed": false,
+      "profession": "creative"
+    },
+    {
+      "id": "crea_agencia_29",
+      "category": "digital_business",
+      "sprite": "assets/sprites/fin_emerald_house.png",
+      "title": "Agencia de Diseño",
+      "description": "Estudio con clientes recurrentes. Ingresos por proyectos y retainers.",
+      "financials": {
+        "total_price": 50000,
+        "down_payment_required": 50000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 2000,
+        "maintenance_and_taxes": 760,
+        "net_monthly_cashflow": 1240
+      },
+      "metrics": {
+        "coc_return_percentage": 29.76,
+        "vacancy_rate_risk": 0.2
+      },
+      "leverage_allowed": false,
+      "profession": "creative"
     }
   ]
 }

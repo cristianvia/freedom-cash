@@ -23,6 +23,7 @@ export class EconomyEngine {
     this.profile = profile;
     this.events = events;
     this.mode = mode || { id: 'easy', cashMult: 1, salaryMult: 1, extraRent: 0, gigs: false, scoreMult: 1 };
+    this.professionId = 'none'; // profesión: desbloquea proyectos temáticos
 
     this.month = 1;
     this.cash = Math.round(profile.starting_cash * this.mode.cashMult);
@@ -272,6 +273,11 @@ export class EconomyEngine {
   }
 
   /* --------------------------- ACCIONES ----------------------------- */
+
+  /** ¿Está este activo disponible para mí? Universal o de mi profesión. */
+  assetEligible(asset) {
+    return !asset.profession || asset.profession === this.professionId;
+  }
 
   /**
    * ¿Puede el jugador permitirse comprar este activo con la financiación dada?
@@ -632,6 +638,7 @@ export class EconomyEngine {
   toJSON() {
     return {
       profileId: this.profile.id,
+      professionId: this.professionId,
       mode: this.mode,
       extraRent: this.extraRent,
       month: this.month,
@@ -656,6 +663,7 @@ export class EconomyEngine {
   /** Reconstruye un motor a partir de un estado guardado. */
   static fromJSON(data, profile, events) {
     const e = new EconomyEngine(profile, events, data.mode);
+    e.professionId = data.professionId || 'none';
     e.extraRent = data.extraRent ?? (data.mode && data.mode.extraRent) ?? 0;
     e.month = data.month;
     e.cash = data.cash;

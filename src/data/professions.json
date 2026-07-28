@@ -1,0 +1,53 @@
+{
+  "$schema_note": "Profesiones (capa extra sobre perfil+dificultad). No cambian la economía inicial; desbloquean PROYECTOS temáticos de tu campo en el Marketplace (assets con profession == este id). 'none' = sin profesión especializada (solo proyectos universales).",
+  "professions": [
+    {
+      "id": "none",
+      "emoji": "🎲",
+      "label": "Generalista",
+      "desc": "Sin especialización. Accedes a todos los proyectos universales del mercado."
+    },
+    {
+      "id": "education",
+      "emoji": "🎓",
+      "label": "Educación",
+      "desc": "Profe, formador o academia. Montas repasos, academias y cursos online.",
+      "projects": ["Academia de Repaso", "Curso Online"]
+    },
+    {
+      "id": "health",
+      "emoji": "🩺",
+      "label": "Sanidad",
+      "desc": "Profesional sanitario. Abres consulta privada o participas en una clínica.",
+      "projects": ["Consulta Privada", "Participación en Clínica Dental"]
+    },
+    {
+      "id": "tech",
+      "emoji": "💻",
+      "label": "Tecnología",
+      "desc": "Desarrollo y producto digital. Lanzas SaaS B2B y apps monetizadas.",
+      "projects": ["SaaS B2B", "App con Publicidad"]
+    },
+    {
+      "id": "hospitality",
+      "emoji": "🍽️",
+      "label": "Hostelería",
+      "desc": "Cocina y restauración. Abres un bar de tapas o una dark kitchen de delivery.",
+      "projects": ["Bar de Tapas", "Dark Kitchen"]
+    },
+    {
+      "id": "trades",
+      "emoji": "🔧",
+      "label": "Oficios",
+      "desc": "Manos y obra. Montas una empresa de reformas o un taller mecánico.",
+      "projects": ["Empresa de Reformas", "Taller Mecánico"]
+    },
+    {
+      "id": "creative",
+      "emoji": "🎨",
+      "label": "Creativo",
+      "desc": "Contenido y diseño. Creas un canal monetizado o una agencia creativa.",
+      "projects": ["Canal de Contenido", "Agencia de Diseño"]
+    }
+  ]
+}

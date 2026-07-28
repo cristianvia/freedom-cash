@@ -112,6 +112,9 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
       y hitos de vida (mascota, pareja, bebé, casa propia) que suben tu coste de vida.
 - [x] **Modo Liga / Clasificación:** cada partida puntúa y escala en una liga persistente
       (con rivales "fantasma"); competitivo, opcional y sin final. Enganche listo para backend.
+- [x] **Profesiones + catálogo ampliado:** eliges profesión (educación, sanidad, tech,
+      hostelería, oficios, creativo) que desbloquea proyectos de tu campo. 29 activos en total.
+- [x] **Variedad gráfica:** edificios recoloreados por distrito (color + silueta).
 - [ ] Fase 2: **multijugador en tiempo real** (próxima sesión) — conectar la liga a un
       backend (WebSocket/Supabase) reutilizando el interfaz de `Leaderboard.js`.
 - [ ] Fase 2: sindicación de compras (comprar activos a medias entre jugadores).

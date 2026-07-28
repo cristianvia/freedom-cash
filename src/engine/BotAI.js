@@ -75,8 +75,8 @@ export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggre
   while (attempts-- > 0) {
     if (Math.random() > aggressiveness) break;
 
-    // opciones asequibles, puntuadas por cashflow neto por euro aportado
-    const options = assets.map(a => {
+    // opciones asequibles (elegibles por profesión), puntuadas por cashflow/euro
+    const options = assets.filter(a => engine.assetEligible(a)).map(a => {
       const canLev = a.leverage_allowed && engine.canBuy(a, 'leverage').ok;
       const canCash = engine.canBuy(a, 'cash').ok;
       if (!canLev && !canCash) return null;

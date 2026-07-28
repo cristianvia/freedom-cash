@@ -68,7 +68,7 @@ const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
 async function loadData() {
-  const [a, p, e, l, v, d, g] = await Promise.all([
+  const [a, p, e, l, v, d, g, pr] = await Promise.all([
     fetch('src/data/assets_database.json').then(r => r.json()),
     fetch('src/data/profiles.json').then(r => r.json()),
     fetch('src/data/events.json').then(r => r.json()),
@@ -76,6 +76,7 @@ async function loadData() {
     fetch('src/data/vehicles.json').then(r => r.json()),
     fetch('src/data/difficulty.json').then(r => r.json()),
     fetch('src/data/gigs.json').then(r => r.json()),
+    fetch('src/data/professions.json').then(r => r.json()),
   ]);
   DATA.assets = a.assets;
   DATA.profiles = p.profiles;
@@ -84,6 +85,7 @@ async function loadData() {
   DATA.vehicles = v.vehicles;
   DATA.modes = d.modes;
   DATA.gigs = g.gigs;
+  DATA.professions = pr.professions;
 
   // todos los sprites (suelo, decoración, edificios y coches) por su clave
   const TILE_KEYS = ['t_ground', 't_grass', 't_plaza', 't_tree', 't_water', 't_road'];
@@ -127,23 +129,52 @@ function renderProfiles() {
         <div><span>Caja inicial</span><b>${euro(p.starting_cash)}</b></div>
       </div>
       <div class="rating">Rating ${p.credit_rating}</div>`;
-    el.onclick = () => chooseDifficulty(p);
+    el.onclick = () => chooseProfession(p);
     wrap.appendChild(el);
   });
 }
 
+/* ------------------------ SELECCIÓN PROFESIÓN -------------------- */
+function chooseProfession(profile) {
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="modal">
+      <h2>Elige tu profesión</h2>
+      <p class="lead">Con ${profile.emoji} <b>${profile.name}</b>. Tu profesión desbloquea
+        <b>proyectos de tu campo</b> en el Marketplace, además de las oportunidades para todos.</p>
+      <div class="prof-grid">
+        ${DATA.professions.map(pr => `
+          <button class="prof-opt" data-prof="${pr.id}">
+            <span class="prof-em">${pr.emoji}</span>
+            <b>${pr.label}</b>
+            <span class="prof-desc">${pr.desc}</span>
+            ${pr.projects ? `<span class="prof-proj">🔓 ${pr.projects.join(' · ')}</span>` : ''}
+          </button>`).join('')}
+      </div>
+      <button class="btn-ghost" id="prof-back" style="width:100%;margin-top:14px">‹ Volver a perfiles</button>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#prof-back').onclick = () => ov.remove();
+  ov.querySelectorAll('button[data-prof]').forEach(btn => {
+    btn.onclick = () => {
+      const profession = DATA.professions.find(pr => pr.id === btn.dataset.prof);
+      ov.remove();
+      chooseDifficulty(profile, profession);
+    };
+  });
+}
+
 /* ------------------------ SELECCIÓN DIFICULTAD -------------------- */
-let pendingProfile = null;
-function chooseDifficulty(profile) {
-  pendingProfile = profile;
+function chooseDifficulty(profile, profession) {
   const ov = document.createElement('div');
   ov.className = 'overlay';
   ov.id = 'diff-overlay';
   ov.innerHTML = `
     <div class="modal">
       <h2>Elige la dificultad</h2>
-      <p class="lead">Con ${profile.emoji} <b>${profile.name}</b>. La dificultad cambia tu punto de partida
-        y cuánto puntúas en la liga.</p>
+      <p class="lead">Con ${profile.emoji} <b>${profile.name}</b> · ${profession.emoji} <b>${profession.label}</b>.
+        La dificultad cambia tu punto de partida y cuánto puntúas en la liga.</p>
       <div class="diff-list">
         ${DATA.modes.map(m => `
           <button class="diff-opt" data-mode="${m.id}">
@@ -156,37 +187,41 @@ function chooseDifficulty(profile) {
             </div>
           </button>`).join('')}
       </div>
-      <button class="btn-ghost" id="diff-back" style="width:100%;margin-top:12px">‹ Volver a perfiles</button>
+      <button class="btn-ghost" id="diff-back" style="width:100%;margin-top:12px">‹ Volver a profesiones</button>
     </div>`;
   document.body.appendChild(ov);
-  ov.querySelector('#diff-back').onclick = () => ov.remove();
+  ov.querySelector('#diff-back').onclick = () => { ov.remove(); chooseProfession(profile); };
   ov.querySelectorAll('button[data-mode]').forEach(btn => {
     btn.onclick = () => {
       const mode = DATA.modes.find(m => m.id === btn.dataset.mode);
       ov.remove();
-      startGame(profile, mode);
+      startGame(profile, mode, profession);
     };
   });
 }
 
 /* ---------------------------- ARRANQUE ---------------------------- */
-async function startGame(profile, mode = null) {
+async function startGame(profile, mode = null, profession = null) {
   mode = mode || DATA.modes[0];
+  profession = profession || DATA.professions[0];
   engine = new EconomyEngine(profile, DATA.events, mode);
+  engine.professionId = profession.id;
   ended = false;
   $('profile-overlay').style.display = 'none';
   $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.name.split(' ')[0]);
+  $('hud-prof').innerHTML = chipHTML(profession.emoji, profession.label);
+  $('hud-prof').style.display = profession.id === 'none' ? 'none' : '';
   $('hud-mode').innerHTML = chipHTML(mode.emoji, mode.label);
   $('hud-mode').style.display = '';
 
-  // oponentes IA: los otros perfiles disponibles (mismo modo)
+  // oponentes IA: los otros perfiles disponibles (mismo modo, profesión aleatoria)
   const others = DATA.profiles.filter(p => p.id !== profile.id);
-  bots = others.map((bp, i) => ({
-    name: bp.name.split(' ')[0],
-    emoji: bp.emoji,
-    engine: new EconomyEngine(bp, DATA.events, mode),
-    aggr: 0.5 + i * 0.15,
-  }));
+  const profPool = DATA.professions.filter(pr => pr.id !== 'none');
+  bots = others.map((bp, i) => {
+    const be = new EconomyEngine(bp, DATA.events, mode);
+    be.professionId = profPool.length ? profPool[Math.floor(Math.random() * profPool.length)].id : 'none';
+    return { name: bp.name.split(' ')[0], emoji: bp.emoji, engine: be, aggr: 0.5 + i * 0.15 };
+  });
 
   // ciudad con distritos
   const canvas = $('city');
@@ -208,12 +243,17 @@ function affordable(a) {
 }
 
 function refreshMarket() {
-  // muestra 3 oportunidades aleatorias no compradas aún (permitimos repetir tipos)
-  const pool = [...DATA.assets];
+  // solo oportunidades elegibles (universales + de tu profesión)
+  const pool = DATA.assets.filter(a => engine.assetEligible(a));
   market = [];
   while (market.length < 3 && pool.length) {
     const i = Math.floor(Math.random() * pool.length);
     market.push(pool.splice(i, 1)[0]);
+  }
+  // sesga: si tienes profesión, que a menudo aparezca uno de TUS proyectos
+  const myProjects = pool.filter(a => a.profession === engine.professionId);
+  if (engine.professionId !== 'none' && myProjects.length && !market.some(a => a.profession) && Math.random() < 0.6) {
+    market[Math.floor(Math.random() * market.length)] = myProjects[Math.floor(Math.random() * myProjects.length)];
   }
   // garantiza al menos una opción asequible para no bloquear el turno
   if (!market.some(affordable)) {
@@ -232,9 +272,11 @@ function renderMarket() {
     const cashCheck = engine.canBuy(a, 'cash');
     const levCheck = engine.canBuy(a, 'leverage');
     const catLabel = { real_estate: 'Inmueble', digital_business: 'Negocio', financial: 'Financiero' }[a.category];
+    const prof = a.profession ? DATA.professions.find(pr => pr.id === a.profession) : null;
     const el = document.createElement('div');
-    el.className = 'market-card';
+    el.className = 'market-card' + (prof ? ' prof-card' : '');
     el.innerHTML = `
+      ${prof ? `<div class="prof-badge">${prof.emoji} Proyecto de ${prof.label}</div>` : ''}
       <div class="top">
         <img src="${a.sprite}" alt="">
         <div>
@@ -276,7 +318,7 @@ function doBuy(assetId, financing) {
 
   // reemplaza la tarjeta comprada por otra nueva del pool
   const idx = market.findIndex(m => m.id === assetId);
-  const remaining = DATA.assets.filter(a => !market.includes(a));
+  const remaining = DATA.assets.filter(a => engine.assetEligible(a) && !market.includes(a));
   if (remaining.length) market[idx] = remaining[Math.floor(Math.random() * remaining.length)];
   else market.splice(idx, 1);
 
@@ -948,6 +990,9 @@ async function resumeGame(save) {
   $('profile-overlay').style.display = 'none';
   $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.name.split(' ')[0]);
   if (engine.mode) { $('hud-mode').innerHTML = chipHTML(engine.mode.emoji || '', engine.mode.label || ''); $('hud-mode').style.display = ''; }
+  const prof = DATA.professions.find(pr => pr.id === engine.professionId);
+  if (prof && prof.id !== 'none') { $('hud-prof').innerHTML = chipHTML(prof.emoji, prof.label); $('hud-prof').style.display = ''; }
+  else $('hud-prof').style.display = 'none';
 
   bots = (save.bots || []).map(bs => ({
     name: bs.name, emoji: bs.emoji, aggr: bs.aggr,
@@ -1077,7 +1122,9 @@ function toast(title, desc, tone = 'neutral') {
   AUTO_MODE = !!auto;
 
   // hook de test: ?diff=investor abre el selector de dificultad
-  if (params.get('diff')) { const p = DATA.profiles.find(x => x.id === params.get('diff')) || DATA.profiles[0]; chooseDifficulty(p); return; }
+  if (params.get('diff')) { const p = DATA.profiles.find(x => x.id === params.get('diff')) || DATA.profiles[0]; chooseDifficulty(p, DATA.professions[0]); return; }
+  // hook de test: ?profsel=investor abre el selector de profesión
+  if (params.get('profsel')) { const p = DATA.profiles.find(x => x.id === params.get('profsel')) || DATA.profiles[0]; chooseProfession(p); return; }
 
   // hook de test: ?mtab=life abre esa pestaña móvil (tras arrancar)
   if (params.get('mtab')) setTimeout(() => setMobileTab(params.get('mtab')), 400);
@@ -1096,7 +1143,8 @@ function toast(title, desc, tone = 'neutral') {
   if (auto) {
     const p = DATA.profiles.find(x => x.id === auto) || DATA.profiles[0];
     const m = DATA.modes.find(x => x.id === params.get('mode')) || DATA.modes[0];
-    await startGame(p, m);
+    const pr = DATA.professions.find(x => x.id === params.get('prof')) || DATA.professions[0];
+    await startGame(p, m, pr);
     // hook de test: ?tut=N muestra el tutorial en el paso N
     const tut = params.get('tut');
     if (tut !== null) startTutorial(parseInt(tut, 10) || 0);
