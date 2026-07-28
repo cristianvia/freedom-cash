@@ -7,6 +7,7 @@ import { IsoCity } from './engine/IsoCity.js';
 import { takeBotTurn } from './engine/BotAI.js';
 import { Tutorial } from './ui/tutorial.js';
 import { computeScore, submitScore, topScores } from './engine/Leaderboard.js';
+import { Achievements } from './engine/Achievements.js';
 
 const $ = (id) => document.getElementById(id);
 const euro = (n) => `${Math.round(n).toLocaleString('es-ES')} €`;
@@ -65,13 +66,14 @@ let p2pOffers = [];         // activos que los rivales ponen a la venta
 let p2pSeq = 0;             // contador de instancias compradas por P2P
 let ended = false;          // evita disparar el fin de partida dos veces
 let activityLog = [];       // feed de actividad (jugador + rivales)
+let ach = null;             // logros + meta-progresión (persiste entre partidas)
 let AUTO_MODE = false;      // demos/test: resuelve dilemas automáticamente
 let globalView = false;     // alterna entre "mi ciudad" y "vista global"
 const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
 async function loadData() {
-  const [a, p, e, l, v, d, g, pr] = await Promise.all([
+  const [a, p, e, l, v, d, g, pr, ac] = await Promise.all([
     fetch('src/data/assets_database.json').then(r => r.json()),
     fetch('src/data/profiles.json').then(r => r.json()),
     fetch('src/data/events.json').then(r => r.json()),
@@ -80,7 +82,9 @@ async function loadData() {
     fetch('src/data/difficulty.json').then(r => r.json()),
     fetch('src/data/gigs.json').then(r => r.json()),
     fetch('src/data/professions.json').then(r => r.json()),
+    fetch('src/data/achievements.json').then(r => r.json()),
   ]);
+  ach = new Achievements(ac);
   DATA.assets = a.assets;
   DATA.profiles = p.profiles;
   DATA.events = e.events;
@@ -211,6 +215,8 @@ async function startGame(profile, mode = null, profession = null) {
   engine.professionId = profession.id;
   buildCatalog();
   ended = false;
+  ach.newRun();
+  ach.bumpLife('games');
   $('profile-overlay').style.display = 'none';
   $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.short || profile.name);
   $('hud-prof').innerHTML = chipHTML(profession.emoji, profession.label);
@@ -458,8 +464,14 @@ function renderMarket() {
 
 function doBuy(assetId, financing) {
   const asset = catalog.find(a => a.id === assetId);
+  const entry = market.find(m => m.asset.id === assetId);
   const res = engine.buyAsset(asset, financing);
   if (!res.ok) { toast('No se pudo comprar', res.reason, 'bad'); return; }
+
+  ach.bumpLife('assets_bought');
+  if (financing === 'leverage') ach.bumpLife('bought_leverage');
+  // esperar a que baje el precio (o a tener caja) también es una jugada
+  if (entry && entry.left <= MARKET_TTL[1] - 4) ach.bumpLife('patient_buys');
 
   // aparece el edificio en su distrito (sprite variado; guardamos celda y sprite)
   const placed = city.placeBuilding(asset.category);
@@ -521,7 +533,7 @@ function renderPortfolio() {
   wrap.querySelectorAll('button[data-refi]').forEach(btn => {
     btn.onclick = () => {
       const r = engine.refinanceAsset(btn.dataset.refi);
-      if (r.ok) { toast('🔧 Hipoteca refinanciada', `Comisión ${euro(r.fee)}. Cuota −25% y tipo fijado (inmune a subidas).`, 'good'); render(); }
+      if (r.ok) { ach.bumpLife('refis'); toast('🔧 Hipoteca refinanciada', `Comisión ${euro(r.fee)}. Cuota −25% y tipo fijado (inmune a subidas).`, 'good'); render(); }
       else toast('No se pudo refinanciar', r.reason, 'bad');
     };
   });
@@ -553,7 +565,12 @@ function endTurn() {
 }
 
 function resolveTurn(ev, choiceIndex) {
+  const wasBurnout = engine.isBurnout();
   const snap = engine.endTurn(ev, choiceIndex);
+
+  // marcas del mes que alimentan los logros de resistencia
+  if (engine.isBurnout() && !wasBurnout) ach.bumpRun('burnouts');
+  if (engine.cash < 0) ach.setRun('was_negative', true);
   const tone = ev ? ev.tone : 'neutral';
   let desc = ev ? ev.description : '';
   if (snap.adj && snap.adj._vacancyAsset) desc += ` (${snap.adj._vacancyAsset})`;
@@ -700,6 +717,8 @@ function buyP2P(idx) {
   toast('🤝 Traspaso cerrado',
     `Compraste el capital de "${o.asset.title}" a ${o.bot.emoji} ${o.bot.name} por ${euro(o.price)}.${mort}`, 'good');
   logActivity(`🤝 Traspaso: ${o.asset.title} de ${o.bot.name}`, 'good');
+  ach.bumpLife('p2p_deals');
+  if (o.urgent) ach.bumpLife('p2p_urgent');
   if (o.financing === 'leverage') showTip('p2p_assume');
   render();
 }
@@ -760,11 +779,23 @@ function renderStandings() {
     </div>`).join('');
 }
 
+/** Apunta en el meta-progreso lo que consiguió esta victoria. */
+function recordWin(s) {
+  ach.bumpLife('wins');
+  ach.addLifeSet('profiles_won', engine.profile.id);
+  ach.minLife('best_win_months', engine.month - 1);
+  if (s.happiness >= 70) ach.bumpLife('balanced_wins');
+  if (!ach.run.burnouts) ach.bumpLife('clean_wins');
+  if (!ach.run.bought_car) ach.bumpLife('carfree_wins');
+  checkAchievements();
+}
+
 function checkEnd() {
   if (ended) return;
   const s = engine.status();
   if (s.won) {
     ended = true;
+    recordWin(s);
     const first = s.era === 1;
     endModal(first ? '🏆 ¡Libertad alcanzada!' : `🏆 ${s.eraLabel} superada`,
       `Has llegado a un Indicador de Emancipación del <b>${s.ie}%</b> con
@@ -828,7 +859,7 @@ function endModal(title, html, win, canContinue = false) {
   const score = computeScore({
     won: win, months: st.months, netWorth: st.netWorth, ie: st.ie,
     happiness: s.happiness, energy: s.energy, rank: st.rank, profileId: engine.profile.id,
-    scoreMult: engine.mode.scoreMult,
+    scoreMult: engine.mode.scoreMult, achPoints: ach.progress().points,
   });
   const lb = submitScore({
     name: 'Tú', emoji: engine.profile.emoji, profile: engine.profile.id,
@@ -862,7 +893,8 @@ function endModal(title, html, win, canContinue = false) {
         con activos mayores y más crédito.
       </div>` : ''}
       <div class="end-actions">
-        <button class="btn-ghost" id="btn-lb">🏆 Ver clasificación</button>
+        <button class="btn-ghost" id="btn-lb">🏆 Clasificación</button>
+        <button class="btn-ghost" id="btn-ach-end">🏅 Logros <small>${ach.progress().unlocked}/${ach.progress().total}</small></button>
         ${canContinue
           ? `<button class="btn-primary" id="btn-continue" style="flex:1">▶️ Continuar · Nueva era</button>
              <button class="btn-ghost" id="btn-again">Cerrar partida</button>`
@@ -872,6 +904,7 @@ function endModal(title, html, win, canContinue = false) {
   document.body.appendChild(ov);
   ov.querySelector('#btn-again').onclick = () => { clearSave(); location.href = location.pathname; };
   ov.querySelector('#btn-lb').onclick = () => showLeaderboard();
+  ov.querySelector('#btn-ach-end').onclick = () => showAchievementsGallery();
   const contBtn = ov.querySelector('#btn-continue');
   if (contBtn) contBtn.onclick = () => { ov.remove(); startNextEra(); };
 }
@@ -947,6 +980,7 @@ function showLeaderboard() {
 function wireDebtButtons() {
   $('btn-loan').onclick = () => {
     engine.takeConsumerLoan(5000);
+    ach.bumpRun('red_loans');
     toast('Préstamo de consumo', 'Entran 5.000 € a caja, pero suma DEUDA ROJA que penaliza tu IE.', 'bad');
     showTip('red_debt');
     render();
@@ -959,6 +993,7 @@ function wireDebtButtons() {
   };
   $('btn-incorporate').onclick = () => {
     const r = engine.incorporate();
+    if (r.ok) ach.bumpLife('incorporations');
     if (r.ok) { toast('🏢 Sociedad constituida', 'A partir de ahora tributas como sociedad: impuestos fijos en lugar de recargo por renta alta.', 'good'); showTip('incorporate'); render(); }
     else toast('No se pudo constituir', r.reason, 'bad');
   };
@@ -1036,6 +1071,8 @@ function render() {
 
   // HUD (desktop chips)
   $('hud-assets').textContent = s.assetsCount;
+  const ap = ach.progress();
+  $('ach-txt').textContent = ` Logros ${ap.unlocked}/${ap.total}`;
   $('hud-month').textContent = s.month;
 
   // HUD compacto móvil
@@ -1057,6 +1094,7 @@ function render() {
   renderGigs(s);
   renderVehicle(s);
   renderActivity();
+  checkAchievements();
 
   // alquiler (solo en modos con extraRent)
   const rentRow = $('flow-rent-row');
@@ -1065,6 +1103,104 @@ function render() {
   drawSparkline();
   refreshView();
   saveGame();
+}
+
+/* ---------------------------- LOGROS ------------------------------ */
+/*
+ * Los logros son lo único que sobrevive a la partida: dan una razón para
+ * volver a jugar y objetivos a corto plazo entre medias del objetivo grande.
+ */
+
+/** Valores de cartera que las reglas necesitan y no están en status(). */
+function achDerived() {
+  const owned = engine.ownedAssets;
+  const byCat = {};
+  owned.forEach(a => { byCat[a.category] = (byCat[a.category] || 0) + 1; });
+  const vols = owned.map(a => engine.yieldSpread(a));
+  const avgVol = vols.length ? vols.reduce((s, v) => s + v, 0) / vols.length : 0;
+  return {
+    categories_owned: Object.keys(byCat).length,
+    max_category_count: Math.max(0, ...Object.values(byCat)),
+    leveraged_count: owned.filter(a => a.financing === 'leverage').length,
+    low_vol_portfolio: owned.length >= 6 && avgVol < 0.20,
+    high_vol_count: vols.filter(v => v > 0.40).length,
+    all_assets_above_avg: owned.length >= 3 && owned.every(a => (a.yieldFactor ?? 1) > 1),
+    tax_savings: Math.max(0, Math.round(
+      engine.taxVehicle === 'company'
+        ? Math.max(0, engine.totalPassiveIncome() - engine.TAX_THRESHOLD) * engine.PERSONAL_TAX - engine.COMPANY_MONTHLY
+        : 0)),
+    red_loans: ach.run.red_loans || 0,
+  };
+}
+
+/** Evalúa los logros y celebra los que se desbloqueen. */
+function checkAchievements() {
+  if (!ach || !engine) return;
+  const fresh = ach.evaluate(engine.status(), achDerived());
+  fresh.forEach((def, i) => {
+    logActivity(`${def.emoji} Logro desbloqueado: ${def.title}`, 'good');
+    if (!AUTO_MODE) setTimeout(() => showAchievement(def), 600 + i * 2600);
+  });
+}
+
+/** Tarjeta de celebración cuando cae un logro. */
+function showAchievement(def) {
+  const tier = ach.tiers[def.tier] || {};
+  const el = document.createElement('div');
+  el.className = 'ach-pop';
+  el.style.setProperty('--tier', tier.color || 'var(--green)');
+  el.innerHTML = `
+    <div class="ach-pop-em">${def.emoji}</div>
+    <div class="ach-pop-txt">
+      <div class="ach-pop-k">Logro · ${tier.label || ''} · +${ach.pointsOf(def)} pts</div>
+      <div class="ach-pop-t">${def.title}</div>
+      <div class="ach-pop-d">${def.desc}</div>
+    </div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  const close = () => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); };
+  el.onclick = close;
+  setTimeout(close, 5200);
+}
+
+/** Galería completa de logros, agrupada por categoría. */
+function showAchievementsGallery() {
+  const p = ach.progress();
+  const groups = ach.byCategory();
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="modal ach-modal">
+      <h2>🏅 Logros</h2>
+      <p class="lead">Se conservan entre partidas: aunque pierdas, el progreso queda.</p>
+      <div class="ach-summary">
+        <div><span>Desbloqueados</span><b>${p.unlocked} <small>de ${p.total}</small></b></div>
+        <div><span>Puntos</span><b>${p.points} <small>de ${p.maxPoints}</small></b></div>
+      </div>
+      <div class="ach-progress"><i style="width:${Math.round(p.unlocked / p.total * 100)}%"></i></div>
+      ${groups.map(g => `
+        <div class="ach-group">
+          <h3>${g.emoji} ${g.label} <small>${g.done}/${g.list.length}</small></h3>
+          <div class="ach-grid">
+            ${g.list.map(d => {
+              const on = ach.isUnlocked(d.id);
+              const tier = ach.tiers[d.tier] || {};
+              return `<div class="ach-item ${on ? 'on' : ''}" style="--tier:${tier.color || '#666'}"
+                        title="${d.desc}">
+                  <span class="ach-em">${on ? d.emoji : '🔒'}</span>
+                  <span class="ach-txt">
+                    <b>${d.title}</b>
+                    <small>${d.desc}</small>
+                  </span>
+                  <span class="ach-pts">${ach.pointsOf(d)}</span>
+                </div>`;
+            }).join('')}
+          </div>
+        </div>`).join('')}
+      <button class="btn-primary" id="ach-close" style="width:100%;margin-top:16px">Cerrar</button>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#ach-close').onclick = () => ov.remove();
 }
 
 /* ------------------------ ACCIONES DEL MES ------------------------ */
@@ -1185,6 +1321,8 @@ function showVehicleChooser() {
       const v = DATA.vehicles.find(x => x.id === btn.dataset.veh);
       const r = engine.chooseVehicle(v, btn.dataset.fin);
       if (r.ok) {
+        if (v.id !== 'none') ach.setRun('bought_car', true);
+        if (btn.dataset.fin === 'loan') ach.bumpRun('red_loans');
         ov.remove();
         const soldMsg = r.proceeds ? `Vendido por ${euro(r.proceeds)}. ` : '';
         toast(`${v.emoji} ${v.label}`,
@@ -1240,6 +1378,7 @@ function renderLifestyle() {
       const action = DATA.lifestyle.find(x => x.id === btn.dataset.life);
       const r = engine.doLifestyle(action);
       if (r.ok) {
+        ach.bumpLife('lifestyle_actions');
         toast(`${action.emoji} ${action.label}`, action.desc, 'good');
         logActivity(`${action.emoji} ${action.label}`, 'good');
         render();
@@ -1270,6 +1409,7 @@ function renderGigs(s) {
       const gig = DATA.gigs.find(x => x.id === btn.dataset.gig);
       const r = engine.doGig(gig);
       if (r.ok) {
+        ach.bumpLife('gigs');
         toast(`${gig.emoji} ${gig.label}`, `Ganas ${euro(r.earned)} a cambio de energía.`, 'good');
         logActivity(`🫵 ${gig.label} (+${euro(r.earned)})`, 'good');
         render();
@@ -1287,6 +1427,7 @@ function saveGame() {
       bots: bots.map(b => ({ name: b.name, emoji: b.emoji, aggr: b.aggr,
         profileId: b.engine.profile.id, engine: b.engine.toJSON() })),
       market: market.map(m => ({ id: m.asset.id, left: m.left })),
+      achRun: ach ? ach.run : {},
       ts: Date.now(),
     }));
   } catch (e) { /* almacenamiento no disponible */ }
@@ -1304,6 +1445,8 @@ async function resumeGame(save) {
   engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events);
   buildCatalog();
   ended = false;
+  ach.newRun();
+  ach.run = { ...(save.achRun || {}) };   // los contadores de esta partida siguen contando
   $('profile-overlay').style.display = 'none';
   $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.short || profile.name);
   if (engine.mode) { $('hud-mode').innerHTML = chipHTML(engine.mode.emoji || '', engine.mode.label || ''); $('hud-mode').style.display = ''; }
@@ -1435,6 +1578,8 @@ function toast(title, desc, tone = 'neutral') {
   $('btn-help').onclick = () => startTutorial();
   $('btn-view').onclick = toggleView;
   $('btn-leaderboard').onclick = () => showLeaderboard();
+  $('btn-ach').onclick = () => showAchievementsGallery();
+  $('btn-ach-start').onclick = () => showAchievementsGallery();
   wireDebtButtons();
   wireMobileNav();
 

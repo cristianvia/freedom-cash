@@ -1,0 +1,364 @@
+{
+  "$schema_note": "Logros de Freedom Cash. Las reglas se evalúan contra tres espacios: 'stat' (métricas de la partida en curso, de EconomyEngine.status()), 'run' (contadores/banderas de ESTA partida) y 'life' (contadores/banderas acumulados entre partidas). Operadores: gte, lte, eq, is. Varias claves en una regla = todas deben cumplirse (AND). 'rules' con varias entradas = AND entre ellas.",
+  "tiers": {
+    "bronce": { "label": "Bronce", "points": 10, "color": "#c88a5a" },
+    "plata": { "label": "Plata", "points": 25, "color": "#b8c2cf" },
+    "oro": { "label": "Oro", "points": 50, "color": "#ffb23e" },
+    "platino": { "label": "Platino", "points": 100, "color": "#7ce7ff" }
+  },
+  "categories": {
+    "inicio": { "label": "Primeros pasos", "emoji": "🌱" },
+    "patrimonio": { "label": "Patrimonio", "emoji": "🏙️" },
+    "cartera": { "label": "Cartera", "emoji": "🧺" },
+    "deuda": { "label": "Deuda y riesgo", "emoji": "⚖️" },
+    "vida": { "label": "Bienestar", "emoji": "☯️" },
+    "estrategia": { "label": "Estrategia", "emoji": "🧠" },
+    "maestria": { "label": "Maestría", "emoji": "👑" }
+  },
+  "achievements": [
+    {
+      "id": "first_month",
+      "emoji": "📅",
+      "title": "Mes uno",
+      "desc": "Cierra tu primer mes y cobra tu primera liquidación.",
+      "cat": "inicio", "tier": "bronce",
+      "rules": [{ "stat": "month", "gte": 2 }]
+    },
+    {
+      "id": "first_asset",
+      "emoji": "🧱",
+      "title": "El primer ladrillo",
+      "desc": "Compra tu primer activo. Ya tienes algo que trabaja por ti.",
+      "cat": "inicio", "tier": "bronce",
+      "rules": [{ "stat": "assetsCount", "gte": 1 }]
+    },
+    {
+      "id": "first_leverage",
+      "emoji": "🏦",
+      "title": "Deuda buena",
+      "desc": "Compra un activo con hipoteca: usar deuda para comprar algo que te paga.",
+      "cat": "inicio", "tier": "bronce",
+      "rules": [{ "life": "bought_leverage", "gte": 1 }]
+    },
+    {
+      "id": "first_passive",
+      "emoji": "💧",
+      "title": "Goteo",
+      "desc": "Alcanza 100 €/mes de renta pasiva neta.",
+      "cat": "inicio", "tier": "bronce",
+      "rules": [{ "stat": "netPassiveIncome", "gte": 100 }]
+    },
+    {
+      "id": "ie_25",
+      "emoji": "📈",
+      "title": "Un cuarto del camino",
+      "desc": "Llega a un Indicador de Emancipación del 25%.",
+      "cat": "inicio", "tier": "bronce",
+      "rules": [{ "stat": "ie", "gte": 25 }]
+    },
+    {
+      "id": "ie_50",
+      "emoji": "🧗",
+      "title": "A media ladera",
+      "desc": "Llega a un IE del 50%: tus activos ya pagan media vida.",
+      "cat": "patrimonio", "tier": "bronce",
+      "rules": [{ "stat": "ie", "gte": 50 }]
+    },
+    {
+      "id": "ie_100",
+      "emoji": "⚖️",
+      "title": "Punto de equilibrio",
+      "desc": "IE del 100%: tus rentas cubren exactamente tus gastos. Ya no dependes del sueldo.",
+      "cat": "patrimonio", "tier": "plata",
+      "rules": [{ "stat": "ie", "gte": 100 }]
+    },
+    {
+      "id": "first_win",
+      "emoji": "🏆",
+      "title": "Libertad financiera",
+      "desc": "Gana tu primera partida alcanzando la meta de IE con el colchón exigido.",
+      "cat": "patrimonio", "tier": "oro",
+      "rules": [{ "life": "wins", "gte": 1 }]
+    },
+    {
+      "id": "assets_5",
+      "emoji": "🏘️",
+      "title": "Pequeño casero",
+      "desc": "Ten 5 activos a la vez.",
+      "cat": "patrimonio", "tier": "bronce",
+      "rules": [{ "stat": "assetsCount", "gte": 5 }]
+    },
+    {
+      "id": "assets_10",
+      "emoji": "🏙️",
+      "title": "Urbanista",
+      "desc": "Ten 10 activos a la vez. Tu ciudad empieza a tener skyline.",
+      "cat": "patrimonio", "tier": "plata",
+      "rules": [{ "stat": "assetsCount", "gte": 10 }]
+    },
+    {
+      "id": "assets_25",
+      "emoji": "🌆",
+      "title": "Magnate",
+      "desc": "Ten 25 activos a la vez.",
+      "cat": "patrimonio", "tier": "oro",
+      "rules": [{ "stat": "assetsCount", "gte": 25 }]
+    },
+    {
+      "id": "passive_1000",
+      "emoji": "💵",
+      "title": "Mil al mes",
+      "desc": "Alcanza 1.000 €/mes de renta pasiva neta.",
+      "cat": "patrimonio", "tier": "bronce",
+      "rules": [{ "stat": "netPassiveIncome", "gte": 1000 }]
+    },
+    {
+      "id": "passive_5000",
+      "emoji": "💰",
+      "title": "Rentista",
+      "desc": "Alcanza 5.000 €/mes de renta pasiva neta.",
+      "cat": "patrimonio", "tier": "plata",
+      "rules": [{ "stat": "netPassiveIncome", "gte": 5000 }]
+    },
+    {
+      "id": "passive_15000",
+      "emoji": "🛢️",
+      "title": "Pozo de petróleo",
+      "desc": "Alcanza 15.000 €/mes de renta pasiva neta.",
+      "cat": "patrimonio", "tier": "oro",
+      "rules": [{ "stat": "netPassiveIncome", "gte": 15000 }]
+    },
+    {
+      "id": "cushion_12",
+      "emoji": "🛡️",
+      "title": "Búnker",
+      "desc": "Acumula 12 meses de gastos en caja. Dormir tranquilo también es rentabilidad.",
+      "cat": "patrimonio", "tier": "plata",
+      "rules": [{ "stat": "cushionMonths", "gte": 12 }]
+    },
+    {
+      "id": "diversified",
+      "emoji": "🧺",
+      "title": "No pongas todos los huevos",
+      "desc": "Ten a la vez activos de las tres categorías: inmueble, negocio y financiero.",
+      "cat": "cartera", "tier": "plata",
+      "rules": [{ "run": "categories_owned", "gte": 3 }]
+    },
+    {
+      "id": "district_8",
+      "emoji": "🏗️",
+      "title": "Distrito propio",
+      "desc": "Ten 8 activos de una misma categoría.",
+      "cat": "cartera", "tier": "plata",
+      "rules": [{ "run": "max_category_count", "gte": 8 }]
+    },
+    {
+      "id": "steady_hand",
+      "emoji": "🧊",
+      "title": "Cartera de hielo",
+      "desc": "Ten 6 activos con una volatilidad media por debajo del 20%. Aburrido es bueno.",
+      "cat": "cartera", "tier": "oro",
+      "rules": [{ "run": "low_vol_portfolio", "is": true }]
+    },
+    {
+      "id": "high_roller",
+      "emoji": "🎲",
+      "title": "Estómago de acero",
+      "desc": "Ten 3 activos con volatilidad superior al 40% a la vez.",
+      "cat": "cartera", "tier": "plata",
+      "rules": [{ "run": "high_vol_count", "gte": 3 }]
+    },
+    {
+      "id": "lucky_month",
+      "emoji": "🍀",
+      "title": "Mes redondo",
+      "desc": "Cobra un mes en el que toda tu cartera rinda por encima de su media.",
+      "cat": "cartera", "tier": "plata",
+      "rules": [{ "run": "all_assets_above_avg", "is": true }]
+    },
+    {
+      "id": "no_red_debt",
+      "emoji": "🧹",
+      "title": "Expediente limpio",
+      "desc": "Llega a un IE del 100% sin haber pedido nunca un préstamo de consumo.",
+      "cat": "deuda", "tier": "oro",
+      "rules": [{ "stat": "ie", "gte": 100 }, { "run": "red_loans", "eq": 0 }]
+    },
+    {
+      "id": "debt_free",
+      "emoji": "🕊️",
+      "title": "Cero deuda roja",
+      "desc": "Amortiza toda tu deuda de consumo después de haber tenido alguna.",
+      "cat": "deuda", "tier": "bronce",
+      "rules": [{ "run": "red_loans", "gte": 1 }, { "stat": "redDebtBalance", "eq": 0 }]
+    },
+    {
+      "id": "refi_3",
+      "emoji": "🔧",
+      "title": "Refinanciador",
+      "desc": "Refinancia 3 hipotecas a lo largo de tus partidas.",
+      "cat": "deuda", "tier": "plata",
+      "rules": [{ "life": "refis", "gte": 3 }]
+    },
+    {
+      "id": "comeback",
+      "emoji": "🌪️",
+      "title": "Aguanté el temporal",
+      "desc": "Recupera un colchón de 3 meses después de haber estado con la caja en números rojos.",
+      "cat": "deuda", "tier": "oro",
+      "rules": [{ "run": "was_negative", "is": true }, { "stat": "cushionMonths", "gte": 3 }]
+    },
+    {
+      "id": "all_green",
+      "emoji": "💚",
+      "title": "Todo verde",
+      "desc": "Ten 5 hipotecas activas y ni un euro de deuda roja.",
+      "cat": "deuda", "tier": "plata",
+      "rules": [{ "run": "leveraged_count", "gte": 5 }, { "stat": "redDebt", "eq": 0 }]
+    },
+    {
+      "id": "burnout_recover",
+      "emoji": "🔋",
+      "title": "De vuelta",
+      "desc": "Sal de un burnout y recupera 60 de energía.",
+      "cat": "vida", "tier": "bronce",
+      "rules": [{ "run": "burnouts", "gte": 1 }, { "stat": "energy", "gte": 60 }]
+    },
+    {
+      "id": "hedonist",
+      "emoji": "🎉",
+      "title": "Vivir también cuenta",
+      "desc": "Date 20 caprichos de estilo de vida a lo largo de tus partidas.",
+      "cat": "vida", "tier": "bronce",
+      "rules": [{ "life": "lifestyle_actions", "gte": 20 }]
+    },
+    {
+      "id": "zen",
+      "emoji": "😌",
+      "title": "Zen",
+      "desc": "Mantén felicidad y energía por encima de 80 a la vez.",
+      "cat": "vida", "tier": "plata",
+      "rules": [{ "stat": "happiness", "gte": 80 }, { "stat": "energy", "gte": 80 }]
+    },
+    {
+      "id": "balanced_win",
+      "emoji": "☯️",
+      "title": "Rico y feliz",
+      "desc": "Gana una partida con la felicidad por encima de 70. Llegar quemado no cuenta.",
+      "cat": "vida", "tier": "oro",
+      "rules": [{ "life": "balanced_wins", "gte": 1 }]
+    },
+    {
+      "id": "no_burnout_win",
+      "emoji": "🧘",
+      "title": "Sin quemarte",
+      "desc": "Gana una partida sin haber caído en burnout ni una sola vez.",
+      "cat": "vida", "tier": "oro",
+      "rules": [{ "life": "clean_wins", "gte": 1 }]
+    },
+    {
+      "id": "car_free_win",
+      "emoji": "🚶",
+      "title": "El coche puede esperar",
+      "desc": "Gana una partida sin comprar coche en toda la partida.",
+      "cat": "vida", "tier": "plata",
+      "rules": [{ "life": "carfree_wins", "gte": 1 }]
+    },
+    {
+      "id": "incorporated",
+      "emoji": "🏢",
+      "title": "Sociedad constituida",
+      "desc": "Da el salto de persona física a sociedad.",
+      "cat": "estrategia", "tier": "bronce",
+      "rules": [{ "life": "incorporations", "gte": 1 }]
+    },
+    {
+      "id": "tax_optimizer",
+      "emoji": "🧾",
+      "title": "Optimizador fiscal",
+      "desc": "Ahorra más de 1.000 €/mes en impuestos gracias a tu estructura.",
+      "cat": "estrategia", "tier": "oro",
+      "rules": [{ "run": "tax_savings", "gte": 1000 }]
+    },
+    {
+      "id": "first_p2p",
+      "emoji": "🤝",
+      "title": "Negociador",
+      "desc": "Cierra tu primer traspaso comprándole el capital a un rival.",
+      "cat": "estrategia", "tier": "bronce",
+      "rules": [{ "life": "p2p_deals", "gte": 1 }]
+    },
+    {
+      "id": "shark",
+      "emoji": "🦈",
+      "title": "Tiburón",
+      "desc": "Cierra 5 traspasos con rivales ahogados de liquidez.",
+      "cat": "estrategia", "tier": "oro",
+      "rules": [{ "life": "p2p_urgent", "gte": 5 }]
+    },
+    {
+      "id": "patient",
+      "emoji": "🎯",
+      "title": "Paciencia de francotirador",
+      "desc": "Compra una oportunidad que llevaba ya 4 meses en el tablón esperándote.",
+      "cat": "estrategia", "tier": "plata",
+      "rules": [{ "life": "patient_buys", "gte": 1 }]
+    },
+    {
+      "id": "gig_grinder",
+      "emoji": "💼",
+      "title": "A dos manos",
+      "desc": "Haz 15 trabajos extra a lo largo de tus partidas.",
+      "cat": "estrategia", "tier": "plata",
+      "rules": [{ "life": "gigs", "gte": 15 }]
+    },
+    {
+      "id": "speedrun_24",
+      "emoji": "⏱️",
+      "title": "Libertad exprés",
+      "desc": "Gana una partida en 24 meses o menos.",
+      "cat": "maestria", "tier": "oro",
+      "rules": [{ "life": "best_win_months", "lte": 24, "gte": 1 }]
+    },
+    {
+      "id": "speedrun_18",
+      "emoji": "🚀",
+      "title": "Vía rápida",
+      "desc": "Gana una partida en 18 meses o menos.",
+      "cat": "maestria", "tier": "platino",
+      "rules": [{ "life": "best_win_months", "lte": 18, "gte": 1 }]
+    },
+    {
+      "id": "era_3",
+      "emoji": "🏛️",
+      "title": "Tercera era",
+      "desc": "Encadena eras en Modo Legado hasta llegar a la era 3.",
+      "cat": "maestria", "tier": "plata",
+      "rules": [{ "stat": "era", "gte": 3 }]
+    },
+    {
+      "id": "era_6",
+      "emoji": "👑",
+      "title": "Legado",
+      "desc": "Llega a la era 6 del Modo Legado.",
+      "cat": "maestria", "tier": "platino",
+      "rules": [{ "stat": "era", "gte": 6 }]
+    },
+    {
+      "id": "all_profiles",
+      "emoji": "🎭",
+      "title": "Todos los caminos",
+      "desc": "Gana al menos una partida con cada situación de partida.",
+      "cat": "maestria", "tier": "platino",
+      "rules": [{ "life": "profiles_won", "gte": 3 }]
+    },
+    {
+      "id": "veteran",
+      "emoji": "🎮",
+      "title": "Veterano",
+      "desc": "Juega 10 partidas.",
+      "cat": "maestria", "tier": "plata",
+      "rules": [{ "life": "games", "gte": 10 }]
+    }
+  ]
+}

@@ -138,6 +138,12 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 - [x] **Profesiones + catálogo ampliado:** eliges profesión (educación, sanidad, tech,
       hostelería, oficios, creativo) que desbloquea proyectos de tu campo. 29 activos en total.
 - [x] **Variedad gráfica:** edificios recoloreados por distrito (color + silueta).
+- [x] **Acciones por mes:** el mes tiene 3 jugadas (+1 por era, −1 con burnout). Comprar,
+      currar un extra, cuidarte o refinanciar compiten por el mismo hueco.
+- [x] **Tablón persistente y competencia:** las oportunidades duran 3-6 meses y los rivales
+      compran del mismo tablón — si la dejas pasar, se la llevan.
+- [x] **43 logros con meta-progresión:** persisten entre partidas, puntúan por tiers
+      (bronce/plata/oro/platino) y suman a la liga. Galería con progreso por categoría.
 - [ ] Fase 2: **multijugador en tiempo real** (próxima sesión) — conectar la liga a un
       backend (WebSocket/Supabase) reutilizando el interfaz de `Leaderboard.js`.
 - [ ] Fase 2: sindicación de compras (comprar activos a medias entre jugadores).

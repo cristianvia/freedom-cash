@@ -54,7 +54,9 @@ export function computeScore(r) {
   } else {
     s = Math.round((r.ie || 0) * 4) + Math.round((r.netWorth || 0) / 2500); // progreso alcanzado
   }
-  return Math.max(0, Math.round(s * profMult * modeMult));
+  // los logros acumulados entre partidas también pesan en la liga
+  const ach = Math.round((r.achPoints || 0) * 0.6);
+  return Math.max(0, Math.round(s * profMult * modeMult) + ach);
 }
 
 /** Envía una entrada y devuelve su puesto en la clasificación. */
