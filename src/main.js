@@ -88,19 +88,23 @@ async function loadData() {
   // todos los sprites (suelo, decoración, edificios y coches) por su clave
   const TILE_KEYS = ['t_ground', 't_grass', 't_plaza', 't_tree', 't_water', 't_road'];
   const BUILDING_KEYS = [
+    // originales (los usan las tarjetas del marketplace por su sprite explícito)
     'b_home', 'b_apartment', 'b_vacation', 'b_house', 'b_shop', 'b_cafe',
     'b_office', 'b_coworking', 'b_bank', 'b_tower', 'b_startup', 'b_retail2',
-    'b_res1', 'b_res2', 'b_res3', 'b_biz1', 'b_biz2', 'b_biz3', 'b_fin1', 'b_fin2',
-    'b_shop2', 'b_shop3',
+    // variantes recoloreadas por distrito (variedad visual en la ciudad)
+    ...Object.values(BUILDING_POOLS).flat(),
   ];
   [...TILE_KEYS, ...BUILDING_KEYS].forEach(k => { spriteMap[k] = `assets/sprites/${k}.png`; });
 }
 
-// Pools de sprites por distrito: dan variedad visual a la ciudad
+// Pools de sprites por distrito: dan variedad de color Y forma a la ciudad
 const BUILDING_POOLS = {
-  real_estate: ['b_apartment', 'b_house', 'b_vacation', 'b_res1', 'b_res2', 'b_res3', 'b_shop', 'b_shop2', 'b_shop3'],
-  digital_business: ['b_office', 'b_coworking', 'b_startup', 'b_biz1', 'b_biz2', 'b_biz3'],
-  financial: ['b_bank', 'b_tower', 'b_fin1', 'b_fin2', 'b_retail2'],
+  real_estate: ['re_brick_tall', 're_brick_twotier', 're_sand_block', 're_sand_office',
+    're_olive_arched', 're_olive_house', 're_rose_shop', 're_rose_wide'],
+  digital_business: ['biz_blue_tall', 'biz_blue_twotier', 'biz_teal_block', 'biz_teal_office',
+    'biz_indigo_arched', 'biz_indigo_house', 'biz_slate_shop', 'biz_slate_wide'],
+  financial: ['fin_gold_tall', 'fin_gold_twotier', 'fin_purple_block', 'fin_purple_office',
+    'fin_emerald_arched', 'fin_emerald_house', 'fin_bronze_shop', 'fin_bronze_wide'],
 };
 
 /* ------------------------- SELECCIÓN PERFIL ----------------------- */
