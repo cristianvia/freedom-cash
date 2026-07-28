@@ -24,23 +24,54 @@ body {
   color: var(--txt);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
+img { max-width: 100%; }
 
 /* ---------- Layout ---------- */
-#app { display: grid; grid-template-columns: 320px 1fr 340px; height: 100vh; gap: 0; }
-.col { padding: 18px; overflow-y: auto; height: 100vh; }
+#app { display: flex; flex-direction: column; height: 100vh; }
+#board { flex: 1; display: grid; grid-template-columns: 300px 1fr 340px; min-height: 0; }
+.col { padding: 16px; overflow-y: auto; min-height: 0; }
 .col.center { padding: 0; position: relative; background:
   linear-gradient(180deg, #0c1220 0%, #0a0f1a 100%); }
 
-/* ---------- Topbar ---------- */
-.brand { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+/* ---------- Barra superior de estado ---------- */
+#topbar { display: flex; align-items: center; gap: 18px; padding: 10px 16px;
+  border-bottom: 1px solid var(--line); background: rgba(13,16,23,.75);
+  backdrop-filter: blur(10px); flex-shrink: 0; }
+.brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .brand .logo {
   width: 38px; height: 38px; border-radius: 10px;
   background: linear-gradient(135deg, var(--green), var(--blue));
   display: grid; place-items: center; font-size: 20px; box-shadow: var(--shadow);
 }
-.brand h1 { font-size: 17px; letter-spacing: .2px; }
+.brand h1 { font-size: 16px; letter-spacing: .2px; }
 .brand small { color: var(--txt-dim); font-size: 11px; display: block; }
+
+.topstats { display: flex; gap: 12px; flex: 1; min-width: 0; }
+.tcard { background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; min-width: 0; overflow: hidden; }
+.tcard-ie { flex: 1.4; } .tcard-cash { flex: 1.1; } .tcard-wb { flex: 1; }
+.tcard-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tcard-head span { font-size: 10.5px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .5px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tcard-head b { font-size: 20px; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.ie-line { display: flex; align-items: center; gap: 10px; }
+.ie-line #ie-value { font-size: 26px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.ie-line .ie-lbl { font-size: 10.5px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .5px; line-height: 1.25; flex-shrink: 0; }
+.ie-line .ie-lbl small { font-size: 9.5px; color: var(--amber); }
+.ie-line .spark { flex: 1; height: 30px; margin: 0; min-width: 40px; }
+.tcard-head b.blue { color: var(--blue); }
+.tcard-sub { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px;
+  font-size: 11px; color: var(--txt-dim); }
+.tcard-sub b { color: var(--txt); font-variant-numeric: tabular-nums; }
+.tcard .progress { height: 8px; margin: 6px 0 0; }
+.tcard .spark { height: 34px; margin-top: 4px; }
+.tcard-wb { display: flex; flex-direction: column; justify-content: center; }
+.tcard .wb-row { margin: 3px 0; grid-template-columns: 18px 1fr 26px; gap: 6px; }
+.tcard .wb-label { font-size: 14px; text-align: center; }
+.tcard .wb-val { font-size: 12px; }
+.tcard .hint { margin-top: 4px; font-size: 10px; line-height: 1.3; text-align: left; overflow: hidden; }
 
 /* ---------- Cards / panels ---------- */
 .panel {
@@ -244,7 +275,7 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 /* ---------- Bienestar (Felicidad / Energía) ---------- */
 .wb-row { display: grid; grid-template-columns: 92px 1fr 34px; align-items: center; gap: 8px; margin: 8px 0; }
 .wb-label { font-size: 12px; color: var(--txt-dim); }
-.wb-bar { height: 10px; background: #0d1320; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); }
+.wb-bar { height: 10px; background: #0d1320; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); min-width: 0; }
 .wb-bar > i { display: block; height: 100%; width: 70%; border-radius: 8px;
   background: linear-gradient(90deg, var(--green-dim), var(--green)); transition: width .4s; }
 .wb-bar > i.warn { background: linear-gradient(90deg, #8a6a1f, var(--amber)); }
@@ -343,9 +374,39 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .end-stats span { font-size: 11px; color: var(--txt-dim); text-transform: uppercase; letter-spacing: .5px; }
 .end-stats b { font-size: 19px; font-variant-numeric: tabular-nums; }
 
+/* ===== Tablet: 2 columnas (dashboard izq + acciones der), ciudad arriba ===== */
 @media (max-width: 1100px) {
-  #app { grid-template-columns: 1fr; grid-auto-rows: min-content; height: auto; overflow-y: auto; }
-  .col { height: auto; }
-  .col.center { height: 60vh; }
+  #app { height: auto; min-height: 100vh; }
+  #board { display: flex; flex-direction: column; }
+  .col { overflow: visible; }
+  .col.center { order: 0; height: 46vh; min-height: 320px; }
+  .col.right { order: 1; }
+  .col.left { order: 2; }
+  .topstats { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
+  .tcard-ie { grid-column: 1 / -1; }
+}
+
+/* ===== Móvil ===== */
+@media (max-width: 640px) {
+  #topbar { flex-direction: column; gap: 10px; padding: 10px 12px;
+    position: sticky; top: 0; z-index: 20; }
+  .brand { align-self: flex-start; }
+  .topstats { width: 100%; gap: 8px; }
+  .col { padding: 12px; }
+  .col.center { height: 40vh; min-height: 260px; }
+  .hud-top { gap: 6px; flex-wrap: wrap; justify-content: center; top: 8px; }
+  .chip { padding: 6px 11px; font-size: 12px; }
   .profiles { grid-template-columns: 1fr; }
+  /* botón de pasar turno fijo abajo, siempre accesible */
+  #btn-endturn { position: sticky; bottom: 10px; z-index: 15;
+    box-shadow: 0 6px 24px rgba(0,0,0,.6); }
+  .market-card img { width: 56px; height: 52px; }
+  .modal { padding: 22px 18px; }
+  .event-toast { max-width: calc(100vw - 24px); bottom: 78px; }
+}
+
+/* táctil: sin efectos hover que "peguen" el estado */
+@media (hover: none) {
+  .market-card:hover, .profile:hover, .diff-opt:hover,
+  .veh-opt:hover, .dil-choice:hover, .lb-row:hover { transform: none; }
 }
