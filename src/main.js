@@ -66,18 +66,22 @@ const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
 async function loadData() {
-  const [a, p, e, l, v] = await Promise.all([
+  const [a, p, e, l, v, d, g] = await Promise.all([
     fetch('src/data/assets_database.json').then(r => r.json()),
     fetch('src/data/profiles.json').then(r => r.json()),
     fetch('src/data/events.json').then(r => r.json()),
     fetch('src/data/lifestyle.json').then(r => r.json()),
     fetch('src/data/vehicles.json').then(r => r.json()),
+    fetch('src/data/difficulty.json').then(r => r.json()),
+    fetch('src/data/gigs.json').then(r => r.json()),
   ]);
   DATA.assets = a.assets;
   DATA.profiles = p.profiles;
   DATA.events = e.events;
   DATA.lifestyle = l.actions;
   DATA.vehicles = v.vehicles;
+  DATA.modes = d.modes;
+  DATA.gigs = g.gigs;
 
   // todos los sprites (suelo, decoración, edificios y coches) por su clave
   const TILE_KEYS = ['t_ground', 't_grass', 't_plaza', 't_tree', 't_water', 't_road'];
@@ -117,24 +121,64 @@ function renderProfiles() {
         <div><span>Caja inicial</span><b>${euro(p.starting_cash)}</b></div>
       </div>
       <div class="rating">Rating ${p.credit_rating}</div>`;
-    el.onclick = () => startGame(p);
+    el.onclick = () => chooseDifficulty(p);
     wrap.appendChild(el);
   });
 }
 
+/* ------------------------ SELECCIÓN DIFICULTAD -------------------- */
+let pendingProfile = null;
+function chooseDifficulty(profile) {
+  pendingProfile = profile;
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.id = 'diff-overlay';
+  ov.innerHTML = `
+    <div class="modal">
+      <h2>Elige la dificultad</h2>
+      <p class="lead">Con ${profile.emoji} <b>${profile.name}</b>. La dificultad cambia tu punto de partida
+        y cuánto puntúas en la liga.</p>
+      <div class="diff-list">
+        ${DATA.modes.map(m => `
+          <button class="diff-opt" data-mode="${m.id}">
+            <div class="diff-top"><span class="diff-em">${m.emoji}</span>
+              <b>${m.label}</b><span class="diff-mult">×${m.scoreMult} pts</span></div>
+            <div class="diff-desc">${m.desc}</div>
+            <div class="diff-nums">
+              Caja inicial ${euro(Math.round(profile.starting_cash * m.cashMult))} ·
+              Sueldo ${Math.round(m.salaryMult * 100)}%${m.extraRent ? ` · Alquiler ${euro(m.extraRent)}/mes` : ''}${m.gigs ? ' · 💼 Trabajos extra' : ''}
+            </div>
+          </button>`).join('')}
+      </div>
+      <button class="btn-ghost" id="diff-back" style="width:100%;margin-top:12px">‹ Volver a perfiles</button>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#diff-back').onclick = () => ov.remove();
+  ov.querySelectorAll('button[data-mode]').forEach(btn => {
+    btn.onclick = () => {
+      const mode = DATA.modes.find(m => m.id === btn.dataset.mode);
+      ov.remove();
+      startGame(profile, mode);
+    };
+  });
+}
+
 /* ---------------------------- ARRANQUE ---------------------------- */
-async function startGame(profile) {
-  engine = new EconomyEngine(profile, DATA.events);
+async function startGame(profile, mode = null) {
+  mode = mode || DATA.modes[0];
+  engine = new EconomyEngine(profile, DATA.events, mode);
   ended = false;
   $('profile-overlay').style.display = 'none';
   $('hud-profile').textContent = profile.emoji + ' ' + profile.name.split(' ')[0];
+  $('hud-mode').textContent = mode.emoji + ' ' + mode.label;
+  $('hud-mode').style.display = '';
 
-  // oponentes IA: los otros perfiles disponibles
+  // oponentes IA: los otros perfiles disponibles (mismo modo)
   const others = DATA.profiles.filter(p => p.id !== profile.id);
   bots = others.map((bp, i) => ({
     name: bp.name.split(' ')[0],
     emoji: bp.emoji,
-    engine: new EconomyEngine(bp, DATA.events),
+    engine: new EconomyEngine(bp, DATA.events, mode),
     aggr: 0.5 + i * 0.15,
   }));
 
@@ -322,7 +366,7 @@ function resolveTurn(ev, choiceIndex) {
 
   // turno de los oponentes IA (compran, se cuidan y resuelven sus eventos)
   bots.forEach(b => {
-    const bought = takeBotTurn(b.engine, DATA.assets, DATA.lifestyle, DATA.vehicles, b.aggr) || [];
+    const bought = takeBotTurn(b.engine, DATA.assets, DATA.lifestyle, DATA.vehicles, b.aggr, DATA.gigs) || [];
     b.engine.endTurn();
     bought.forEach(t => logActivity(`${b.emoji} ${b.name} compró ${t}`, 'neutral'));
     if (b.engine.hasLost()) logActivity(`${b.emoji} ${b.name} abandonó la partida 💥`, 'bad');
@@ -513,6 +557,7 @@ function endModal(title, html, win) {
   const score = computeScore({
     won: win, months: st.months, netWorth: st.netWorth, ie: st.ie,
     happiness: s.happiness, energy: s.energy, rank: st.rank, profileId: engine.profile.id,
+    scoreMult: engine.mode.scoreMult,
   });
   const lb = submitScore({
     name: 'Tú', emoji: engine.profile.emoji, profile: engine.profile.id,
@@ -662,8 +707,14 @@ function render() {
   renderP2P();
   renderWellbeing(s);
   renderLifestyle();
+  renderGigs(s);
   renderVehicle(s);
   renderActivity();
+
+  // alquiler (solo en modos con extraRent)
+  const rentRow = $('flow-rent-row');
+  if (s.extraRent > 0) { rentRow.style.display = ''; $('flow-rent').textContent = '−' + euro(s.extraRent); }
+  else rentRow.style.display = 'none';
   drawSparkline();
   refreshView();
   saveGame();
@@ -715,10 +766,13 @@ function showVehicleChooser() {
       <div class="veh-list">
         ${DATA.vehicles.map(v => {
           const active = (engine.vehicle && engine.vehicle.id === v.id) || (!engine.vehicle && v.id === 'none');
+          const resale = engine.vehicleResaleValue();
           const acts = v.id === 'none'
-            ? `<button class="btn-cash" data-veh="none" data-fin="cash" style="flex:1">Ir sin coche</button>`
-            : `<button class="btn-cash" data-veh="${v.id}" data-fin="cash" ${engine.cash < v.price ? 'disabled' : ''}>Contado ${euro(v.price)}</button>
-               ${v.financeable ? `<button class="btn-lever" data-veh="${v.id}" data-fin="loan" ${engine.cash < Math.round(v.price * 0.15) ? 'disabled' : ''}>Financiar</button>` : ''}`;
+            ? `<button class="btn-cash" data-veh="none" data-fin="cash" style="flex:1">${engine.vehicle ? `Vender coche (+${euro(resale)})` : 'Ir sin coche'}</button>`
+            : active
+              ? `<span class="veh-owned">✓ Tu coche actual</span>`
+              : `<button class="btn-cash" data-veh="${v.id}" data-fin="cash" ${engine.cash + (engine.vehicle ? resale : 0) < v.price ? 'disabled' : ''}>Contado ${euro(v.price)}</button>
+                 ${v.financeable ? `<button class="btn-lever" data-veh="${v.id}" data-fin="loan" ${engine.cash + (engine.vehicle ? resale : 0) < Math.round(v.price * 0.15) ? 'disabled' : ''}>Financiar</button>` : ''}`;
           return `<div class="veh-opt ${active ? 'active' : ''}">
               <div class="veh-opt-top">
                 ${v.sprite ? `<img src="${v.sprite}" alt="">` : `<span class="veh-emoji">${v.emoji}</span>`}
@@ -739,9 +793,12 @@ function showVehicleChooser() {
       const r = engine.chooseVehicle(v, btn.dataset.fin);
       if (r.ok) {
         ov.remove();
+        const soldMsg = r.proceeds ? `Vendido por ${euro(r.proceeds)}. ` : '';
         toast(`${v.emoji} ${v.label}`,
-          btn.dataset.fin === 'loan' ? 'Financiado: genera deuda roja que penaliza tu IE.' : 'Elección aplicada.', 'good');
-        logActivity(v.id === 'none' ? '🫵 Prescindes del coche' : `🫵 Coche: ${v.label}`, 'neutral');
+          v.id === 'none' ? `${soldMsg}Vuelves al transporte público.`
+          : btn.dataset.fin === 'loan' ? `${soldMsg}Financiado: genera deuda roja que penaliza tu IE.`
+          : `${soldMsg}Elección aplicada.`, 'good');
+        logActivity(v.id === 'none' ? '🫵 Vendes el coche' : `🫵 Coche: ${v.label}`, 'neutral');
         if (btn.dataset.fin === 'loan') showTip('car_finance');
         render();
       } else toast('No se pudo', r.reason, 'bad');
@@ -798,6 +855,36 @@ function renderLifestyle() {
   });
 }
 
+/* --------------------------- TRABAJOS EXTRA ----------------------- */
+function renderGigs(s) {
+  const panel = $('panel-gigs'), wrap = $('gigs');
+  if (!panel || !wrap) return;
+  if (!s.gigsEnabled) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  wrap.innerHTML = DATA.gigs.map(g => {
+    const used = engine.gigsUsed.has(g.id);
+    const fx = [];
+    if (g.energy) fx.push(`${g.energy}⚡`);
+    if (g.happiness) fx.push(`${g.happiness > 0 ? '+' : ''}${g.happiness}😊`);
+    return `<button class="life-btn" data-gig="${g.id}" ${used ? 'disabled' : ''} title="${g.desc}">
+        <span class="life-em">${g.emoji}</span>
+        <span class="life-txt"><b>${g.label}</b><small>${fx.join(' · ')}</small></span>
+        <span class="life-cost" style="color:var(--green)">+${euro(g.cash)}${used ? ' ✓' : ''}</span>
+      </button>`;
+  }).join('');
+  wrap.querySelectorAll('button[data-gig]').forEach(btn => {
+    btn.onclick = () => {
+      const gig = DATA.gigs.find(x => x.id === btn.dataset.gig);
+      const r = engine.doGig(gig);
+      if (r.ok) {
+        toast(`${gig.emoji} ${gig.label}`, `Ganas ${euro(r.earned)} a cambio de energía.`, 'good');
+        logActivity(`🫵 ${gig.label} (+${euro(r.earned)})`, 'good');
+        render();
+      } else toast('No disponible', r.reason, 'bad');
+    };
+  });
+}
+
 /* --------------------------- PERSISTENCIA ------------------------- */
 function saveGame() {
   if (!engine || ended) return;
@@ -825,6 +912,7 @@ async function resumeGame(save) {
   ended = false;
   $('profile-overlay').style.display = 'none';
   $('hud-profile').textContent = profile.emoji + ' ' + profile.name.split(' ')[0];
+  if (engine.mode) { $('hud-mode').textContent = (engine.mode.emoji || '') + ' ' + (engine.mode.label || ''); $('hud-mode').style.display = ''; }
 
   bots = (save.bots || []).map(bs => ({
     name: bs.name, emoji: bs.emoji, aggr: bs.aggr,
@@ -952,6 +1040,9 @@ function toast(title, desc, tone = 'neutral') {
   if (params.get('lb')) showLeaderboard(); // hook de test
   AUTO_MODE = !!auto;
 
+  // hook de test: ?diff=investor abre el selector de dificultad
+  if (params.get('diff')) { const p = DATA.profiles.find(x => x.id === params.get('diff')) || DATA.profiles[0]; chooseDifficulty(p); return; }
+
   // oferta de continuar partida guardada
   const save = loadSave();
   if (save && save.engine && !auto) {
@@ -965,7 +1056,8 @@ function toast(title, desc, tone = 'neutral') {
 
   if (auto) {
     const p = DATA.profiles.find(x => x.id === auto) || DATA.profiles[0];
-    await startGame(p);
+    const m = DATA.modes.find(x => x.id === params.get('mode')) || DATA.modes[0];
+    await startGame(p, m);
     // hook de test: ?tut=N muestra el tutorial en el paso N
     const tut = params.get('tut');
     if (tut !== null) startTutorial(parseInt(tut, 10) || 0);

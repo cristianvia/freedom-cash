@@ -31,7 +31,7 @@
 
     { "id": "car_repair", "title": "Avería del coche",
       "description": "El taller no perdona: reparación inesperada y un día horrible.",
-      "type": "life", "value": -600, "energy": -8, "happiness": -5, "tone": "bad", "weight": 7 },
+      "type": "life", "value": -600, "energy": -8, "happiness": -5, "tone": "bad", "weight": 7, "requires": "vehicle" },
     { "id": "wedding", "title": "Boda de un amigo",
       "description": "Regalo, traje y viaje… pero te lo pasas genial.",
       "type": "life", "value": -280, "happiness": 6, "energy": -3, "tone": "bad", "weight": 6 },
@@ -106,7 +106,7 @@
       ] },
     { "id": "dilemma_car", "title": "El coche viejo falla",
       "description": "¿Lo reparas una vez más o das el salto a uno mejor?",
-      "type": "dilemma", "tone": "neutral", "weight": 4,
+      "type": "dilemma", "tone": "neutral", "weight": 4, "requires": "vehicle",
       "choices": [
         { "label": "Repararlo (−400 €)", "cash": -400, "happiness": -3 },
         { "label": "Comprar uno mejor (−2.500 €)", "cash": -2500, "happiness": 10, "energy": 4 }

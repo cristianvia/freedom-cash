@@ -1,0 +1,10 @@
+{
+  "$schema_note": "Trabajos extra / side projects. Dan dinero rápido a cambio de energía (a veces felicidad). Uno por mes cada uno. Solo disponibles en modos con gigs=true. Enseñan que al principio hay que 'buscarse la vida' antes de que los activos trabajen por ti.",
+  "gigs": [
+    { "id": "delivery", "emoji": "🛵", "label": "Repartos con la app", "desc": "Un fin de semana repartiendo. Cansado pero rápido.", "cash": 320, "energy": -12, "happiness": -2 },
+    { "id": "freelance_web", "emoji": "💻", "label": "Diseñar una web", "desc": "Un encargo freelance de fin de semana.", "cash": 650, "energy": -16, "happiness": -3 },
+    { "id": "tutoring", "emoji": "📖", "label": "Dar clases particulares", "desc": "Unas horas enseñando lo que sabes.", "cash": 240, "energy": -8 },
+    { "id": "resell", "emoji": "📦", "label": "Comprar y revender", "desc": "Compras barato y revendes online con margen.", "cash": 420, "energy": -10, "happiness": -1 },
+    { "id": "handyman", "emoji": "🔧", "label": "Chapuzas y montajes", "desc": "Ayudas a montar muebles y arreglar cosas.", "cash": 300, "energy": -11 }
+  ]
+}

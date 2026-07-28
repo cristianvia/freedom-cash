@@ -17,13 +17,17 @@ export class EconomyEngine {
   /**
    * @param {object} profile  ficha de vida (de profiles.json)
    * @param {object[]} events  lista de eventos (de events.json)
+   * @param {object} mode      modo de dificultad (de difficulty.json)
    */
-  constructor(profile, events = []) {
+  constructor(profile, events = [], mode = null) {
     this.profile = profile;
     this.events = events;
+    this.mode = mode || { id: 'easy', cashMult: 1, salaryMult: 1, extraRent: 0, gigs: false, scoreMult: 1 };
 
     this.month = 1;
-    this.cash = profile.starting_cash;
+    this.cash = Math.round(profile.starting_cash * this.mode.cashMult);
+    this.extraRent = this.mode.extraRent || 0;
+    this.gigsUsed = new Set();
     this.ownedAssets = [];   // { ...asset, financing:'cash'|'leverage', instanceId, refinanced? }
     this.redDebts = [];      // { id, label, balance, monthly_payment }
     this.mortgageModifier = 1; // acumulado por subidas/bajadas de tipos (deuda verde)
@@ -73,9 +77,9 @@ export class EconomyEngine {
     return this.energy < this.BURNOUT_ENERGY ? this.BURNOUT_SALARY_MULT : 1;
   }
 
-  /** Sueldo base efectivo: perfil × mejoras (formación) × energía. */
+  /** Sueldo base efectivo: perfil × dificultad × mejoras (formación) × energía. */
   effectiveSalaryBase() {
-    return this.profile.salary_base * this.salaryBoost * this.energyFactor();
+    return this.profile.salary_base * this.mode.salaryMult * this.salaryBoost * this.energyFactor();
   }
 
   isBurnout() { return this.energy < this.BURNOUT_ENERGY; }
@@ -85,7 +89,7 @@ export class EconomyEngine {
     const base = this.effectiveSalaryBase();
     const { salary_variance } = this.profile;
     if (!salary_variance) return Math.round(base);
-    const delta = (Math.random() * 2 - 1) * salary_variance * this.salaryBoost * this.energyFactor();
+    const delta = (Math.random() * 2 - 1) * salary_variance * this.mode.salaryMult * this.salaryBoost * this.energyFactor();
     return Math.round(base + delta);
   }
 
@@ -102,11 +106,32 @@ export class EconomyEngine {
     return this.vehicle ? this.vehicle.monthly : this.NO_CAR_TRANSPORT;
   }
 
+  /** Valor de reventa del coche actual (~55% de lo que costó). */
+  vehicleResaleValue() {
+    return this.vehicle && this.vehicle.price ? Math.round(this.vehicle.price * 0.55) : 0;
+  }
+
+  /** Vende el coche actual y vuelve a transporte público. */
+  sellVehicle() {
+    if (!this.vehicle) return { ok: false, reason: 'No tienes coche' };
+    const proceeds = this.vehicleResaleValue();
+    this.cash += proceeds;
+    this.vehicle = null;
+    return { ok: true, proceeds };
+  }
+
   /** Elige/compra un vehículo. financing: 'cash' | 'loan' (loan = deuda roja). */
   chooseVehicle(v, financing = 'cash') {
-    if (v.id === 'none') { this.vehicle = null; return { ok: true }; }
+    // "sin coche": si tenías uno, lo vendes por su valor residual
+    if (v.id === 'none') {
+      if (this.vehicle) return this.sellVehicle();
+      this.vehicle = null;
+      return { ok: true, proceeds: 0 };
+    }
     const upfront = (financing === 'loan' && v.financeable) ? Math.round(v.price * 0.15) : v.price;
     if (this.cash < upfront) return { ok: false, reason: 'Liquidez insuficiente' };
+    // si ya tenías coche, primero recuperas su valor residual (cambio de coche)
+    if (this.vehicle) this.cash += this.vehicleResaleValue();
     this.cash -= upfront;
     if (financing === 'loan' && v.financeable && v.price > upfront) {
       const financed = v.price - upfront;
@@ -118,10 +143,26 @@ export class EconomyEngine {
         monthly_payment: monthly,
       });
     }
-    this.vehicle = { id: v.id, label: v.label, emoji: v.emoji, sprite: v.sprite, monthly: v.monthly };
+    this.vehicle = { id: v.id, label: v.label, emoji: v.emoji, sprite: v.sprite, monthly: v.monthly, price: v.price };
     this.happiness += v.happiness || 0;
     this._clampWellbeing();
     return { ok: true };
+  }
+
+  /** ¿Hay trabajos extra disponibles en este modo? */
+  gigsEnabled() { return !!this.mode.gigs; }
+
+  /** Hace un trabajo extra: entra dinero ya, cuesta energía (y a veces felicidad). */
+  doGig(gig) {
+    if (!this.gigsEnabled()) return { ok: false, reason: 'No disponible en este modo' };
+    if (this.gigsUsed.has(gig.id)) return { ok: false, reason: 'Ya lo hiciste este mes' };
+    if (this.energy < 6) return { ok: false, reason: 'Sin energía para más trabajo' };
+    this.cash += gig.cash || 0;
+    this.energy += gig.energy || 0;
+    if (gig.happiness) this.happiness += gig.happiness;
+    this._clampWellbeing();
+    this.gigsUsed.add(gig.id);
+    return { ok: true, earned: gig.cash };
   }
 
   /** Ejecuta una acción de estilo de vida (cuesta dinero, ajusta bienestar). */
@@ -190,7 +231,7 @@ export class EconomyEngine {
   /* ------------------------- MÉTRICAS CLAVE ------------------------- */
 
   fixedExpenses() {
-    return Math.round(this.profile.fixed_expenses * this.expenseInflation) + this.lifeExpenses;
+    return Math.round(this.profile.fixed_expenses * this.expenseInflation) + this.lifeExpenses + this.extraRent;
   }
 
   /** Indicador de Emancipación (%). El coste del coche sube tu listón de libertad. */
@@ -357,13 +398,23 @@ export class EconomyEngine {
 
   /* --------------------------- EVENTOS ------------------------------ */
 
-  /** Elige un evento aleatorio ponderado (respeta minMonth y eventos "once"). */
+  /** ¿Se cumple la condición 'requires' de un evento en el estado actual? */
+  eventConditionMet(e) {
+    if (!e.requires) return true;
+    if (e.requires === 'vehicle') return !!this.vehicle;         // solo si tienes coche
+    if (e.requires === 'no_vehicle') return !this.vehicle;
+    if (e.requires === 'real_estate') return this.ownedAssets.some(a => a.category === 'real_estate');
+    return true;
+  }
+
+  /** Elige un evento aleatorio ponderado (respeta minMonth, once y requires). */
   pickEvent() {
     if (!this.events.length) return null;
     const pool = this.events.filter(e =>
       !(e.minMonth && this.month < e.minMonth) &&
-      !(e.once && this.firedOnce.has(e.id)));
-    const list = pool.length ? pool : this.events;
+      !(e.once && this.firedOnce.has(e.id)) &&
+      this.eventConditionMet(e));
+    const list = pool.length ? pool : this.events.filter(e => this.eventConditionMet(e));
     const total = list.reduce((s, e) => s + (e.weight || 1), 0);
     let r = Math.random() * total;
     for (const e of list) {
@@ -517,8 +568,9 @@ export class EconomyEngine {
     this.redDebts.forEach(d => { d.balance = Math.max(0, d.balance - d.monthly_payment); });
     this.redDebts = this.redDebts.filter(d => d.balance > 0);
 
-    // nuevo mes: se resetean las acciones de estilo de vida
+    // nuevo mes: se resetean las acciones de estilo de vida y los trabajos extra
     this.lifestyleUsed = new Set();
+    this.gigsUsed = new Set();
 
     this.month += 1;
     const snap = this.recordSnapshot({
@@ -553,6 +605,9 @@ export class EconomyEngine {
       salaryBoost: Math.round((this.salaryBoost - 1) * 100),
       vehicle: this.vehicle,
       vehicleCost: this.vehicleMonthlyCost(),
+      extraRent: this.extraRent,
+      gigsEnabled: this.gigsEnabled(),
+      mode: this.mode.id,
       won: this.hasWon(),
       lost: this.hasLost(),
       lossReason: this.lossReason(),
@@ -577,6 +632,8 @@ export class EconomyEngine {
   toJSON() {
     return {
       profileId: this.profile.id,
+      mode: this.mode,
+      extraRent: this.extraRent,
       month: this.month,
       cash: this.cash,
       ownedAssets: this.ownedAssets,
@@ -598,7 +655,8 @@ export class EconomyEngine {
 
   /** Reconstruye un motor a partir de un estado guardado. */
   static fromJSON(data, profile, events) {
-    const e = new EconomyEngine(profile, events);
+    const e = new EconomyEngine(profile, events, data.mode);
+    e.extraRent = data.extraRent ?? (data.mode && data.mode.extraRent) ?? 0;
     e.month = data.month;
     e.cash = data.cash;
     e.ownedAssets = data.ownedAssets || [];

@@ -63,6 +63,11 @@
         <div id="lifestyle"></div>
       </div>
 
+      <div class="panel" id="panel-gigs" style="display:none">
+        <h2>Trabajos extra</h2>
+        <div id="gigs"></div>
+      </div>
+
       <div class="panel" id="panel-vehicle">
         <h2>Vehículo</h2>
         <div class="veh-current" id="veh-current"></div>
@@ -79,6 +84,9 @@
         </div>
         <div class="stat">
           <span class="label">Gastos fijos</span><span class="val red" id="expenses">0 €</span>
+        </div>
+        <div class="stat" id="flow-rent-row" style="display:none">
+          <span class="label">Alquiler</span><span class="val red" id="flow-rent">0 €</span>
         </div>
         <div class="stat">
           <span class="label">Coche / transporte</span><span class="val red" id="flow-vehicle">0 €</span>
@@ -138,6 +146,7 @@
       <div class="hud-top">
         <div class="chip"><span class="k">Mes</span><span id="hud-month">1</span></div>
         <div class="chip"><span class="k">Perfil</span><span id="hud-profile">—</span></div>
+        <div class="chip" id="hud-mode-chip"><span class="k">Modo</span><span id="hud-mode" style="display:none">—</span></div>
         <div class="chip"><span class="k">Activos</span><span id="hud-assets">0</span></div>
         <button class="chip chip-btn" id="btn-view">🌍 Vista global</button>
         <button class="chip chip-btn" id="btn-help">❓ Cómo jugar</button>

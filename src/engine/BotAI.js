@@ -11,9 +11,25 @@
  * @param {number} aggressiveness  0..1  probabilidad de seguir comprando
  * @returns {string[]} títulos de los activos comprados este turno
  */
-export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggressiveness = 0.6) {
+export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggressiveness = 0.6, gigs = []) {
   const buys = [];
   let attempts = 2;
+
+  // 0a) Trabajos extra: si va justo de liquidez y tiene energía, se busca la vida.
+  //     En apuros hace hasta 2 gigs; descansa gratis para poder seguir currando.
+  if (engine.gigsEnabled() && gigs.length) {
+    const tight = engine.cash < engine.fixedExpenses() * 3;
+    let gigsThisTurn = 0;
+    while (tight && engine.energy > 22 && gigsThisTurn < 2) {
+      const g = gigs.filter(x => !engine.gigsUsed.has(x.id))
+        .sort((a, b) => (b.cash / -(b.energy || 1)) - (a.cash / -(a.energy || 1)))[0];
+      if (!g) break;
+      const r = engine.doGig(g);
+      if (!r.ok) break;
+      gigsThisTurn++;
+    }
+    if (engine.energy < 30) { const rest = lifestyle.find(l => l.id === 'rest'); if (rest) engine.doLifestyle(rest); }
+  }
 
   // 0b) Vehículo: compra un coche usado modesto al contado cuando puede (evita la deuda roja del coche)
   if (vehicles && vehicles.length && !engine.vehicle &&
@@ -77,8 +93,8 @@ export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggre
     // elige entre las 3 mejores (algo de aleatoriedad de personalidad)
     const pick = options[Math.floor(Math.random() * Math.min(3, options.length))];
 
-    // conserva un colchón de 2 meses de gastos
-    const buffer = engine.fixedExpenses() * 2;
+    // conserva un colchón de 1 mes de gastos (reinvierte pronto, como un jugador hábil)
+    const buffer = engine.fixedExpenses() * 1;
     if (engine.cash - pick.cost < buffer) break;
 
     const r = engine.buyAsset(pick.a, pick.fin);

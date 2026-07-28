@@ -1,0 +1,38 @@
+{
+  "$schema_note": "Modos de dificultad. Modifican el punto de partida de CUALQUIER perfil. cashMult/salaryMult escalan caja y sueldo iniciales; extraRent = alquiler mensual añadido a los gastos fijos; gigs = habilita trabajos extra (side gigs); scoreMult premia la dificultad en la liga.",
+  "modes": [
+    {
+      "id": "easy",
+      "emoji": "🌤️",
+      "label": "Fácil",
+      "desc": "Empiezas con buena liquidez y sueldo completo. Ideal para aprender las mecánicas sin agobios.",
+      "cashMult": 1.0,
+      "salaryMult": 1.0,
+      "extraRent": 0,
+      "gigs": false,
+      "scoreMult": 1.0
+    },
+    {
+      "id": "normal",
+      "emoji": "⛅",
+      "label": "Intermedio",
+      "desc": "Menos dinero inicial y sueldo algo más bajo. Tendrás que priorizar y podrás hacer trabajos extra para arrancar.",
+      "cashMult": 0.7,
+      "salaryMult": 0.9,
+      "extraRent": 0,
+      "gigs": true,
+      "scoreMult": 1.4
+    },
+    {
+      "id": "hard",
+      "emoji": "🌩️",
+      "label": "Difícil",
+      "desc": "Empiezas con muy poco y pagando alquiler cada mes. Sobrevive con trabajos extra y activos de riesgo antes de poder invertir en serio.",
+      "cashMult": 0.55,
+      "salaryMult": 0.85,
+      "extraRent": 200,
+      "gigs": true,
+      "scoreMult": 2.0
+    }
+  ]
+}

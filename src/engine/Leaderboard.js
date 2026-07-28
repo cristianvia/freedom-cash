@@ -43,6 +43,7 @@ function save(list) {
  */
 export function computeScore(r) {
   const profMult = r.profileId === 'corporate' ? 1.15 : 1.0; // el perfil difícil premia más
+  const modeMult = r.scoreMult || 1;                          // la dificultad premia más
   let s;
   if (r.won) {
     const speed = Math.max(0, 70 - r.months) * 18;          // más rápido, más puntos
@@ -53,7 +54,7 @@ export function computeScore(r) {
   } else {
     s = Math.round((r.ie || 0) * 4) + Math.round((r.netWorth || 0) / 2500); // progreso alcanzado
   }
-  return Math.max(0, Math.round(s * profMult));
+  return Math.max(0, Math.round(s * profMult * modeMult));
 }
 
 /** Envía una entrada y devuelve su puesto en la clasificación. */
