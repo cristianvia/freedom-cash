@@ -12,6 +12,7 @@ const $ = (id) => document.getElementById(id);
 const euro = (n) => `${Math.round(n).toLocaleString('es-ES')} €`;
 // chip con emoji (siempre visible) + texto (ocultable en móvil)
 const chipHTML = (emoji, text) => `<span class="chip-ic">${emoji}</span><span class="chip-txt"> ${text}</span>`;
+const shuffleArr = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const SAVE_KEY = 'freedomcash.save.v1';
 const TUT_KEY = 'freedomcash.tutorialDone.v1';
 
@@ -141,7 +142,7 @@ function chooseProfession(profile) {
   ov.innerHTML = `
     <div class="modal">
       <h2>Elige tu profesión</h2>
-      <p class="lead">Con ${profile.emoji} <b>${profile.name}</b>. Tu profesión desbloquea
+      <p class="lead">2/3 · Con ${profile.emoji} <b>${profile.name}</b>. Tu profesión desbloquea
         <b>proyectos de tu campo</b> en el Marketplace, además de las oportunidades para todos.</p>
       <div class="prof-grid">
         ${DATA.professions.map(pr => `
@@ -173,7 +174,7 @@ function chooseDifficulty(profile, profession) {
   ov.innerHTML = `
     <div class="modal">
       <h2>Elige la dificultad</h2>
-      <p class="lead">Con ${profile.emoji} <b>${profile.name}</b> · ${profession.emoji} <b>${profession.label}</b>.
+      <p class="lead">3/3 · Con ${profile.emoji} <b>${profile.name}</b> · ${profession.emoji} <b>${profession.label}</b>.
         La dificultad cambia tu punto de partida y cuánto puntúas en la liga.</p>
       <div class="diff-list">
         ${DATA.modes.map(m => `
@@ -208,7 +209,7 @@ async function startGame(profile, mode = null, profession = null) {
   engine.professionId = profession.id;
   ended = false;
   $('profile-overlay').style.display = 'none';
-  $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.name.split(' ')[0]);
+  $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.short || profile.name);
   $('hud-prof').innerHTML = chipHTML(profession.emoji, profession.label);
   $('hud-prof').style.display = profession.id === 'none' ? 'none' : '';
   $('hud-mode').innerHTML = chipHTML(mode.emoji, mode.label);
@@ -217,10 +218,11 @@ async function startGame(profile, mode = null, profession = null) {
   // oponentes IA: los otros perfiles disponibles (mismo modo, profesión aleatoria)
   const others = DATA.profiles.filter(p => p.id !== profile.id);
   const profPool = DATA.professions.filter(pr => pr.id !== 'none');
+  const rivalNames = shuffleArr(['Ana', 'Marcos', 'Lucía', 'Diego', 'Sara', 'Javi', 'Nora', 'Pablo']);
   bots = others.map((bp, i) => {
     const be = new EconomyEngine(bp, DATA.events, mode);
     be.professionId = profPool.length ? profPool[Math.floor(Math.random() * profPool.length)].id : 'none';
-    return { name: bp.name.split(' ')[0], emoji: bp.emoji, engine: be, aggr: 0.5 + i * 0.15 };
+    return { name: rivalNames[i] || 'Rival', emoji: bp.emoji, engine: be, aggr: 0.5 + i * 0.15 };
   });
 
   // ciudad con distritos
@@ -988,7 +990,7 @@ async function resumeGame(save) {
   engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events);
   ended = false;
   $('profile-overlay').style.display = 'none';
-  $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.name.split(' ')[0]);
+  $('hud-profile').innerHTML = chipHTML(profile.emoji, profile.short || profile.name);
   if (engine.mode) { $('hud-mode').innerHTML = chipHTML(engine.mode.emoji || '', engine.mode.label || ''); $('hud-mode').style.display = ''; }
   const prof = DATA.professions.find(pr => pr.id === engine.professionId);
   if (prof && prof.id !== 'none') { $('hud-prof').innerHTML = chipHTML(prof.emoji, prof.label); $('hud-prof').style.display = ''; }
