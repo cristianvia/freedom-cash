@@ -321,6 +321,38 @@
       "rules": [{ "life": "p2p_urgent", "gte": 5 }]
     },
     {
+      "id": "detective",
+      "emoji": "🔎",
+      "title": "Antes de firmar, mira",
+      "desc": "Encarga 10 análisis independientes antes de invertir.",
+      "cat": "estrategia", "tier": "plata",
+      "rules": [{ "life": "due_diligence", "gte": 10 }]
+    },
+    {
+      "id": "scam_dodger",
+      "emoji": "🚨",
+      "title": "A mí no me la cuelan",
+      "desc": "Destapa 3 chiringuitos financieros con un análisis antes de picar.",
+      "cat": "estrategia", "tier": "oro",
+      "rules": [{ "life": "scams_dodged", "gte": 3 }]
+    },
+    {
+      "id": "moonshot",
+      "emoji": "🚀",
+      "title": "Le salió bien",
+      "desc": "Vive el despegue de una apuesta: su renta sube un 40% para siempre.",
+      "cat": "cartera", "tier": "oro",
+      "rules": [{ "run": "booms", "gte": 1 }]
+    },
+    {
+      "id": "burned",
+      "emoji": "💀",
+      "title": "Lección cara",
+      "desc": "Pierde un activo entero por no haberlo analizado. Duele, pero se aprende.",
+      "cat": "deuda", "tier": "bronce",
+      "rules": [{ "run": "ruins", "gte": 1 }]
+    },
+    {
       "id": "patient",
       "emoji": "🎯",
       "title": "Paciencia de francotirador",

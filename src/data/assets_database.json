@@ -20,7 +20,8 @@
         "coc_return_percentage": 78,
         "vacancy_rate_risk": 0.15
       },
-      "leverage_allowed": true
+      "leverage_allowed": true,
+      "quality": "solid"
     },
     {
       "id": "re_flat_02",
@@ -41,7 +42,8 @@
         "coc_return_percentage": 46.32,
         "vacancy_rate_risk": 0.08
       },
-      "leverage_allowed": true
+      "leverage_allowed": true,
+      "quality": "solid"
     },
     {
       "id": "re_local_03",
@@ -62,7 +64,8 @@
         "coc_return_percentage": 43.25,
         "vacancy_rate_risk": 0.12
       },
-      "leverage_allowed": true
+      "leverage_allowed": true,
+      "quality": "solid"
     },
     {
       "id": "biz_saas_01",
@@ -83,7 +86,8 @@
         "coc_return_percentage": 38.03,
         "vacancy_rate_risk": 0.25
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "biz_ecom_02",
@@ -104,7 +108,8 @@
         "coc_return_percentage": 43.59,
         "vacancy_rate_risk": 0.35
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "biz_vending_03",
@@ -125,7 +130,8 @@
         "coc_return_percentage": 43.53,
         "vacancy_rate_risk": 0.18
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "fin_etf_09",
@@ -146,7 +152,8 @@
         "coc_return_percentage": 24.3,
         "vacancy_rate_risk": 0.1
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "biz_affiliate_10",
@@ -167,7 +174,8 @@
         "coc_return_percentage": 69.8,
         "vacancy_rate_risk": 0.4
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "re_parking_11",
@@ -188,7 +196,8 @@
         "coc_return_percentage": 55.89,
         "vacancy_rate_risk": 0.06
       },
-      "leverage_allowed": true
+      "leverage_allowed": true,
+      "quality": "solid"
     },
     {
       "id": "fin_reit_01",
@@ -209,7 +218,8 @@
         "coc_return_percentage": 15.06,
         "vacancy_rate_risk": 0.05
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "fin_crypto_02",
@@ -230,7 +240,8 @@
         "coc_return_percentage": 36.48,
         "vacancy_rate_risk": 0.55
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "re_trastero_12",
@@ -251,7 +262,8 @@
         "coc_return_percentage": 43.64,
         "vacancy_rate_risk": 0.05
       },
-      "leverage_allowed": true
+      "leverage_allowed": true,
+      "quality": "solid"
     },
     {
       "id": "re_nave_13",
@@ -272,7 +284,8 @@
         "coc_return_percentage": 30.86,
         "vacancy_rate_risk": 0.09
       },
-      "leverage_allowed": true
+      "leverage_allowed": true,
+      "quality": "solid"
     },
     {
       "id": "fin_indexado_14",
@@ -293,7 +306,8 @@
         "coc_return_percentage": 10.44,
         "vacancy_rate_risk": 0.12
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "fin_bonos_15",
@@ -314,7 +328,8 @@
         "coc_return_percentage": 7.5,
         "vacancy_rate_risk": 0.02
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "biz_vending2_16",
@@ -335,7 +350,8 @@
         "coc_return_percentage": 19.4,
         "vacancy_rate_risk": 0.14
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "biz_foodtruck_17",
@@ -356,7 +372,8 @@
         "coc_return_percentage": 27.38,
         "vacancy_rate_risk": 0.3
       },
-      "leverage_allowed": false
+      "leverage_allowed": false,
+      "quality": "solid"
     },
     {
       "id": "edu_academia_18",
@@ -378,7 +395,8 @@
         "vacancy_rate_risk": 0.15
       },
       "leverage_allowed": false,
-      "profession": "education"
+      "profession": "education",
+      "quality": "solid"
     },
     {
       "id": "edu_curso_19",
@@ -400,7 +418,8 @@
         "vacancy_rate_risk": 0.35
       },
       "leverage_allowed": false,
-      "profession": "education"
+      "profession": "education",
+      "quality": "solid"
     },
     {
       "id": "med_consulta_20",
@@ -422,7 +441,8 @@
         "vacancy_rate_risk": 0.12
       },
       "leverage_allowed": false,
-      "profession": "health"
+      "profession": "health",
+      "quality": "solid"
     },
     {
       "id": "med_clinica_21",
@@ -444,7 +464,8 @@
         "vacancy_rate_risk": 0.1
       },
       "leverage_allowed": true,
-      "profession": "health"
+      "profession": "health",
+      "quality": "solid"
     },
     {
       "id": "tech_saas_22",
@@ -466,7 +487,8 @@
         "vacancy_rate_risk": 0.22
       },
       "leverage_allowed": false,
-      "profession": "tech"
+      "profession": "tech",
+      "quality": "solid"
     },
     {
       "id": "tech_app_23",
@@ -488,7 +510,8 @@
         "vacancy_rate_risk": 0.4
       },
       "leverage_allowed": false,
-      "profession": "tech"
+      "profession": "tech",
+      "quality": "solid"
     },
     {
       "id": "food_bar_24",
@@ -510,7 +533,8 @@
         "vacancy_rate_risk": 0.2
       },
       "leverage_allowed": false,
-      "profession": "hospitality"
+      "profession": "hospitality",
+      "quality": "solid"
     },
     {
       "id": "food_dark_25",
@@ -532,7 +556,8 @@
         "vacancy_rate_risk": 0.28
       },
       "leverage_allowed": false,
-      "profession": "hospitality"
+      "profession": "hospitality",
+      "quality": "solid"
     },
     {
       "id": "trade_reformas_26",
@@ -554,7 +579,8 @@
         "vacancy_rate_risk": 0.18
       },
       "leverage_allowed": false,
-      "profession": "trades"
+      "profession": "trades",
+      "quality": "solid"
     },
     {
       "id": "trade_taller_27",
@@ -576,7 +602,8 @@
         "vacancy_rate_risk": 0.14
       },
       "leverage_allowed": false,
-      "profession": "trades"
+      "profession": "trades",
+      "quality": "solid"
     },
     {
       "id": "crea_youtube_28",
@@ -598,7 +625,8 @@
         "vacancy_rate_risk": 0.45
       },
       "leverage_allowed": false,
-      "profession": "creative"
+      "profession": "creative",
+      "quality": "solid"
     },
     {
       "id": "crea_agencia_29",
@@ -620,7 +648,384 @@
         "vacancy_rate_risk": 0.2
       },
       "leverage_allowed": false,
-      "profession": "creative"
+      "profession": "creative",
+      "quality": "solid"
+    },
+    {
+      "id": "re_garaje_30",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_sand_block.png",
+      "title": "Garaje junto al Hospital",
+      "description": "Rotación garantizada por turnos de personal sanitario. Cero mantenimiento.",
+      "quality": "solid",
+      "financials": {
+        "total_price": 26000,
+        "down_payment_required": 6500,
+        "mortgage_available": 19500,
+        "monthly_mortgage_cost": 95,
+        "gross_monthly_income": 395,
+        "maintenance_and_taxes": 28,
+        "net_monthly_cashflow": 272
+      },
+      "metrics": {
+        "coc_return_percentage": 50.22,
+        "vacancy_rate_risk": 0.05
+      },
+      "leverage_allowed": true
+    },
+    {
+      "id": "fin_monetario_31",
+      "category": "financial",
+      "sprite": "assets/sprites/fin_bronze_wide.png",
+      "title": "Fondo Monetario",
+      "description": "Liquidez casi inmediata y rentabilidad pequeña. El aparcamiento del dinero.",
+      "quality": "solid",
+      "financials": {
+        "total_price": 8000,
+        "down_payment_required": 8000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 52,
+        "maintenance_and_taxes": 3,
+        "net_monthly_cashflow": 49
+      },
+      "metrics": {
+        "coc_return_percentage": 7.35,
+        "vacancy_rate_risk": 0.02
+      },
+      "leverage_allowed": false
+    },
+    {
+      "id": "fin_infl_32",
+      "category": "financial",
+      "sprite": "assets/sprites/fin_gold_tall.png",
+      "title": "Bonos Ligados a la Inflación",
+      "description": "Pagan poco, pero su renta sube cuando suben los precios. Es un seguro, no un negocio.",
+      "quality": "solid",
+      "financials": {
+        "total_price": 18000,
+        "down_payment_required": 18000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 128,
+        "maintenance_and_taxes": 6,
+        "net_monthly_cashflow": 122
+      },
+      "metrics": {
+        "coc_return_percentage": 8.13,
+        "vacancy_rate_risk": 0.03
+      },
+      "leverage_allowed": false
+    },
+    {
+      "id": "re_solar_33",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_olive_house.png",
+      "title": "Instalación Fotovoltaica",
+      "description": "Placas en nave industrial con contrato de venta de energía a 20 años.",
+      "quality": "solid",
+      "financials": {
+        "total_price": 48000,
+        "down_payment_required": 12000,
+        "mortgage_available": 36000,
+        "monthly_mortgage_cost": 165,
+        "gross_monthly_income": 690,
+        "maintenance_and_taxes": 60,
+        "net_monthly_cashflow": 465
+      },
+      "metrics": {
+        "coc_return_percentage": 46.5,
+        "vacancy_rate_risk": 0.07
+      },
+      "leverage_allowed": true
+    },
+    {
+      "id": "biz_lavan_34",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_slate_shop.png",
+      "title": "Lavandería de Barrio",
+      "description": "Autoservicio 24h. Ingresos pequeños, constantes y sin personal.",
+      "quality": "solid",
+      "financials": {
+        "total_price": 34000,
+        "down_payment_required": 34000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 760,
+        "maintenance_and_taxes": 190,
+        "net_monthly_cashflow": 570
+      },
+      "metrics": {
+        "coc_return_percentage": 20.12,
+        "vacancy_rate_risk": 0.12
+      },
+      "leverage_allowed": false
+    },
+    {
+      "id": "spec_startup_40",
+      "category": "digital_business",
+      "sprite": "assets/sprites/b_startup.png",
+      "title": "Participación en una Startup",
+      "description": "Un 4% de la empresa de un conocido. Si escala, se multiplica; si no, cero.",
+      "quality": "speculative",
+      "financials": {
+        "total_price": 25000,
+        "down_payment_required": 25000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 690,
+        "maintenance_and_taxes": 60,
+        "net_monthly_cashflow": 630
+      },
+      "metrics": {
+        "coc_return_percentage": 30.24,
+        "vacancy_rate_risk": 0.45
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.03,
+        "boom": 0.03
+      },
+      "warning": "Empresa sin histórico: la mayoría de startups no llegan al tercer año."
+    },
+    {
+      "id": "spec_defi_41",
+      "category": "financial",
+      "sprite": "assets/sprites/fin_purple_office.png",
+      "title": "Staking en Protocolo DeFi",
+      "description": "Rendimiento alto en un protocolo joven. El contrato lo auditó… alguien.",
+      "quality": "speculative",
+      "financials": {
+        "total_price": 12000,
+        "down_payment_required": 12000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 530,
+        "maintenance_and_taxes": 15,
+        "net_monthly_cashflow": 515
+      },
+      "metrics": {
+        "coc_return_percentage": 51.5,
+        "vacancy_rate_risk": 0.55
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.035,
+        "boom": 0.02
+      },
+      "warning": "Riesgo de contrato inteligente: un fallo o un hackeo se lo lleva todo."
+    },
+    {
+      "id": "spec_resto_42",
+      "category": "digital_business",
+      "sprite": "assets/sprites/b_cafe.png",
+      "title": "Restaurante de Moda",
+      "description": "Local con cola en la puerta… hoy. La hostelería premia y castiga rápido.",
+      "quality": "speculative",
+      "financials": {
+        "total_price": 70000,
+        "down_payment_required": 70000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 2450,
+        "maintenance_and_taxes": 1100,
+        "net_monthly_cashflow": 1350
+      },
+      "metrics": {
+        "coc_return_percentage": 23.14,
+        "vacancy_rate_risk": 0.35
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.022,
+        "boom": 0.022
+      },
+      "warning": "Márgenes finos: una mala racha de tres meses se lleva el negocio por delante."
+    },
+    {
+      "id": "spec_turis_43",
+      "category": "real_estate",
+      "sprite": "assets/sprites/b_vacation.png",
+      "title": "Piso Turístico sin Licencia",
+      "description": "Rentabilidad muy por encima del alquiler normal. Papeles \"en trámite\".",
+      "quality": "speculative",
+      "financials": {
+        "total_price": 95000,
+        "down_payment_required": 28500,
+        "mortgage_available": 66500,
+        "monthly_mortgage_cost": 290,
+        "gross_monthly_income": 2100,
+        "maintenance_and_taxes": 210,
+        "net_monthly_cashflow": 1600
+      },
+      "metrics": {
+        "coc_return_percentage": 67.37,
+        "vacancy_rate_risk": 0.4
+      },
+      "leverage_allowed": true,
+      "outcome": {
+        "ruin": 0.03,
+        "boom": 0.01
+      },
+      "warning": "Riesgo regulatorio: si el ayuntamiento aprieta, la licencia no llega y adiós renta."
+    },
+    {
+      "id": "spec_nft_44",
+      "category": "financial",
+      "sprite": "assets/sprites/fin_emerald_house.png",
+      "title": "Cartera de Arte Digital",
+      "description": "Piezas de artistas emergentes que se alquilan para exposiciones virtuales.",
+      "quality": "speculative",
+      "financials": {
+        "total_price": 16000,
+        "down_payment_required": 16000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 640,
+        "maintenance_and_taxes": 40,
+        "net_monthly_cashflow": 600
+      },
+      "metrics": {
+        "coc_return_percentage": 45.0,
+        "vacancy_rate_risk": 0.58
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.04,
+        "boom": 0.025
+      },
+      "warning": "Mercado ilíquido: el precio depende de que siga habiendo compradores."
+    },
+    {
+      "id": "spec_franq_45",
+      "category": "digital_business",
+      "sprite": "assets/sprites/b_shop.png",
+      "title": "Franquicia de Bubble Tea",
+      "description": "La marca del momento. Canon de entrada alto y contrato de 5 años.",
+      "quality": "speculative",
+      "financials": {
+        "total_price": 55000,
+        "down_payment_required": 55000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1850,
+        "maintenance_and_taxes": 760,
+        "net_monthly_cashflow": 1090
+      },
+      "metrics": {
+        "coc_return_percentage": 23.78,
+        "vacancy_rate_risk": 0.32
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.02,
+        "boom": 0.018
+      },
+      "warning": "Negocio de moda: cuando pasa la novedad, el canon sigue."
+    },
+    {
+      "id": "scam_ponzi_50",
+      "category": "financial",
+      "sprite": "assets/sprites/b_bank.png",
+      "title": "Fondo \"Garantizado\" 9% Mensual",
+      "description": "Rentabilidad fija garantizada por contrato. Comercial muy insistente y sin folleto CNMV.",
+      "quality": "scam",
+      "financials": {
+        "total_price": 20000,
+        "down_payment_required": 20000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1800,
+        "maintenance_and_taxes": 0,
+        "net_monthly_cashflow": 1800
+      },
+      "metrics": {
+        "coc_return_percentage": 108.0,
+        "vacancy_rate_risk": 0.6
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.3
+      },
+      "warning": "ESQUEMA PIRAMIDAL: paga a los antiguos con el dinero de los nuevos. Cuando pare, no queda nada."
+    },
+    {
+      "id": "scam_trading_51",
+      "category": "digital_business",
+      "sprite": "assets/sprites/b_coworking.png",
+      "title": "Cuenta Gestionada de Trading",
+      "description": "Un gurú opera por ti con \"rentabilidad asegurada\" del 7% mensual. Retirada mínima a 12 meses.",
+      "quality": "scam",
+      "financials": {
+        "total_price": 15000,
+        "down_payment_required": 15000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1050,
+        "maintenance_and_taxes": 0,
+        "net_monthly_cashflow": 1050
+      },
+      "metrics": {
+        "coc_return_percentage": 84.0,
+        "vacancy_rate_risk": 0.6
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.32
+      },
+      "warning": "CHIRINGUITO FINANCIERO: sin licencia para gestionar dinero ajeno. El bloqueo de retirada es la señal."
+    },
+    {
+      "id": "scam_preventa_52",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_brick_tall.png",
+      "title": "Preventa sobre Plano en el Extranjero",
+      "description": "Apartamentos a mitad de precio en un resort por construir. Pago íntegro por adelantado.",
+      "quality": "scam",
+      "financials": {
+        "total_price": 45000,
+        "down_payment_required": 45000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 2700,
+        "maintenance_and_taxes": 0,
+        "net_monthly_cashflow": 2700
+      },
+      "metrics": {
+        "coc_return_percentage": 72.0,
+        "vacancy_rate_risk": 0.6
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.28
+      },
+      "warning": "PROMOTORA FANTASMA: sin aval bancario ni licencia de obra. Si no se construye, no hay a quién reclamar."
+    },
+    {
+      "id": "scam_mineria_53",
+      "category": "financial",
+      "sprite": "assets/sprites/fin_gold_tall.png",
+      "title": "Minería Cripto Gestionada",
+      "description": "Alquilas potencia de cálculo en una granja que nadie ha visitado. Pagos \"diarios\".",
+      "quality": "scam",
+      "financials": {
+        "total_price": 10000,
+        "down_payment_required": 10000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 760,
+        "maintenance_and_taxes": 0,
+        "net_monthly_cashflow": 760
+      },
+      "metrics": {
+        "coc_return_percentage": 91.2,
+        "vacancy_rate_risk": 0.6
+      },
+      "leverage_allowed": false,
+      "outcome": {
+        "ruin": 0.3
+      },
+      "warning": "SIN ACTIVO REAL DETRÁS: no hay forma de auditar que esas máquinas existan."
     }
   ]
 }

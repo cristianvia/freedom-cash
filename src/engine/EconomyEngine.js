@@ -103,6 +103,11 @@ export class EconomyEngine {
     this.REFI_FEE_PCT = 0.03;   // comisión (sobre la hipoteca) por refinanciar
     this.REFI_REDUCTION = 0.25; // reducción de la cuota tras refinanciar
 
+    // --- Due diligence: investigar antes de firmar ---
+    this.investigated = new Set();   // ids de activos ya analizados
+    this.DD_PCT = 0.012;             // coste del análisis (% del precio)
+    this.DD_MIN = 200;
+
     // --- Ciclo económico (se arranca en 'recuperación': hay margen para entrar) ---
     this.cycleIndex = 3;
     this.cycleLeft = 4;
@@ -355,9 +360,11 @@ export class EconomyEngine {
     return Math.min(this.YIELD_SPREAD_MAX, this.YIELD_SPREAD_BASE + this.YIELD_SPREAD_RISK * risk);
   }
 
-  /** Renta bruta del mes de un activo: catálogo × ciclo × sorteo de la horquilla. */
+  /** Renta bruta del mes: catálogo × despegues × ciclo × sorteo de la horquilla. */
   grossIncomeOf(a) {
-    return a.financials.gross_monthly_income * this.cycleYieldMult() * (a.yieldFactor ?? 1);
+    if (a.ruined) return 0;   // se fue a cero: sigue en la ciudad, pero no paga
+    const boom = Math.pow(1.4, a.boomed || 0);
+    return a.financials.gross_monthly_income * boom * this.cycleYieldMult() * (a.yieldFactor ?? 1);
   }
 
   /**
@@ -370,7 +377,7 @@ export class EconomyEngine {
     const f = a.financials;
     const spread = this.yieldSpread(a);
     const fixed = f.maintenance_and_taxes + this.mortgageCostOf(a);
-    const gross = f.gross_monthly_income * this.cycleYieldMult();
+    const gross = f.gross_monthly_income * Math.pow(1.4, a.boomed || 0) * this.cycleYieldMult();
     return {
       min: gross * (1 - spread) - fixed,
       max: gross * (1 + spread) - fixed,
@@ -804,6 +811,97 @@ export class EconomyEngine {
     return { ok: true, instance };
   }
 
+  /* --------------------- DUE DILIGENCE / CALIDAD -------------------- */
+  /*
+   * No todas las oportunidades son buenas, y algunas son directamente estafas.
+   * Pero el juego nunca miente: las señales están a la vista de quien mire
+   * (nadie financia un chiringuito, nadie tiene cero gastos, nadie paga el
+   * triple que el mercado sin motivo). Investigar cuesta tiempo y dinero;
+   * no investigar cuesta el capital entero.
+   */
+
+  /** Señales de alarma visibles SIN pagar análisis. Se deducen de la ficha. */
+  assetFlags(asset) {
+    const f = asset.financials;
+    const flags = [];
+    const invested = f.down_payment_required || f.total_price;
+    const coc = invested ? (f.gross_monthly_income - f.maintenance_and_taxes - f.monthly_mortgage_cost) * 12 / invested * 100 : 0;
+    if (coc > 70) flags.push('Rentabilidad muy por encima del mercado');
+    if (!asset.leverage_allowed && asset.category === 'real_estate') {
+      flags.push('Ningún banco quiere financiarlo');
+    }
+    if (!f.maintenance_and_taxes) flags.push('Declara cero gastos de mantenimiento');
+    const risk = (asset.metrics && asset.metrics.vacancy_rate_risk) || 0;
+    if (risk >= 0.55) flags.push('Riesgo altísimo de irse a cero');
+    else if (risk >= 0.33) flags.push('Riesgo muy por encima de lo habitual');
+    return flags;
+  }
+
+  dueDiligenceCost(asset) {
+    return Math.max(this.DD_MIN, Math.round(asset.financials.total_price * this.DD_PCT));
+  }
+
+  isInvestigated(asset) { return this.investigated.has(asset.baseId || asset.id); }
+
+  canInvestigate(asset) {
+    if (this.isInvestigated(asset)) return { ok: false, reason: 'Ya lo has analizado' };
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason };
+    const cost = this.dueDiligenceCost(asset);
+    return { ok: this.cash >= cost, reason: 'Liquidez insuficiente para el análisis', cost };
+  }
+
+  /**
+   * Paga un análisis independiente: destapa la naturaleza real del activo y su
+   * probabilidad mensual de irse a cero (o de despegar).
+   */
+  investigate(asset) {
+    const c = this.canInvestigate(asset);
+    if (!c.ok) return { ok: false, reason: c.reason };
+    this.spendAction();
+    this.cash -= c.cost;
+    this.investigated.add(asset.baseId || asset.id);
+    const o = asset.outcome || {};
+    return {
+      ok: true, cost: c.cost,
+      quality: asset.quality || 'solid',
+      warning: asset.warning || null,
+      ruin: o.ruin || 0,
+      boom: o.boom || 0,
+    };
+  }
+
+  /* ---------------------- RUINA Y DESPEGUE -------------------------- */
+
+  /**
+   * Resuelve el destino de los activos con riesgo real. Un chiringuito revienta
+   * y se lleva TODO el capital; una apuesta legítima que sale mal deja un
+   * residuo; y a veces una apuesta despega y su renta sube para siempre.
+   * @returns {object[]} sucesos para contarlos en la UI
+   */
+  rollOutcomes() {
+    const events = [];
+    for (const a of [...this.ownedAssets]) {
+      const o = a.outcome;
+      if (!o || a.ruined) continue;
+      if (o.ruin && Math.random() < o.ruin) {
+        const scam = a.quality === 'scam';
+        if (scam) {
+          this.ownedAssets = this.ownedAssets.filter(x => x.instanceId !== a.instanceId);
+        } else {
+          a.ruined = true;   // sigue siendo tuyo, pero ya no renta
+        }
+        events.push({ type: 'ruin', scam, asset: a });
+        continue;
+      }
+      if (o.boom && Math.random() < o.boom) {
+        a.boomed = (a.boomed || 0) + 1;
+        events.push({ type: 'boom', asset: a });
+      }
+    }
+    return events;
+  }
+
   /* ------------------------ VALOR / TRASPASOS ----------------------- */
 
   /** Capital aportado (equity): al contado el precio entero; apalancado, la entrada. */
@@ -822,7 +920,9 @@ export class EconomyEngine {
     const held = Math.max(0, this.month - (a.purchasedMonth ?? this.month));
     const appr = 1 + Math.min(this.APPRECIATION_MAX, this.APPRECIATION_MONTH * held);
     const cycle = this.cyclePriceMult() / (a.purchasePriceMult ?? this.cyclePriceMult());
-    return this.assetEquity(a) * appr * cycle;
+    // un activo arruinado ya no vale lo que costó: solo queda el residuo
+    const state = a.ruined ? 0.25 : Math.pow(1.35, a.boomed || 0);
+    return this.assetEquity(a) * appr * cycle * state;
   }
 
   /** Plusvalía latente (%) de un activo si lo vendieras hoy. */
@@ -1108,12 +1208,15 @@ export class EconomyEngine {
     // la macro avanza: puede estrenarse fase del ciclo económico
     const newPhase = this.advanceCycle();
 
+    // se resuelve el destino de las apuestas: ruinas y despegues
+    const outcomes = this.rollOutcomes();
+
     // el mes que empieza ya tiene su rendimiento sorteado dentro de la horquilla:
     // el dashboard enseña exactamente lo que vas a cobrar, no una media teórica
     this.rollYields();
 
     const snap = this.recordSnapshot({
-      salary, event, adj, newPhase,
+      salary, event, adj, newPhase, outcomes,
       cashflow: monthResult,
       baseCashflow,
     });
@@ -1206,6 +1309,7 @@ export class EconomyEngine {
       actionsUsed: this.actionsUsed,
       cycleIndex: this.cycleIndex,
       cycleLeft: this.cycleLeft,
+      investigated: [...this.investigated],
       firedOnce: [...this.firedOnce],
       lifestyleUsed: [...this.lifestyleUsed],
       history: this.history,
@@ -1237,6 +1341,7 @@ export class EconomyEngine {
     e.actionsUsed = data.actionsUsed ?? 0;
     e.cycleIndex = data.cycleIndex ?? 3;
     e.cycleLeft = data.cycleLeft ?? 4;
+    e.investigated = new Set(data.investigated || []);
     e.firedOnce = new Set(data.firedOnce || []);
     e.lifestyleUsed = new Set(data.lifestyleUsed || []);
     e.history = data.history || [];

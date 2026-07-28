@@ -72,18 +72,24 @@ let globalView = false;     // alterna entre "mi ciudad" y "vista global"
 const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
+// Los datos DEBEN cuadrar con el código: si el navegador sirve un JSON viejo de
+// caché tras un deploy, el juego arranca con un catálogo que no corresponde.
+// 'no-cache' revalida siempre (no refetchea si no ha cambiado: es barato).
+const loadJSON = (file) =>
+  fetch(`src/data/${file}`, { cache: 'no-cache' }).then(r => r.json());
+
 async function loadData() {
   const [a, p, e, l, v, d, g, pr, ac, tx] = await Promise.all([
-    fetch('src/data/assets_database.json').then(r => r.json()),
-    fetch('src/data/profiles.json').then(r => r.json()),
-    fetch('src/data/events.json').then(r => r.json()),
-    fetch('src/data/lifestyle.json').then(r => r.json()),
-    fetch('src/data/vehicles.json').then(r => r.json()),
-    fetch('src/data/difficulty.json').then(r => r.json()),
-    fetch('src/data/gigs.json').then(r => r.json()),
-    fetch('src/data/professions.json').then(r => r.json()),
-    fetch('src/data/achievements.json').then(r => r.json()),
-    fetch('src/data/tax.json').then(r => r.json()),
+    loadJSON('assets_database.json'),
+    loadJSON('profiles.json'),
+    loadJSON('events.json'),
+    loadJSON('lifestyle.json'),
+    loadJSON('vehicles.json'),
+    loadJSON('difficulty.json'),
+    loadJSON('gigs.json'),
+    loadJSON('professions.json'),
+    loadJSON('achievements.json'),
+    loadJSON('tax.json'),
   ]);
   ach = new Achievements(ac);
   DATA.assets = a.assets;
@@ -432,6 +438,34 @@ function renderMarket() {
       ? `<span class="heat" title="Pueden permitírsela y podrían adelantarse">🔥 ${rivals
           .slice(0, 2).map(b => b.name).join(', ')}${rivals.length > 2 ? ` +${rivals.length - 2}` : ''}</span>`
       : '';
+
+    // Due diligence: las señales de alarma están a la vista; el análisis pagado
+    // destapa lo que hay detrás. Nunca compras a ciegas sin haber podido mirar.
+    const flags = engine.assetFlags(a);
+    const known = engine.isInvestigated(a);
+    const ddCost = engine.dueDiligenceCost(a);
+    const ddCheck = engine.canInvestigate(a);
+    const ddTag = known
+      ? `<span class="dd done">🔎 Analizado</span>`
+      : flags.length
+        ? `<span class="dd warn">⚠️ ${flags.length} ${flags.length === 1 ? 'señal' : 'señales'}</span>`
+        : '';
+    const qual = known ? (a.quality || 'solid') : null;
+    const flagsBox = (flags.length || known) ? `
+      <div class="dd-box ${qual || ''}">
+        ${known ? `<div class="dd-verdict ${qual}">${
+            qual === 'scam' ? '🚨 CHIRINGUITO: es una estafa'
+          : qual === 'speculative' ? '🎲 Apuesta real: puede multiplicarse o irse a cero'
+          : '✅ Inversión sólida: sin riesgo de ruina'}</div>` : ''}
+        ${known && a.warning ? `<div class="dd-warn">${a.warning}</div>` : ''}
+        ${known && a.outcome ? `<div class="dd-odds">${
+            a.outcome.ruin ? `<span class="bad">Ruina ${Math.round(a.outcome.ruin * 100)}%/mes</span>` : ''}${
+            a.outcome.boom ? `<span class="good">Despegue ${Math.round(a.outcome.boom * 100)}%/mes</span>` : ''}</div>` : ''}
+        ${flags.length ? `<ul class="dd-flags">${flags.map(x => `<li>${x}</li>`).join('')}</ul>` : ''}
+        ${known ? '' : `<button class="btn-ghost btn-sm dd-btn" data-dd="${a.id}" ${ddCheck.ok ? '' : 'disabled'}
+            title="${ddCheck.ok ? 'Encarga un análisis independiente' : ddCheck.reason}">
+            🔎 Analizar · ${euro(ddCost)}</button>`}
+      </div>` : '';
     // horquilla: el cashflow con hipoteca es peor que al contado, así que se
     // muestra la banda del modo que el jugador puede permitirse ahora mismo
     const bandCash = engine.incomeBand({ ...a, financing: 'cash' });
@@ -448,7 +482,8 @@ function renderMarket() {
           <span class="tag ${a.category}">${catLabel}</span>
         </div>
       </div>
-      <div class="card-flags">${ttlTag}${heatTag}</div>
+      <div class="card-flags">${ttlTag}${heatTag}${ddTag}</div>
+      ${flagsBox}
       <div class="desc">${a.description}</div>
       <div class="mini-grid">
         <span>Precio<b>${euro(f.total_price)}${cycleDelta ? `
@@ -483,6 +518,24 @@ function renderMarket() {
 
   wrap.querySelectorAll('button[data-buy]').forEach(btn => {
     btn.onclick = () => doBuy(btn.dataset.id, btn.dataset.buy);
+  });
+  wrap.querySelectorAll('button[data-dd]').forEach(btn => {
+    btn.onclick = () => {
+      const entry = market.find(m => m.asset.id === btn.dataset.dd);
+      if (!entry) return;
+      const r = engine.investigate(entry.asset);
+      if (!r.ok) { toast('No se pudo analizar', r.reason, 'bad'); return; }
+      ach.bumpLife('due_diligence');
+      if (r.quality === 'scam') ach.bumpLife('scams_dodged');
+      toast(
+        r.quality === 'scam' ? '🚨 Es un chiringuito'
+        : r.quality === 'speculative' ? '🎲 Es una apuesta'
+        : '✅ Inversión sólida',
+        r.warning || 'El análisis no encuentra nada raro: los números se sostienen.',
+        r.quality === 'scam' ? 'bad' : r.quality === 'speculative' ? 'neutral' : 'good');
+      if (r.quality === 'scam') showTip('scam');
+      render();
+    };
   });
 }
 
@@ -537,6 +590,8 @@ function renderPortfolio() {
     let badge = a.financing === 'leverage'
       ? '<span class="badge green">VERDE</span>' : '<span class="badge cash">CONTADO</span>';
     if (a.refinanced) badge += '<span class="badge refi">REFI</span>';
+    if (a.ruined) badge += '<span class="badge ruined">💀 A CERO</span>';
+    if (a.boomed) badge += `<span class="badge boom">🚀 ×${a.boomed}</span>`;
     // botón de refinanciar solo en hipotecas no refinanciadas
     const canRefi = a.financing === 'leverage' && !a.refinanced;
     const refiBtn = canRefi
@@ -607,6 +662,24 @@ function resolveTurn(ev, choiceIndex) {
 
   city.emitCoins();
   $('hud-month').textContent = engine.month;
+
+  // ruinas y despegues: lo que pasa cuando una apuesta se resuelve
+  (snap.outcomes || []).forEach((o, i) => {
+    ach.bumpRun(o.type === 'ruin' ? 'ruins' : 'booms');
+    if (o.type === 'ruin') {
+      logActivity(`💀 ${o.asset.title} se fue a cero`, 'bad');
+      if (!AUTO_MODE) setTimeout(() => toast(
+        o.scam ? '🚨 Era una estafa' : '💀 La apuesta salió mal',
+        o.scam
+          ? `"${o.asset.title}" ha desaparecido con tu dinero. No queda nada que vender.`
+          : `"${o.asset.title}" deja de generar renta. Puedes venderlo, pero solo por el residuo.`,
+        'bad'), 4600 + i * 2400);
+    } else {
+      logActivity(`🚀 ${o.asset.title} despegó (+40% de renta)`, 'good');
+      if (!AUTO_MODE) setTimeout(() => toast('🚀 Despegue',
+        `"${o.asset.title}" ha escalado: su renta sube un 40% para siempre.`, 'good'), 4600 + i * 2400);
+    }
+  });
 
   // cambio de fase del ciclo: es la noticia más importante del mes
   if (snap.newPhase) {
@@ -1699,6 +1772,7 @@ const TIPS = {
   tax_ladder: { t: '💡 La escalera fiscal', d: 'Cada estructura tiene costes fijos, así que subir antes de tiempo te hace PERDER dinero. La regla es siempre la misma: solo compensa cuando el ahorro mensual supera el coste de mantenerla, y la constitución se recupera en un plazo razonable.' },
   amortization: { t: '💡 Amortizar sin pagar', d: 'Un inmueble te deja deducir cada año un 3% del valor de la construcción. Es un gasto que resta impuestos pero NO sale de tu bolsillo: por eso el ladrillo es tan eficiente fiscalmente.' },
   p2p_assume: { t: '💡 Traspaso: compras capital, no el inmueble', d: 'En un traspaso pagas solo el capital que el vendedor había puesto y te subrogas en su hipoteca: la deuda pasa a ser tuya. Por eso el precio parece bajo — el inmueble sigue costando lo que costaba.' },
+  scam: { t: '🚨 Si parece demasiado bueno…', d: 'Nadie regala un 9% mensual garantizado. Las señales estaban en la ficha: rentabilidad imposible, cero gastos declarados y ningún banco dispuesto a financiarlo. Analizar cuesta calderilla; caer cuesta el capital entero.' },
   cycle_buy: { t: '💡 Se compra en la recesión', d: 'Cuando todo el mundo tiene miedo, los precios caen y las entradas se abaratan. Si has guardado caja, es tu momento: el activo que compres barato mantendrá su hipoteca barata para siempre.' },
   cycle_sell: { t: '💡 Se vende en el pico', d: 'En la burbuja los activos valen más de lo que rinden. Vender ahora lo que compraste barato realiza la plusvalía… y te deja liquidez para la próxima recesión.' },
   yield_band: { t: '💡 Los retornos son horquillas', d: 'Ningún activo renta lo mismo todos los meses: cada uno oscila dentro de su horquilla. Cuanto más riesgo, más ancha la banda. Diversificar no sube la media… pero estabiliza tu IE.' },

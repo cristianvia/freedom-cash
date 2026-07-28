@@ -165,6 +165,32 @@ img { max-width: 100%; }
   background: rgba(255,93,108,.09); max-width: 100%; overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; }
 
+/* ---------- Due diligence: señales y veredicto ---------- */
+.card-flags .dd { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+  border: 1px solid var(--line); background: rgba(255,255,255,.05); color: var(--txt-dim); }
+.card-flags .dd.warn { color: var(--amber); border-color: rgba(255,178,62,.35);
+  background: rgba(255,178,62,.1); }
+.card-flags .dd.done { color: var(--blue); border-color: rgba(74,168,255,.35);
+  background: rgba(74,168,255,.1); }
+.dd-box { margin-top: 8px; padding: 9px 11px; border-radius: 11px;
+  background: rgba(255,178,62,.06); border: 1px solid rgba(255,178,62,.22); }
+.dd-box.solid { background: rgba(46,230,160,.06); border-color: rgba(46,230,160,.25); }
+.dd-box.scam { background: rgba(255,93,108,.09); border-color: rgba(255,93,108,.4); }
+.dd-verdict { font-size: 12px; font-weight: 800; margin-bottom: 5px; }
+.dd-verdict.scam { color: var(--red); }
+.dd-verdict.speculative { color: var(--amber); }
+.dd-verdict.solid { color: var(--green); }
+.dd-warn { font-size: 11px; color: var(--txt-dim); line-height: 1.4; margin-bottom: 6px; }
+.dd-odds { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.dd-odds span { font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; }
+.dd-odds .bad { color: var(--red); background: rgba(255,93,108,.14); }
+.dd-odds .good { color: var(--green); background: rgba(46,230,160,.14); }
+.dd-flags { margin: 0 0 7px 14px; padding: 0; }
+.dd-flags li { font-size: 11px; color: var(--txt-dim); line-height: 1.45; }
+.dd-btn { width: 100%; }
+.badge.ruined { background: rgba(255,93,108,.18); color: var(--red); }
+.badge.boom { background: rgba(46,230,160,.18); color: var(--green); }
+
 /* ---------- Acciones del mes ---------- */
 .actions-bar { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
   padding: 11px 14px; margin-bottom: 10px; }

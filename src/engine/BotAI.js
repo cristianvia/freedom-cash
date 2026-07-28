@@ -90,7 +90,12 @@ export function takeBotTurn(engine, assets, lifestyle = [], vehicles = [], aggre
       const cost = fin === 'leverage'
         ? a.financials.down_payment_required
         : a.financials.total_price;
-      const score = a.financials.net_monthly_cashflow / Math.max(1, cost);
+      // el rival descuenta el riesgo de ruina: un chiringuito con un 30% mensual
+      // de irse a cero deja de parecer una ganga. Aun así pica de vez en cuando,
+      // que para eso el feed cuenta historias
+      const ruin = (a.outcome && a.outcome.ruin) || 0;
+      if (a.quality === 'scam' && Math.random() > 0.15) return null;
+      const score = a.financials.net_monthly_cashflow / Math.max(1, cost) * (1 - Math.min(0.95, ruin * 12));
       return { a, fin, cost, score };
     }).filter(Boolean).sort((x, y) => y.score - x.score);
 
