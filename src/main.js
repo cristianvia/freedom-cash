@@ -66,6 +66,7 @@ let market = [];            // oportunidades visibles este turno
 let p2pOffers = [];         // activos que los rivales ponen a la venta
 let p2pSeq = 0;             // contador de instancias compradas por P2P
 let ended = false;          // evita disparar el fin de partida dos veces
+let rivalWinsSeen = [];     // rivales cuya victoria ya te avisamos (si decides seguir)
 let activityLog = [];       // feed de actividad (jugador + rivales)
 let ach = null;             // logros + meta-progresión (persiste entre partidas)
 const sfx = new Sfx();      // sonido sintetizado + háptica
@@ -249,6 +250,7 @@ async function startGame(profile, mode = null, profession = null) {
     be.professionId = profPool.length ? profPool[Math.floor(Math.random() * profPool.length)].id : 'none';
     return { name: rivalNames[i] || 'Rival', emoji: bp.emoji, engine: be, aggr: 0.5 + i * 0.15 };
   });
+  rivalWinsSeen = [];
 
   // ciudad con distritos
   const canvas = $('city');
@@ -973,12 +975,18 @@ function checkEnd() {
     }
     return;
   }
-  const botWinner = bots.find(b => b.engine.hasWon());
+  const botWinner = bots.find(b => b.engine.hasWon() && !rivalWinsSeen.includes(b.name));
   if (botWinner) {
     ended = true;
+    rivalWinsSeen.push(botWinner.name);
+    // a partir de la 2ª era la derrota por rival no es definitiva: puedes seguir
+    // tu partida (quizá estás a media jugada de capitalización y el IE baja a ratos)
+    const canResume = s.era > 1;
     endModal(`🤖 ${botWinner.name} llegó primero`,
-      `Tu rival <b>${botWinner.emoji} ${botWinner.name}</b> alcanzó la libertad financiera antes que tú.
-       Afina tu estrategia de apalancamiento y diversificación para la próxima.`, false);
+      `Tu rival <b>${botWinner.emoji} ${botWinner.name}</b> alcanzó ${canResume ? `la meta de la ${s.eraLabel}` : 'la libertad financiera'} antes que tú.${canResume
+        ? ' Pero esto no tiene por qué acabarse aquí.'
+        : ' Afina tu estrategia de apalancamiento y diversificación para la próxima.'}`,
+      false, false, canResume);
   }
 }
 
@@ -1004,10 +1012,11 @@ function computeEndStats() {
 /**
  * @param {boolean} win          ¿victoria o derrota?
  * @param {boolean} canContinue  ofrecer encadenar la siguiente era (Modo Legado)
+ * @param {boolean} canResume    ofrecer seguir la misma era pese a la derrota
  */
-function endModal(title, html, win, canContinue = false) {
+function endModal(title, html, win, canContinue = false, canResume = false) {
   sfx.play(win ? 'win' : 'lose');
-  if (!canContinue) clearSave();
+  if (!canContinue && !canResume) clearSave();
   const st = computeEndStats();
   const rankTxt = ['🥇 1º', '🥈 2º', '🥉 3º'][st.rank - 1] || `${st.rank}º`;
   const s = engine.status();
@@ -1049,13 +1058,23 @@ function endModal(title, html, win, canContinue = false) {
         solo la mitad de la nueva vida. Vuelve a haber partida, a una escala mayor,
         con mercado más grande y más crédito. Las eras no se acaban.
       </div>` : ''}
+      ${canResume ? `
+      <div class="era-teaser">
+        <b>¿Lo dejas aquí?</b> Que tu rival llegue antes no borra lo que has construido:
+        puedes seguir esta misma era con tu caja, tus activos y tus deudas donde están
+        — útil si estabas a media jugada de capitalizar o vender. Al alcanzar la meta
+        seguirás encadenando eras; solo el oro de esta ronda se lo lleva otro.
+      </div>` : ''}
       <div class="end-actions">
         <button class="btn-ghost" id="btn-lb">🏆 Clasificación</button>
         <button class="btn-ghost" id="btn-ach-end">🏅 Logros <small>${ach.progress().unlocked}/${ach.progress().total}</small></button>
         ${canContinue
           ? `<button class="btn-primary" id="btn-continue" style="flex:1">▶️ Continuar · Nueva era</button>
              <button class="btn-ghost" id="btn-again">Cerrar partida</button>`
-          : `<button class="btn-primary" id="btn-again" style="flex:1">Jugar otra vez</button>`}
+          : canResume
+            ? `<button class="btn-primary" id="btn-keep-playing" style="flex:1">▶️ Seguir jugando</button>
+               <button class="btn-ghost" id="btn-again">Cerrar partida</button>`
+            : `<button class="btn-primary" id="btn-again" style="flex:1">Jugar otra vez</button>`}
       </div>
     </div>`;
   document.body.appendChild(ov);
@@ -1064,6 +1083,19 @@ function endModal(title, html, win, canContinue = false) {
   ov.querySelector('#btn-ach-end').onclick = () => showAchievementsGallery();
   const contBtn = ov.querySelector('#btn-continue');
   if (contBtn) contBtn.onclick = () => { ov.remove(); startNextEra(); };
+  const resBtn = ov.querySelector('#btn-keep-playing');
+  if (resBtn) resBtn.onclick = () => { ov.remove(); resumeAfterRival(); };
+}
+
+/**
+ * Sigue la partida tras la victoria de un rival: no se toca nada del estado,
+ * solo se reabre el turno. Si más adelante gana otro rival volverá a preguntar.
+ */
+function resumeAfterRival() {
+  ended = false;
+  logActivity('💪 Sigues en la carrera: la meta no se ha movido, tú tampoco.', 'good');
+  render();
+  saveGame();
 }
 
 /* --------------------------- MODO LEGADO -------------------------- */
@@ -1076,6 +1108,7 @@ function startNextEra() {
   bots.forEach(b => b.engine.startNewEra());   // los rivales suben contigo
   buildCatalog();
   ended = false;
+  rivalWinsSeen = [];                          // meta nueva: sus victorias vuelven a contar
 
   logActivity(`🚀 Comienza la ${info.label}: meta ${info.targetTo}% de IE.`, 'good');
   refreshMarket();
@@ -1762,6 +1795,7 @@ function saveGame() {
         profileId: b.engine.profile.id, engine: b.engine.toJSON() })),
       market: market.map(m => ({ id: m.asset.id, left: m.left })),
       achRun: ach ? ach.run : {},
+      rivalWinsSeen,
       ts: Date.now(),
     }));
   } catch (e) { /* almacenamiento no disponible */ }
@@ -1781,6 +1815,7 @@ async function resumeGame(save) {
   engine.setInsuranceData(DATA.insurance);
   buildCatalog();
   ended = false;
+  rivalWinsSeen = [...(save.rivalWinsSeen || [])];   // no repreguntar por rivales ya avisados
   ach.newRun();
   ach.run = { ...(save.achRun || {}) };   // los contadores de esta partida siguen contando
   $('profile-overlay').style.display = 'none';
