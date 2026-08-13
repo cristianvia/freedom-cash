@@ -142,7 +142,7 @@
         <div class="hint" id="ins-hint"></div>
       </div>
 
-      <div class="panel" id="panel-districts" data-tab="stats">
+      <div class="panel" id="panel-districts" data-tab="city">
         <h2>Distritos · Economías de escala</h2>
         <div id="districts"></div>
       </div>
@@ -172,12 +172,12 @@
         <div class="hint" id="tax-hint"></div>
       </div>
 
-      <div class="panel" id="panel-rank" data-tab="stats">
+      <div class="panel" id="panel-rank" data-tab="money">
         <h2>Ranking · Carrera a la Libertad</h2>
         <div id="standings"></div>
       </div>
 
-      <div class="panel" id="panel-activity" data-tab="stats">
+      <div class="panel" id="panel-activity" data-tab="money">
         <h2>Actividad · En vivo</h2>
         <div id="activity"></div>
       </div>
@@ -230,14 +230,14 @@
         <div id="p2p"></div>
       </div>
 
-      <div class="panel" id="panel-portfolio" data-tab="market">
+      <div class="panel" id="panel-portfolio" data-tab="folder">
         <h2>Tu Portfolio</h2>
         <div id="merge-box" class="merge-box" style="display:none"></div>
         <div class="pf-filters" id="pf-filters"></div>
         <div id="portfolio"><div class="empty">Aún no tienes activos. Compra en el Marketplace.</div></div>
       </div>
 
-      <div class="panel" id="panel-team" data-tab="market" style="display:none">
+      <div class="panel" id="panel-team" data-tab="folder" style="display:none">
         <h2>Equipo</h2>
         <div id="team"></div>
       </div>
@@ -251,9 +251,11 @@
         <div class="ab-hint" id="ab-hint"></div>
       </div>
 
-      <button class="btn-primary" id="btn-endturn">Cobrar y pasar de mes ▸</button>
-      <button class="btn-ghost btn-ff" id="btn-fastforward"
-              title="Encadena meses y para en cuanto haya algo que decidir">⏩ Avanzar hasta que pase algo</button>
+      <div class="turn-bar" id="turn-bar">
+        <button class="btn-primary" id="btn-endturn">Cobrar y pasar de mes ▸</button>
+        <button class="btn-ghost btn-ff" id="btn-fastforward"
+                title="Encadena meses y para en cuanto haya algo que decidir">⏩ Avanzar hasta que pase algo</button>
+      </div>
     </aside>
 
     <!-- Notificaciones de evento (siempre visibles) -->
@@ -268,7 +270,7 @@
       <button class="m-tab" data-mtab="market"><span class="mt-i">🏪</span><span class="mt-l">Mercado</span></button>
       <button class="m-tab" data-mtab="life"><span class="mt-i">🎯</span><span class="mt-l">Vida</span></button>
       <button class="m-tab" data-mtab="money"><span class="mt-i">💰</span><span class="mt-l">Balance</span></button>
-      <button class="m-tab" data-mtab="stats"><span class="mt-i">📊</span><span class="mt-l">Liga</span></button>
+      <button class="m-tab" data-mtab="folder"><span class="mt-i">🧺</span><span class="mt-l">Cartera</span></button>
     </nav>
   </div>
 

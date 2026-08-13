@@ -219,7 +219,8 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .btn-ghost { background: transparent; color: var(--txt-dim); border: 1px solid var(--line); }
 .btn-sm { padding: 6px 10px; font-size: 12px; }
 /* Avance rápido: secundario de verdad, justo debajo de pasar de mes */
-.btn-ff { width: 100%; margin-top: 8px; padding: 10px; font-size: 13px; border-radius: 10px; }
+.turn-bar { display: flex; flex-direction: column; gap: 8px; }
+.btn-ff { width: 100%; padding: 10px; font-size: 13px; border-radius: 10px; }
 .btn-ff:hover:not(:disabled) { color: var(--txt); border-color: var(--blue); }
 .btn-ff.idle { color: var(--txt); border-color: var(--blue); }
 
@@ -264,7 +265,11 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .era-teaser.finale { border-color: var(--amber); background: rgba(255,178,62,.08); }
 
 /* ---------- Cartera: filtros y grupos ---------- */
-.pf-filters { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+.pf-filters { display: flex; gap: 6px; margin-bottom: 10px;
+  overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px; }
+.pf-filters::-webkit-scrollbar { display: none; }
+.pf-f { white-space: nowrap; flex: none; }
 .pf-f { background: transparent; border: 1px solid var(--line); color: var(--txt-dim);
   border-radius: 8px; padding: 4px 9px; font-size: 12px; line-height: 1.4; }
 .pf-f i { font-style: normal; font-size: 10px; opacity: .7; }
@@ -695,9 +700,11 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 @media (max-width: 860px) {
   :root { --mhud: 54px; --mnav: 62px; }
 
-  /* #app = zona de contenido entre el HUD (fijo) y la nav (fija) */
-  #app { display: block; height: auto; min-height: 100vh; overflow-x: hidden;
+  /* #app = zona de contenido entre el HUD (fijo) y la nav (fija). En columna
+     para poder ordenar: la ciudad va siempre primero en su pestaña. */
+  #app { display: flex; flex-direction: column; height: auto; min-height: 100vh; overflow-x: hidden;
     padding: var(--mhud) 12px calc(var(--mnav) + 76px + env(safe-area-inset-bottom)); }
+  .col.center { order: -1; }
   .brand { display: none; }
 
   /* HUD compacto fijo arriba */
@@ -718,17 +725,23 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 
   /* Visibilidad por pestaña */
   body[data-mtab="market"] .panel[data-tab="market"],
+  body[data-mtab="folder"] .panel[data-tab="folder"],
   body[data-mtab="life"]   .panel[data-tab="life"],
-  body[data-mtab="money"]  .panel[data-tab="money"],
-  body[data-mtab="stats"]  .panel[data-tab="stats"] { display: block; }
+  body[data-mtab="money"]  .panel[data-tab="money"] { display: block; }
 
-  /* La ciudad es su propia pestaña, a pantalla completa */
+  /* La ciudad, con altura acotada: una rejilla isométrica es 2:1 y en un lienzo
+     vertical se quedaba diminuta en medio de un vacío enorme. Debajo van los
+     distritos, que es información de la propia ciudad. */
   .col.center { display: none; padding: 0; }
-  body[data-mtab="city"] .col.center { display: block; height: calc(100vh - var(--mhud) - var(--mnav) - env(safe-area-inset-bottom)); }
-  #city { width: 100%; height: 100%; }
+  body[data-mtab="city"] .col.center { display: block; height: auto; margin-bottom: 12px; }
+  body[data-mtab="city"] .panel[data-tab="city"] { display: block; }
+  /* La proporción la manda el isométrico (2:1 más hueco para las torres), no
+     el alto de la pantalla: así el lienzo no deja medio móvil en negro. */
+  #city { width: 100%; height: auto; aspect-ratio: 1 / 0.8; display: block; }
   /* Chips de la ciudad compactos: solo iconos/emoji, en una fila */
   .hud-top { top: 8px; gap: 6px; flex-wrap: nowrap; justify-content: center; width: 100%; left: 0; transform: none; padding: 0 10px; }
-  .hud-top .chip { padding: 6px 10px; font-size: 13px; gap: 0; }
+  .hud-top .chip { padding: 8px 12px; font-size: 13px; gap: 0; min-height: 40px;
+    display: flex; align-items: center; }
   .hud-top .chip .k { display: none; }         /* sin mini-etiquetas */
   .hud-top .chip .chip-txt { display: none; }  /* Vista/Cómo jugar/Perfil/Modo: solo icono/emoji */
   .hud-top .chip-ic { font-size: 16px; }
@@ -736,10 +749,16 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   .hud-top .chip-activos { font-weight: 700; }
   .hud-top .chip-activos::before { content: "🏠 "; font-weight: 400; }
 
-  /* Botón "pasar mes": FAB fijo sobre la nav, siempre accesible */
-  #btn-endturn { position: fixed; left: 12px; right: 12px;
+  /* Barra de turno fija sobre la nav: pasar de mes + avance rápido, juntos */
+  .turn-bar { position: fixed; left: 12px; right: 12px;
     bottom: calc(var(--mnav) + 10px + env(safe-area-inset-bottom));
-    z-index: 25; width: auto; box-shadow: 0 8px 28px rgba(0,0,0,.6); }
+    z-index: 25; flex-direction: row; gap: 8px; align-items: stretch; }
+  #btn-endturn { flex: 1; min-width: 0; box-shadow: 0 8px 28px rgba(0,0,0,.6); }
+  /* en móvil el avance rápido es un botón cuadrado: el texto no cabe */
+  .btn-ff { width: 56px; flex: none; padding: 0; font-size: 0;
+    background: rgba(20,25,38,.96); backdrop-filter: blur(8px);
+    box-shadow: 0 8px 28px rgba(0,0,0,.6); }
+  .btn-ff::before { content: "⏩"; font-size: 21px; }
 
   /* Barra de navegación inferior tipo app */
   #m-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0;
@@ -753,7 +772,18 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   .m-tab.active .mt-i { filter: none; transform: translateY(-1px) scale(1.14); }
 
   .profiles { grid-template-columns: 1fr; }
-  .market-card img { width: 54px; height: 50px; }
+  .market-card img { width: 58px; height: 54px; }
+
+  /* Objetivos táctiles: nada por debajo de 42 px de alto */
+  .buy-row > button { min-height: 44px; font-size: 13px; }
+  .btn-sm { padding: 10px 12px; font-size: 12.5px; min-height: 40px; }
+  .life-btn { padding: 11px 12px; }
+  .pf-f { min-height: 40px; padding: 8px 13px; font-size: 13px; }
+  .ins-btn, .dil-choice, .veh-opt, .diff-opt { min-height: 46px; }
+  .m-tab { padding: 8px 0; }
+  /* La cartera y el mercado respiran: filas más altas y sin apreturas */
+  .pf-item, .pf-group { padding: 11px 0; }
+  .mg-row { padding: 9px 0; }
   .event-toast { max-width: calc(100vw - 24px);
     bottom: calc(var(--mnav) + 82px + env(safe-area-inset-bottom)); }
 }

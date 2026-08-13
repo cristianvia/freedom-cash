@@ -47,7 +47,8 @@ const TUTORIAL_STEPS = [
 ];
 
 function startTutorial(startIndex = 0) {
-  const t = new Tutorial(TUTORIAL_STEPS, () => { try { localStorage.setItem(TUT_KEY, '1'); } catch (e) {} });
+  const t = new Tutorial(TUTORIAL_STEPS, () => { activeTutorial = null; try { localStorage.setItem(TUT_KEY, '1'); } catch (e) {} });
+  activeTutorial = t;
   if (typeof startIndex === 'number' && startIndex > 0) { t.i = Math.min(startIndex, TUTORIAL_STEPS.length - 1); t.render(); }
   return t;
 }
@@ -74,6 +75,7 @@ const sfx = new Sfx();      // sonido sintetizado + háptica
 let AUTO_MODE = false;      // demos/test: resuelve dilemas automáticamente
 let fastMode = false;       // avance rápido: encadena meses sin narrarlos uno a uno
 let awaitingChoice = false; // hay un dilema en pantalla esperando respuesta
+let activeTutorial = null; // tutorial en curso, si lo hay
 let globalView = false;     // alterna entre "mi ciudad" y "vista global"
 
 /* ----------------------------- CARGA ------------------------------ */
@@ -925,12 +927,17 @@ function renderMerges() {
 let pfFilter = 'all';
 const pfOpen = new Set();   // grupos desplegados
 
+/*
+ * Etiquetas de texto y no iconos: los emoji de categoría no existen en algunas
+ * fuentes de sistema y salían como cajas vacías. La barra se desplaza en
+ * horizontal cuando no caben, que es lo normal en un móvil.
+ */
 const PF_FILTERS = [
-  { id: 'all',   label: 'Todos',       test: () => true },
-  { id: 'real_estate', label: '🏠',    title: 'Inmuebles',  test: a => a.category === 'real_estate' },
-  { id: 'digital_business', label: '💻', title: 'Negocios', test: a => a.category === 'digital_business' },
-  { id: 'financial', label: '📈',      title: 'Financieros', test: a => a.category === 'financial' },
-  { id: 'losing', label: '⚠️',         title: 'Los que pierden dinero',
+  { id: 'all', label: 'Todos', title: 'Toda la cartera', test: () => true },
+  { id: 'real_estate', label: 'Inmuebles', test: a => a.category === 'real_estate' },
+  { id: 'digital_business', label: 'Negocios', test: a => a.category === 'digital_business' },
+  { id: 'financial', label: 'Financieros', test: a => a.category === 'financial' },
+  { id: 'losing', label: 'Pierden', title: 'Los que pierden dinero, están vacíos o se fueron a cero',
     test: a => engine.assetNetIncome(a) < 0 || a.ruined || engine.isVacant(a) },
 ];
 
@@ -1584,6 +1591,8 @@ function computeEndStats() {
  * @param {boolean} canResume    ofrecer seguir la misma era pese a la derrota
  */
 function endModal(title, html, win, canContinue = false, canResume = false, finale = false) {
+  // el tutorial se dibuja por encima de todo: si sigue abierto, tapa el final
+  if (activeTutorial) { activeTutorial.finish(); activeTutorial = null; }
   sfx.play(win ? 'win' : 'lose');
   if (!canContinue && !canResume) clearSave();
   const st = computeEndStats();
