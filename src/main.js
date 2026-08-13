@@ -4,6 +4,7 @@
  */
 import { EconomyEngine, ERA_ASSET_STEP, ERA_START_RATIO } from './engine/EconomyEngine.js';
 import { IsoCity } from './engine/IsoCity.js';
+import { specFor, buildingThumb } from './engine/CityArt.js';
 import { takeBotTurn } from './engine/BotAI.js';
 import { Tutorial } from './ui/tutorial.js';
 import { computeScore, submitScore, topScores } from './engine/Leaderboard.js';
@@ -74,7 +75,6 @@ let AUTO_MODE = false;      // demos/test: resuelve dilemas automáticamente
 let fastMode = false;       // avance rápido: encadena meses sin narrarlos uno a uno
 let awaitingChoice = false; // hay un dilema en pantalla esperando respuesta
 let globalView = false;     // alterna entre "mi ciudad" y "vista global"
-const spriteMap = {};       // key -> url para IsoCity
 
 /* ----------------------------- CARGA ------------------------------ */
 // Los datos DEBEN cuadrar con el código: si el navegador sirve un JSON viejo de
@@ -110,28 +110,35 @@ async function loadData() {
   DATA.tax = tx;
   DATA.insurance = ins;
   DATA.contracts = ct;
-
-  // todos los sprites (suelo, decoración, edificios y coches) por su clave
-  const TILE_KEYS = ['t_ground', 't_grass', 't_plaza', 't_tree', 't_water', 't_road'];
-  const BUILDING_KEYS = [
-    // originales (los usan las tarjetas del marketplace por su sprite explícito)
-    'b_home', 'b_apartment', 'b_vacation', 'b_house', 'b_shop', 'b_cafe',
-    'b_office', 'b_coworking', 'b_bank', 'b_tower', 'b_startup', 'b_retail2',
-    // variantes recoloreadas por distrito (variedad visual en la ciudad)
-    ...Object.values(BUILDING_POOLS).flat(),
-  ];
-  [...TILE_KEYS, ...BUILDING_KEYS].forEach(k => { spriteMap[k] = `assets/sprites/${k}.png`; });
 }
 
-// Pools de sprites por distrito: dan variedad de color Y forma a la ciudad
-const BUILDING_POOLS = {
-  real_estate: ['re_brick_tall', 're_brick_twotier', 're_sand_block', 're_sand_office',
-    're_olive_arched', 're_olive_house', 're_rose_shop', 're_rose_wide'],
-  digital_business: ['biz_blue_tall', 'biz_blue_twotier', 'biz_teal_block', 'biz_teal_office',
-    'biz_indigo_arched', 'biz_indigo_house', 'biz_slate_shop', 'biz_slate_wide'],
-  financial: ['fin_gold_tall', 'fin_gold_twotier', 'fin_purple_block', 'fin_purple_office',
-    'fin_emerald_arched', 'fin_emerald_house', 'fin_bronze_shop', 'fin_bronze_wide'],
-};
+
+/* --------------------------- ESCALÓN ------------------------------ */
+/*
+ * Cuántos peldaños tiene un activo por debajo en su cadena de mejora. Es lo
+ * que decide la silueta: un trastero sale caseta y un operador nacional sale
+ * torre. Se calcula recorriendo el catálogo hacia atrás.
+ */
+const tierCache = new Map();
+function tierOf(asset) {
+  const base = (asset.baseId || String(asset.id)).replace(/@e\d+$/, '').replace(/#.*$/, '');
+  if (tierCache.has(base)) return tierCache.get(base);
+  const all = DATA.assets || [];
+  let tier = 1, cur = base, guard = 6;
+  while (guard-- > 0) {
+    const parent = all.find(a => a.upgrade === cur);
+    if (!parent) break;
+    tier++; cur = parent.id;
+  }
+  tierCache.set(base, tier);
+  return tier;
+}
+
+/** Miniatura del activo, dibujada con el mismo motor que la ciudad. */
+function thumb(asset) { return buildingThumb(asset, tierOf(asset), 104); }
+
+/** Ficha de dibujo de un activo, con su escalón ya resuelto. */
+function citySpec(asset) { return specFor(asset, tierOf(asset)); }
 
 /* ------------------------- SELECCIÓN PERFIL ----------------------- */
 function renderProfiles() {
@@ -260,8 +267,6 @@ async function startGame(profile, mode = null, profession = null) {
   // ciudad con distritos
   const canvas = $('city');
   city = new IsoCity(canvas, 6, 6);
-  await city.loadSprites(spriteMap);
-  city.setBuildingPools(BUILDING_POOLS);
   window.addEventListener('resize', () => city.resize());
   city.resize();
   city.buildDistricts();
@@ -545,7 +550,7 @@ function renderMarket() {
     el.innerHTML = `
       ${prof ? `<div class="prof-badge">${prof.emoji} Proyecto de ${prof.label}</div>` : ''}
       <div class="top">
-        <img src="${a.sprite}" alt="">
+        <img src="${thumb(a)}" alt="" class="asset-thumb">
         <div>
           <div class="title">${a.title}</div>
           <span class="tag ${a.category}">${catLabel}</span>
@@ -631,8 +636,9 @@ function doBuy(assetId, financing, rateType = 'variable') {
   if (entry && entry.left <= MARKET_TTL[1] - 4) ach.bumpLife('patient_buys');
 
   // aparece el edificio en su distrito (sprite variado; guardamos celda y sprite)
-  const placed = city.placeBuilding(asset.category);
-  if (placed) { res.instance.cell = placed.cell; res.instance.citySprite = placed.key; city.emitCoins(); }
+  city.ensureCapacity(engine.ownedAssets.length + 1);
+  const placed = city.placeBuilding(citySpec(res.instance));
+  if (placed) { res.instance.cell = placed.cell; city.emitCoins(); }
 
   // la oportunidad comprada deja su hueco libre en el tablón
   market = market.filter(m => m.asset.id !== assetId);
@@ -871,7 +877,7 @@ function renderMerges() {
       : `te devuelven <b>${euro(-check.extra)}</b>`;
     return `
       <div class="mg-row ${check.ok ? '' : 'off'}">
-        <img src="${target.sprite}" alt="">
+        <img src="${thumb(target)}" alt="" class="asset-thumb">
         <div class="mg-t">
           <b>${g.need} × ${g.title}</b> → ${target.title}
           <span class="mg-d">Aportan ${euro(check.contribution)} · ${pay} · rinde ${cf >= 0 ? '+' : ''}${euro(cf)}/mes</span>
@@ -891,9 +897,8 @@ function renderMerges() {
       // la ciudad refleja el cambio: caen los pequeños y sube el grande, con
       // el sprite propio del escalón para que se note que ha crecido
       r.freedCells.forEach(cell => city.removeBuilding(cell));
-      const key = (target.sprite || '').split('/').pop().replace(/\.png$/, '');
-      const placed = city.placeBuilding(target.category, null, spriteMap[key] ? key : null);
-      if (placed) { r.instance.cell = placed.cell; r.instance.citySprite = placed.key; }
+      const placed = city.placeBuilding(citySpec(r.instance));
+      if (placed) r.instance.cell = placed.cell;
       sfx.play('buy');
       ach.bumpRun('merges');
       ach.bumpLife('merges');
@@ -992,7 +997,7 @@ function renderPfGroup(wrap, key, list, open = false) {
   const el = document.createElement('div');
   el.className = `pf-group ${open ? 'open' : ''}`;
   el.innerHTML = `
-    <img src="${a0.sprite}" alt="">
+    <img src="${thumb(a0)}" alt="" class="asset-thumb">
     <div class="pf-t">${a0.title} <span class="pf-n">×${list.length}</span>
       <span class="pf-gd">${a0.financing === 'leverage'
         ? `hipoteca ${a0.rateType === 'fixed' ? 'fija' : 'variable'}` : 'al contado'} · vale ${euro(value)}</span></div>
@@ -1038,7 +1043,7 @@ function renderPfItem(wrap, a, nested = false) {
   const el = document.createElement('div');
   el.className = `pf-item ${nested ? 'nested' : ''}`;
   el.innerHTML = `
-    <img src="${a.sprite}" alt="">
+    <img src="${thumb(a)}" alt="" class="asset-thumb">
     <div class="pf-t">${a.title} ${badge}</div>
     <div class="pf-cf" style="color:${cf >= 0 ? 'var(--green)' : 'var(--red)'}"
          title="Horquilla: ${euro(band.min)} a ${euro(band.max)}/mes · media ${euro(band.expected)}">
@@ -1416,8 +1421,9 @@ function buyP2P(idx) {
   o.bot.engine.ownedAssets = o.bot.engine.ownedAssets.filter(x => x.instanceId !== o.instanceId);
 
   const inst = engine.acquireAsset(o.asset, o.financing, `p2p${++p2pSeq}`);
-  const placed = city.placeBuilding(o.asset.category);
-  if (placed) { inst.cell = placed.cell; inst.citySprite = placed.key; city.emitCoins(); }
+  city.ensureCapacity(engine.ownedAssets.length + 1);
+  const placed = city.placeBuilding(citySpec(inst));
+  if (placed) { inst.cell = placed.cell; city.emitCoins(); }
 
   p2pOffers.splice(idx, 1);
   const mort = o.financing === 'leverage'
@@ -1449,7 +1455,7 @@ function renderP2P() {
     const blocked = !o.credit.ok || engine.cash < o.price;
     return `
     <div class="p2p-offer ${o.urgent ? 'urgent' : ''}">
-      <img src="${o.asset.sprite}" alt="">
+      <img src="${thumb(o.asset)}" alt="" class="asset-thumb">
       <div class="p2p-info">
         <div class="p2p-title">${o.asset.title}</div>
         <div class="p2p-meta">${o.bot.emoji} ${o.bot.name} ${o.urgent
@@ -2194,9 +2200,10 @@ function refreshView() {
       ...bots.map(b => ({ name: b.name, emoji: b.emoji, me: false, ie: b.engine.emancipationIndex(),
         count: b.engine.ownedAssets.length, won: b.engine.hasWon(), list: b.engine.ownedAssets })),
     ];
-    city.setViewData(players, BUILDING_POOLS);
+    players.forEach(p => (p.list || []).forEach(a => { a._tier = tierOf(a); }));
+    city.setViewData(players);
   } else {
-    city.setViewData(null, null);
+    city.setViewData(null);
   }
   city.draw();
 }
@@ -2424,19 +2431,11 @@ async function resumeGame(save) {
 
   const canvas = $('city');
   city = new IsoCity(canvas, 6, 6);
-  await city.loadSprites(spriteMap);
-  city.setBuildingPools(BUILDING_POOLS);
   window.addEventListener('resize', () => city.resize());
   city.resize();
   city.buildDistricts();
-  // re-colocar los edificios de los activos ya comprados (con su sprite guardado)
-  engine.ownedAssets.forEach(a => {
-    if (a.cell && city.grid[a.cell.row] && city.grid[a.cell.row][a.cell.col]) {
-      city.grid[a.cell.row][a.cell.col].building = a.citySprite || city.pickBuildingSprite(a.category);
-      city.grid[a.cell.row][a.cell.col].decor = null;
-    }
-  });
-  city.draw();
+  // la ciudad se reconstruye entera desde el portfolio: crece lo que haga falta
+  city.rebuildFrom(engine.ownedAssets, tierOf);
 
   // el tablón se guarda con la vida que le queda a cada oportunidad
   market = (save.market || []).map(m => {
@@ -2579,7 +2578,7 @@ function toast(title, desc, tone = 'neutral') {
   // hook de test: ?dbg=1 expone el estado interno para inspeccionarlo desde fuera
   if (params.get('dbg')) {
     window.__fc = {
-      get engine() { return engine; }, get bots() { return bots; },
+      get engine() { return engine; }, get bots() { return bots; }, get city() { return city; },
       get market() { return market; }, get p2p() { return p2pOffers; },
       rivalsEyeing, botsSnipeMarket, tickMarket, endTurn,
     };
