@@ -140,6 +140,9 @@ export class EconomyEngine {
     this.YIELD_SPREAD_RISK = 0.80;  // cuánto amplía la horquilla el riesgo del activo
     this.YIELD_SPREAD_MAX = 0.60;   // tope de la horquilla (±60%)
 
+    // --- Fusión de activos: crecer hacia arriba, no solo a lo ancho ---
+    this.MERGE_NEED = 3;   // ejemplares iguales que hacen falta para subir de escalón
+
     // --- Traspasos entre jugadores (mercado P2P) ---
     this.APPRECIATION_MONTH = 0.0075; // el capital se revaloriza ~9%/año mientras renta
     this.APPRECIATION_MAX = 0.45;     // tope de revalorización acumulada
@@ -393,11 +396,47 @@ export class EconomyEngine {
     return Math.min(this.YIELD_SPREAD_MAX, this.YIELD_SPREAD_BASE + this.YIELD_SPREAD_RISK * risk);
   }
 
-  /** Renta bruta del mes: catálogo × despegues × ciclo × sorteo de la horquilla. */
+  /* ------------------------- INDEXACIÓN ----------------------------- */
+  /*
+   * La mitad silenciosa del juego contra la inflación. Antes tus gastos subían
+   * y tus rentas se quedaban clavadas en el euro del día que compraste, así que
+   * cualquier activo de hace tres eras acababa siendo calderilla. Ahora cada
+   * activo declara cómo se actualiza:
+   *
+   *   ipc      el alquiler se revisa cada año (inmuebles). También sus gastos.
+   *   market   sigue al mercado a medias (fondos, REIT, cripto).
+   *   none     nominal puro (bonos, monetario, negocios sin reinvertir).
+   *
+   * La cuota de la hipoteca NO se actualiza nunca: por eso la deuda a tipo fijo
+   * es un activo cuando los precios suben, que es la lección de verdad.
+   */
+
+  /** Cuánto ha subido el coste de vida desde que compraste este activo. */
+  inflationSince(a) {
+    return this.expenseInflation / (a.purchaseInflation || 1);
+  }
+
+  /** Factor de actualización de la renta de un activo. */
+  indexationFactor(a) {
+    const mode = a.indexation || 'none';
+    if (mode === 'none') return 1;
+    const since = this.inflationSince(a);
+    return mode === 'ipc' ? since : Math.pow(since, 0.6);
+  }
+
+  /** Gastos de mantenimiento de hoy: lo que se revisa, se revisa también aquí. */
+  maintenanceOf(a) {
+    const idx = a.indexation === 'ipc' || a.indexation === 'market'
+      ? this.indexationFactor(a) : 1;
+    return a.financials.maintenance_and_taxes * idx;
+  }
+
+  /** Renta bruta del mes: catálogo × indexación × despegues × ciclo × horquilla. */
   grossIncomeOf(a) {
     if (a.ruined) return 0;   // se fue a cero: sigue en la ciudad, pero no paga
     const boom = Math.pow(1.4, a.boomed || 0);
-    return a.financials.gross_monthly_income * boom * this.cycleYieldMult() * (a.yieldFactor ?? 1);
+    return a.financials.gross_monthly_income * this.indexationFactor(a) * boom *
+      this.cycleYieldMult() * (a.yieldFactor ?? 1);
   }
 
   /**
@@ -409,8 +448,9 @@ export class EconomyEngine {
   incomeBand(a) {
     const f = a.financials;
     const spread = this.yieldSpread(a);
-    const fixed = f.maintenance_and_taxes + this.mortgageCostOf(a);
-    const gross = f.gross_monthly_income * Math.pow(1.4, a.boomed || 0) * this.cycleYieldMult();
+    const fixed = this.maintenanceOf(a) + this.mortgageCostOf(a);
+    const gross = f.gross_monthly_income * this.indexationFactor(a) *
+      Math.pow(1.4, a.boomed || 0) * this.cycleYieldMult();
     return {
       min: gross * (1 - spread) - fixed,
       max: gross * (1 + spread) - fixed,
@@ -439,7 +479,7 @@ export class EconomyEngine {
   assetNetIncome(a) {
     const d = this.districtBonus(a.category);   // economías de escala del distrito
     return this.grossIncomeOf(a) * d.gross
-      - a.financials.maintenance_and_taxes * d.maint
+      - this.maintenanceOf(a) * d.maint
       - this.mortgageCostOf(a);
   }
 
@@ -799,8 +839,13 @@ export class EconomyEngine {
 
   /* --------------------------- ACCIONES ----------------------------- */
 
-  /** ¿Está este activo disponible para mí? Universal o de mi profesión. */
+  /**
+   * ¿Puede este activo salir en el mercado para mí? Universal o de mi
+   * profesión, y nunca los escalones de fusión: a esos se llega reagrupando,
+   * que es justo lo que les da sentido.
+   */
   assetEligible(asset) {
+    if (asset.merge_only) return false;
     return !asset.profession || asset.profession === this.professionId;
   }
 
@@ -846,6 +891,7 @@ export class EconomyEngine {
       instanceId: `${asset.id}#${++this._seq}`,
       purchasedMonth: this.month,
       purchasePriceMult: this.cyclePriceMult(),
+      purchaseInflation: this.expenseInflation,
     };
     instance.yieldFactor = this.rollYieldFactor(instance);  // ya renta dentro de su horquilla
     this.ownedAssets.push(instance);
@@ -1088,6 +1134,7 @@ export class EconomyEngine {
     };
     delete instance.cell; delete instance.citySprite;
     instance.purchasePriceMult = this.cyclePriceMult();
+    instance.purchaseInflation = this.expenseInflation;
     instance.yieldFactor = this.rollYieldFactor(instance);
     this.ownedAssets.push(instance);
     return instance;
@@ -1119,6 +1166,127 @@ export class EconomyEngine {
     const before = this.pendingSales.length;
     this.pendingSales = this.pendingSales.filter(s => s.instanceId !== instanceId);
     return { ok: this.pendingSales.length < before };
+  }
+
+  /* ------------------------ FUSIÓN DE ACTIVOS ----------------------- */
+  /*
+   * El segundo eje del juego. Con solo comprar, la partida crece a lo ancho —el
+   * trastero número 223— y todo lo viejo se queda pequeño para siempre. Aquí
+   * tres ejemplares iguales se reagrupan en uno del escalón superior: renta más
+   * por euro, ocupa UNA casilla de la ciudad en vez de tres, y da un objetivo a
+   * pocos meses vista ("me falta un trastero para el bloque").
+   *
+   * El escalón se resuelve contra el catálogo de HOY, no contra el de la era en
+   * que compraste: por eso tus activos viejos, que ya no movían la aguja, valen
+   * como entrada para algo del tamaño actual.
+   */
+
+  /** Identificador del activo base, sin el sufijo de era. */
+  baseIdOf(a) { return a.baseId || String(a.id).replace(/@e\d+$/, ''); }
+
+  /** ¿Puede este ejemplar entrar en una fusión ahora mismo? */
+  mergeable(a) {
+    return !!a.upgrade && !a.ruined && !this.isForSale(a.instanceId);
+  }
+
+  /**
+   * Ejemplares que pide este escalón. Los últimos peldaños piden menos: con 3
+   * en todos, la cima de una cadena de cuatro exigía 27 unidades de base y no
+   * la alcanzaba nadie, así que el mejor contenido no se veía nunca.
+   */
+  mergeNeedFor(a) { return a.merge_need || this.MERGE_NEED; }
+
+  /**
+   * Grupos con ejemplares suficientes para subir de escalón. Se gastan primero
+   * los más antiguos: el sedimento de eras pasadas es justo el combustible.
+   * @returns {{baseId:string, upgradeId:string, picks:object[], count:number, title:string}[]}
+   */
+  mergeCandidates() {
+    const groups = new Map();
+    this.ownedAssets.forEach(a => {
+      if (!this.mergeable(a)) return;
+      const k = this.baseIdOf(a);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(a);
+    });
+    return [...groups.entries()]
+      .filter(([, list]) => list.length >= this.mergeNeedFor(list[0]))
+      .map(([baseId, list]) => {
+        const need = this.mergeNeedFor(list[0]);
+        const sorted = [...list].sort((a, b) => (a.purchasedMonth || 0) - (b.purchasedMonth || 0));
+        return {
+          baseId,
+          upgradeId: sorted[0].upgrade,
+          need,
+          picks: sorted.slice(0, need),
+          count: list.length,
+          title: sorted[sorted.length - 1].title,
+        };
+      });
+  }
+
+  /** Lo que aportan los ejemplares a fusionar: su valor de traspaso de hoy. */
+  mergeContribution(picks) {
+    return picks.reduce((s, a) => s + this.assetTransferValue(a), 0);
+  }
+
+  /**
+   * ¿Se puede cerrar esta fusión? Devuelve lo que habría que poner encima
+   * (negativo = te devuelven cambio, porque aportas de más).
+   * @param {object[]} picks   ejemplares que se consumen
+   * @param {object} target    activo del escalón superior, ya escalado a la era
+   */
+  canMerge(picks, target) {
+    if (!target) return { ok: false, reason: 'Este activo no tiene escalón superior' };
+    const need = picks && picks.length ? this.mergeNeedFor(picks[0]) : this.MERGE_NEED;
+    if (!picks || picks.length < need) {
+      return { ok: false, reason: `Necesitas ${need} ejemplares iguales` };
+    }
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason, noActions: true };
+    const f = this.pricedFinancials(target);
+    // se entra por la vía más barata que permita el activo y tu crédito
+    const lev = target.leverage_allowed && f.mortgage_available <= this.creditLimit();
+    const financing = lev ? 'leverage' : 'cash';
+    const entry = lev ? f.down_payment_required : f.total_price;
+    const contribution = this.mergeContribution(picks);
+    const extra = Math.round(entry - contribution);
+    return {
+      ok: this.cash >= extra,
+      reason: 'Liquidez insuficiente para completar la fusión',
+      extra, entry, financing,
+      contribution: Math.round(contribution),
+    };
+  }
+
+  /**
+   * Reagrupa: los ejemplares aportados desaparecen y nace el del escalón
+   * superior. Cuesta una acción, como cualquier jugada del mes.
+   */
+  mergeAssets(picks, target) {
+    const c = this.canMerge(picks, target);
+    if (!c.ok) return { ok: false, reason: c.reason };
+    this.spendAction();
+    this.cash -= c.extra;
+
+    const ids = new Set(picks.map(a => a.instanceId));
+    const freedCells = picks.map(a => a.cell).filter(Boolean);
+    this.ownedAssets = this.ownedAssets.filter(a => !ids.has(a.instanceId));
+
+    const instance = {
+      ...target,
+      financials: this.pricedFinancials(target),
+      financing: c.financing,
+      instanceId: `${target.id}#m${++this._seq}`,
+      purchasedMonth: this.month,
+      purchasePriceMult: this.cyclePriceMult(),
+      purchaseInflation: this.expenseInflation,
+    };
+    delete instance.cell; delete instance.citySprite;
+    instance.yieldFactor = this.rollYieldFactor(instance);
+    this.ownedAssets.push(instance);
+
+    return { ok: true, instance, extra: c.extra, freedCells, merged: picks.length };
   }
 
   /** Pide un préstamo de consumo (DEUDA ROJA): entra caja, resta liquidez cada mes. */
@@ -1511,6 +1679,11 @@ export class EconomyEngine {
     e.salaryBoost = data.salaryBoost ?? 1;
     e.vehicle = data.vehicle ?? null;
     e.expenseInflation = data.expenseInflation ?? 1;
+    // partidas anteriores a la indexación: sus activos se sellan con la
+    // inflación de HOY, para que la renta no pegue un salto al cargar
+    e.ownedAssets.forEach(a => {
+      if (a.purchaseInflation == null) a.purchaseInflation = e.expenseInflation;
+    });
     e.lifeExpenses = data.lifeExpenses ?? 0;
     e.era = data.era ?? 1;
     e.eraRisk = data.eraRisk ?? 1;

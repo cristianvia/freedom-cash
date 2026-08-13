@@ -3,6 +3,7 @@
   "assets": [
     {
       "id": "re_apt_01",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/b_vacation.png",
       "title": "Apartamento Turístico en Costa",
@@ -25,6 +26,7 @@
     },
     {
       "id": "re_flat_02",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/b_apartment.png",
       "title": "Piso para Reforma y Alquiler",
@@ -47,6 +49,7 @@
     },
     {
       "id": "re_local_03",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/b_shop.png",
       "title": "Local Comercial en Centro",
@@ -69,6 +72,7 @@
     },
     {
       "id": "biz_saas_01",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/b_office.png",
       "title": "Micro-SaaS Automatizado",
@@ -91,6 +95,7 @@
     },
     {
       "id": "biz_ecom_02",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/b_startup.png",
       "title": "Tienda E-commerce Automatizada",
@@ -113,6 +118,7 @@
     },
     {
       "id": "biz_vending_03",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/b_cafe.png",
       "title": "Ruta de Máquinas Vending",
@@ -135,6 +141,8 @@
     },
     {
       "id": "fin_etf_09",
+      "indexation": "none",
+      "upgrade": "fin_cartera_global",
       "category": "financial",
       "sprite": "assets/sprites/b_retail2.png",
       "title": "ETF de Dividendos Global",
@@ -157,6 +165,8 @@
     },
     {
       "id": "biz_affiliate_10",
+      "indexation": "none",
+      "upgrade": "biz_red_webs",
       "category": "digital_business",
       "sprite": "assets/sprites/b_coworking.png",
       "title": "Web de Afiliación SEO",
@@ -179,6 +189,8 @@
     },
     {
       "id": "re_parking_11",
+      "indexation": "ipc",
+      "upgrade": "re_parking_planta",
       "category": "real_estate",
       "sprite": "assets/sprites/b_house.png",
       "title": "Plaza de Garaje en Alquiler",
@@ -201,6 +213,7 @@
     },
     {
       "id": "fin_reit_01",
+      "indexation": "market",
       "category": "financial",
       "sprite": "assets/sprites/b_bank.png",
       "title": "Fondo Inmobiliario (REIT)",
@@ -223,6 +236,7 @@
     },
     {
       "id": "fin_crypto_02",
+      "indexation": "market",
       "category": "financial",
       "sprite": "assets/sprites/b_tower.png",
       "title": "Cesta Cripto Diversificada",
@@ -245,6 +259,8 @@
     },
     {
       "id": "re_trastero_12",
+      "indexation": "ipc",
+      "upgrade": "re_trastero_bloque",
       "category": "real_estate",
       "sprite": "assets/sprites/re_sand_block.png",
       "title": "Trastero en Alquiler",
@@ -267,6 +283,7 @@
     },
     {
       "id": "re_nave_13",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/re_brick_twotier.png",
       "title": "Nave Logística",
@@ -289,6 +306,7 @@
     },
     {
       "id": "fin_indexado_14",
+      "indexation": "market",
       "category": "financial",
       "sprite": "assets/sprites/fin_gold_tall.png",
       "title": "Fondo Indexado S&P 500",
@@ -311,6 +329,7 @@
     },
     {
       "id": "fin_bonos_15",
+      "indexation": "none",
       "category": "financial",
       "sprite": "assets/sprites/fin_bronze_wide.png",
       "title": "Bonos del Estado",
@@ -333,6 +352,7 @@
     },
     {
       "id": "biz_vending2_16",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/biz_slate_shop.png",
       "title": "Lavandería Automática",
@@ -355,6 +375,7 @@
     },
     {
       "id": "biz_foodtruck_17",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/biz_teal_office.png",
       "title": "Food Truck",
@@ -377,6 +398,7 @@
     },
     {
       "id": "edu_academia_18",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/biz_blue_twotier.png",
       "title": "Academia de Repaso",
@@ -400,6 +422,7 @@
     },
     {
       "id": "edu_curso_19",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/biz_indigo_house.png",
       "title": "Curso Online",
@@ -423,6 +446,7 @@
     },
     {
       "id": "med_consulta_20",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/biz_teal_block.png",
       "title": "Consulta Privada",
@@ -446,6 +470,7 @@
     },
     {
       "id": "med_clinica_21",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/biz_blue_tall.png",
       "title": "Participación en Clínica Dental",
@@ -469,6 +494,7 @@
     },
     {
       "id": "tech_saas_22",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/biz_indigo_arched.png",
       "title": "SaaS B2B",
@@ -492,6 +518,7 @@
     },
     {
       "id": "tech_app_23",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/biz_slate_wide.png",
       "title": "App con Publicidad",
@@ -515,6 +542,7 @@
     },
     {
       "id": "food_bar_24",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/re_rose_shop.png",
       "title": "Bar de Tapas",
@@ -538,6 +566,7 @@
     },
     {
       "id": "food_dark_25",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/re_olive_house.png",
       "title": "Dark Kitchen",
@@ -561,6 +590,7 @@
     },
     {
       "id": "trade_reformas_26",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/re_brick_tall.png",
       "title": "Empresa de Reformas",
@@ -584,6 +614,7 @@
     },
     {
       "id": "trade_taller_27",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/re_sand_office.png",
       "title": "Taller Mecánico",
@@ -607,6 +638,7 @@
     },
     {
       "id": "crea_youtube_28",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/fin_purple_office.png",
       "title": "Canal de Contenido",
@@ -630,6 +662,7 @@
     },
     {
       "id": "crea_agencia_29",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/fin_emerald_house.png",
       "title": "Agencia de Diseño",
@@ -653,6 +686,7 @@
     },
     {
       "id": "re_garaje_30",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/re_sand_block.png",
       "title": "Garaje junto al Hospital",
@@ -675,6 +709,7 @@
     },
     {
       "id": "fin_monetario_31",
+      "indexation": "none",
       "category": "financial",
       "sprite": "assets/sprites/fin_bronze_wide.png",
       "title": "Fondo Monetario",
@@ -697,6 +732,7 @@
     },
     {
       "id": "fin_infl_32",
+      "indexation": "market",
       "category": "financial",
       "sprite": "assets/sprites/fin_gold_tall.png",
       "title": "Bonos Ligados a la Inflación",
@@ -719,6 +755,7 @@
     },
     {
       "id": "re_solar_33",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/re_olive_house.png",
       "title": "Instalación Fotovoltaica",
@@ -741,6 +778,7 @@
     },
     {
       "id": "biz_lavan_34",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/biz_slate_shop.png",
       "title": "Lavandería de Barrio",
@@ -763,6 +801,7 @@
     },
     {
       "id": "spec_startup_40",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/b_startup.png",
       "title": "Participación en una Startup",
@@ -790,6 +829,7 @@
     },
     {
       "id": "spec_defi_41",
+      "indexation": "market",
       "category": "financial",
       "sprite": "assets/sprites/fin_purple_office.png",
       "title": "Staking en Protocolo DeFi",
@@ -817,6 +857,7 @@
     },
     {
       "id": "spec_resto_42",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/b_cafe.png",
       "title": "Restaurante de Moda",
@@ -844,6 +885,7 @@
     },
     {
       "id": "spec_turis_43",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/b_vacation.png",
       "title": "Piso Turístico sin Licencia",
@@ -871,6 +913,7 @@
     },
     {
       "id": "spec_nft_44",
+      "indexation": "market",
       "category": "financial",
       "sprite": "assets/sprites/fin_emerald_house.png",
       "title": "Cartera de Arte Digital",
@@ -898,6 +941,7 @@
     },
     {
       "id": "spec_franq_45",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/b_shop.png",
       "title": "Franquicia de Bubble Tea",
@@ -925,6 +969,7 @@
     },
     {
       "id": "scam_ponzi_50",
+      "indexation": "none",
       "category": "financial",
       "sprite": "assets/sprites/b_bank.png",
       "title": "Fondo \"Garantizado\" 9% Mensual",
@@ -951,6 +996,7 @@
     },
     {
       "id": "scam_trading_51",
+      "indexation": "none",
       "category": "digital_business",
       "sprite": "assets/sprites/b_coworking.png",
       "title": "Cuenta Gestionada de Trading",
@@ -977,6 +1023,7 @@
     },
     {
       "id": "scam_preventa_52",
+      "indexation": "ipc",
       "category": "real_estate",
       "sprite": "assets/sprites/re_brick_tall.png",
       "title": "Preventa sobre Plano en el Extranjero",
@@ -1003,6 +1050,7 @@
     },
     {
       "id": "scam_mineria_53",
+      "indexation": "none",
       "category": "financial",
       "sprite": "assets/sprites/fin_gold_tall.png",
       "title": "Minería Cripto Gestionada",
@@ -1026,6 +1074,205 @@
         "ruin": 0.3
       },
       "warning": "SIN ACTIVO REAL DETRÁS: no hay forma de auditar que esas máquinas existan."
+    },
+
+    {
+      "id": "re_trastero_bloque",
+      "indexation": "ipc",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_sand_office.png",
+      "title": "Bloque de Trasteros",
+      "description": "Una nave entera compartimentada: un solo contrato, un solo seguro, una sola visita al mes.",
+      "quality": "solid",
+      "merge_only": true,
+      "upgrade": "re_trastero_centro",
+      "financials": {
+        "total_price": 29000,
+        "down_payment_required": 7250,
+        "mortgage_available": 21750,
+        "monthly_mortgage_cost": 145,
+        "gross_monthly_income": 505,
+        "maintenance_and_taxes": 42,
+        "net_monthly_cashflow": 463
+      },
+      "metrics": { "coc_return_percentage": 52.6, "vacancy_rate_risk": 0.06 },
+      "leverage_allowed": true
+    },
+    {
+      "id": "re_trastero_centro",
+      "indexation": "ipc",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_brick_twotier.png",
+      "title": "Centro Logístico Urbano",
+      "description": "Self-storage con acceso 24h y oficina propia. Ya no gestionas trasteros: gestionas metros cuadrados.",
+      "quality": "solid",
+      "merge_only": true,
+      "upgrade": "re_trastero_operador",
+      "merge_need": 2,
+      "financials": {
+        "total_price": 95000,
+        "down_payment_required": 23750,
+        "mortgage_available": 71250,
+        "monthly_mortgage_cost": 470,
+        "gross_monthly_income": 1820,
+        "maintenance_and_taxes": 150,
+        "net_monthly_cashflow": 1670
+      },
+      "metrics": { "coc_return_percentage": 60.6, "vacancy_rate_risk": 0.08 },
+      "leverage_allowed": true
+    },
+    {
+      "id": "re_trastero_operador",
+      "indexation": "ipc",
+      "category": "real_estate",
+      "sprite": "assets/sprites/b_tower.png",
+      "title": "Operador de Self-Storage",
+      "description": "Marca propia y varios centros en la ciudad. El trastero de 9.000 € que compraste ya es una empresa.",
+      "quality": "solid",
+      "merge_only": true,
+      "financials": {
+        "total_price": 310000,
+        "down_payment_required": 77500,
+        "mortgage_available": 232500,
+        "monthly_mortgage_cost": 1530,
+        "gross_monthly_income": 6550,
+        "maintenance_and_taxes": 520,
+        "net_monthly_cashflow": 6030
+      },
+      "metrics": { "coc_return_percentage": 69.7, "vacancy_rate_risk": 0.1 },
+      "leverage_allowed": true
+    },
+
+    {
+      "id": "re_parking_planta",
+      "indexation": "ipc",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_olive_arched.png",
+      "title": "Planta de Parking",
+      "description": "Una planta entera en rotación. Barrera automática y cero personal.",
+      "quality": "solid",
+      "merge_only": true,
+      "upgrade": "re_parking_subterraneo",
+      "financials": {
+        "total_price": 46000,
+        "down_payment_required": 11500,
+        "mortgage_available": 34500,
+        "monthly_mortgage_cost": 178,
+        "gross_monthly_income": 850,
+        "maintenance_and_taxes": 58,
+        "net_monthly_cashflow": 792
+      },
+      "metrics": { "coc_return_percentage": 64.1, "vacancy_rate_risk": 0.07 },
+      "leverage_allowed": true
+    },
+    {
+      "id": "re_parking_subterraneo",
+      "indexation": "ipc",
+      "category": "real_estate",
+      "sprite": "assets/sprites/re_brick_tall.png",
+      "title": "Aparcamiento Subterráneo",
+      "description": "Tres plantas bajo una plaza céntrica, con abonados fijos y tarifa de rotación.",
+      "quality": "solid",
+      "merge_only": true,
+      "financials": {
+        "total_price": 152000,
+        "down_payment_required": 38000,
+        "mortgage_available": 114000,
+        "monthly_mortgage_cost": 590,
+        "gross_monthly_income": 3050,
+        "maintenance_and_taxes": 210,
+        "net_monthly_cashflow": 2840
+      },
+      "metrics": { "coc_return_percentage": 71.1, "vacancy_rate_risk": 0.09 },
+      "leverage_allowed": true
+    },
+
+    {
+      "id": "fin_cartera_global",
+      "indexation": "market",
+      "category": "financial",
+      "sprite": "assets/sprites/fin_gold_twotier.png",
+      "title": "Cartera Indexada Global",
+      "description": "Tus fondos sueltos reagrupados en una cartera con rebalanceo automático y comisiones más bajas.",
+      "quality": "solid",
+      "merge_only": true,
+      "upgrade": "fin_sicav",
+      "financials": {
+        "total_price": 13500,
+        "down_payment_required": 13500,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 320,
+        "maintenance_and_taxes": 18,
+        "net_monthly_cashflow": 302
+      },
+      "metrics": { "coc_return_percentage": 26.8, "vacancy_rate_risk": 0.11 },
+      "leverage_allowed": false
+    },
+    {
+      "id": "fin_sicav",
+      "indexation": "market",
+      "category": "financial",
+      "sprite": "assets/sprites/b_bank.png",
+      "title": "SICAV Familiar",
+      "description": "Vehículo de inversión propio con gestor y política escrita. Aquí ya no inviertes: asignas capital.",
+      "quality": "solid",
+      "merge_only": true,
+      "financials": {
+        "total_price": 45000,
+        "down_payment_required": 45000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1180,
+        "maintenance_and_taxes": 70,
+        "net_monthly_cashflow": 1110
+      },
+      "metrics": { "coc_return_percentage": 29.6, "vacancy_rate_risk": 0.13 },
+      "leverage_allowed": false
+    },
+
+    {
+      "id": "biz_red_webs",
+      "indexation": "none",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_teal_office.png",
+      "title": "Red de Webs de Nicho",
+      "description": "Varias webs bajo la misma infraestructura: un equipo de contenidos sirve a todas.",
+      "quality": "solid",
+      "merge_only": true,
+      "upgrade": "biz_grupo_medios",
+      "financials": {
+        "total_price": 20000,
+        "down_payment_required": 20000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 1600,
+        "maintenance_and_taxes": 300,
+        "net_monthly_cashflow": 1300
+      },
+      "metrics": { "coc_return_percentage": 78, "vacancy_rate_risk": 0.38 },
+      "leverage_allowed": false
+    },
+    {
+      "id": "biz_grupo_medios",
+      "indexation": "none",
+      "category": "digital_business",
+      "sprite": "assets/sprites/biz_blue_tall.png",
+      "title": "Grupo de Medios Digitales",
+      "description": "Cabeceras propias, equipo de redacción y publicidad vendida directamente a marcas.",
+      "quality": "solid",
+      "merge_only": true,
+      "financials": {
+        "total_price": 68000,
+        "down_payment_required": 68000,
+        "mortgage_available": 0,
+        "monthly_mortgage_cost": 0,
+        "gross_monthly_income": 5800,
+        "maintenance_and_taxes": 1100,
+        "net_monthly_cashflow": 4700
+      },
+      "metrics": { "coc_return_percentage": 82.9, "vacancy_rate_risk": 0.35 },
+      "leverage_allowed": false
     }
   ]
 }

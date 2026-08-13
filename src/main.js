@@ -607,7 +607,79 @@ function doBuy(assetId, financing) {
 }
 
 /* -------------------------- PORTFOLIO ----------------------------- */
+/* ----------------------- REAGRUPAR (fusión) ----------------------- */
+/*
+ * La jugada que convierte acumular en construir. El aviso vive encima de la
+ * cartera porque es ahí donde el jugador ve que tiene tres ejemplares iguales,
+ * y enseña las dos cifras que importan: lo que aportan tus activos y lo que
+ * tienes que poner encima.
+ */
+
+/** El activo del escalón superior, resuelto en el catálogo de la era actual. */
+function upgradeTarget(upgradeId) {
+  return catalog.find(a => (a.baseId || a.id) === upgradeId) || null;
+}
+
+function renderMerges() {
+  const box = $('merge-box');
+  if (!box) return;
+  const groups = engine.mergeCandidates()
+    .map(g => ({ g, target: upgradeTarget(g.upgradeId) }))
+    .filter(x => x.target)
+    .map(x => ({ ...x, check: engine.canMerge(x.g.picks, x.target) }))
+    // primero lo que puedes cerrar hoy, y de eso lo que menos dinero pide
+    .sort((a, b) => (b.check.ok - a.check.ok) || (a.check.extra - b.check.extra));
+
+  if (!groups.length) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = `<div class="mg-h">🔀 Reagrupar</div>` + groups.map(({ g, target, check }, i) => {
+    const cf = engine.assetNetIncome({ ...target, financials: engine.pricedFinancials(target),
+      financing: check.financing, yieldFactor: 1 });
+    const pay = check.extra > 0
+      ? `pones <b>${euro(check.extra)}</b>`
+      : `te devuelven <b>${euro(-check.extra)}</b>`;
+    return `
+      <div class="mg-row ${check.ok ? '' : 'off'}">
+        <img src="${target.sprite}" alt="">
+        <div class="mg-t">
+          <b>${g.need} × ${g.title}</b> → ${target.title}
+          <span class="mg-d">Aportan ${euro(check.contribution)} · ${pay} · rinde ${cf >= 0 ? '+' : ''}${euro(cf)}/mes</span>
+        </div>
+        <button class="btn-ghost btn-sm mg-go" data-merge="${i}" ${check.ok ? '' : 'disabled'}
+                title="${check.ok ? 'Consume una jugada del mes' : check.reason}">
+          ${check.ok ? 'Reagrupar' : (check.noActions ? 'Sin acciones' : 'Falta caja')}
+        </button>
+      </div>`;
+  }).join('');
+
+  box.querySelectorAll('button[data-merge]').forEach(btn => {
+    btn.onclick = () => {
+      const { g, target } = groups[parseInt(btn.dataset.merge, 10)];
+      const r = engine.mergeAssets(g.picks, target);
+      if (!r.ok) { toast('No se pudo reagrupar', r.reason, 'bad'); return; }
+      // la ciudad refleja el cambio: caen los pequeños y sube el grande, con
+      // el sprite propio del escalón para que se note que ha crecido
+      r.freedCells.forEach(cell => city.removeBuilding(cell));
+      const key = (target.sprite || '').split('/').pop().replace(/\.png$/, '');
+      const placed = city.placeBuilding(target.category, null, spriteMap[key] ? key : null);
+      if (placed) { r.instance.cell = placed.cell; r.instance.citySprite = placed.key; }
+      sfx.play('buy');
+      ach.bumpRun('merges');
+      ach.bumpLife('merges');
+      // sin escalón superior = has coronado la cadena, que es el logro gordo
+      if (!target.upgrade) ach.bumpRun('merge_top');
+      logActivity(`🔀 ${r.merged} × ${g.title} → ${target.title}`, 'good');
+      toast('🔀 Reagrupado',
+        `${r.merged} × "${g.title}" son ahora ${target.title}.` +
+        `${r.extra > 0 ? ` Has puesto ${euro(r.extra)} encima.` : r.extra < 0 ? ` Te sobran ${euro(-r.extra)}.` : ''}`,
+        'good');
+      render();
+    };
+  });
+}
+
 function renderPortfolio() {
+  renderMerges();
   const wrap = $('portfolio');
   if (!engine.ownedAssets.length) {
     wrap.innerHTML = '<div class="empty">Aún no tienes activos. Compra en el Marketplace.</div>';

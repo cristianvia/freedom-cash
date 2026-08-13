@@ -16,6 +16,15 @@
     "maestria": { "label": "Maestría", "emoji": "👑" }
   },
   "achievements": [
+    { "id": "merge_first", "emoji": "🔀", "title": "Reagrupador",
+      "desc": "Fusiona tres activos iguales en uno del escalón superior. Crecer no es solo comprar más.",
+      "cat": "cartera", "tier": "bronce", "rules": [{ "run": "merges", "gte": 1 }] },
+    { "id": "merge_10", "emoji": "🏗", "title": "Promotor",
+      "desc": "Cierra 10 reagrupaciones a lo largo de tus partidas.",
+      "cat": "cartera", "tier": "plata", "rules": [{ "life": "merges", "gte": 10 }] },
+    { "id": "merge_top", "emoji": "👑", "title": "Cima de la cadena",
+      "desc": "Llega al último escalón de una cadena de mejora: de un trastero de 9.000 € a una empresa.",
+      "cat": "maestria", "tier": "oro", "rules": [{ "run": "merge_top", "gte": 1 }] },
     {
       "id": "first_month",
       "emoji": "📅",
