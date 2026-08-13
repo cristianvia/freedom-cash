@@ -218,6 +218,10 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   width: 100%; padding: 14px; font-size: 15px; border-radius: 12px; }
 .btn-ghost { background: transparent; color: var(--txt-dim); border: 1px solid var(--line); }
 .btn-sm { padding: 6px 10px; font-size: 12px; }
+/* Avance rápido: secundario de verdad, justo debajo de pasar de mes */
+.btn-ff { width: 100%; margin-top: 8px; padding: 10px; font-size: 13px; border-radius: 10px; }
+.btn-ff:hover:not(:disabled) { color: var(--txt); border-color: var(--blue); }
+.btn-ff.idle { color: var(--txt); border-color: var(--blue); }
 
 /* ---------- Center HUD ---------- */
 #city { width: 100%; height: 100%; display: block; }

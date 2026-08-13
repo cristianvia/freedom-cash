@@ -89,6 +89,17 @@ export class EconomyEngine {
     this.ownedAssets = [];   // { ...asset, financing:'cash'|'leverage', instanceId, refinanced? }
     this.redDebts = [];      // { id, label, balance, monthly_payment }
     this.mortgageModifier = 1; // acumulado por subidas/bajadas de tipos (deuda verde)
+
+    /*
+     * Los tipos se mueven, pero no se van para siempre. Antes el modificador
+     * era un producto sin techo: unas cuantas subidas encadenadas lo dejaban en
+     * ×7 y TODA tu cartera apalancada pasaba a cashflow negativo sin remedio,
+     * porque refinanciar cuesta una acción y no hay acciones para 300 activos.
+     * Ahora vive en una horquilla y cada mes tira de vuelta hacia el 1,0.
+     */
+    this.RATE_MIN = 0.6;        // suelo: una hipoteca nunca sale casi gratis
+    this.RATE_MAX = 1.8;        // techo: ni cuesta nunca el doble de lo firmado
+    this.RATE_REVERSION = 0.02; // fracción del camino de vuelta a 1,0 cada mes
     this.history = [];       // snapshots de IE por mes (para la gráfica)
     this._seq = 0;
 
@@ -307,6 +318,21 @@ export class EconomyEngine {
     this._clampWellbeing();
     this.lifestyleUsed.add(action.id);
     return { ok: true };
+  }
+
+  /* ------------------------ TIPOS DE INTERÉS ------------------------ */
+
+  /** Encierra el modificador de tipos en su horquilla. */
+  clampRate(v) { return Math.min(this.RATE_MAX, Math.max(this.RATE_MIN, v)); }
+
+  /**
+   * Reversión a la media: cada mes el tipo recorre una fracción del camino de
+   * vuelta al 1,0. Un ciclo de subidas sigue doliendo —y mucho— pero se acaba
+   * pasando, así que aguantar es una jugada en vez de una condena.
+   */
+  applyRateReversion() {
+    this.mortgageModifier = this.clampRate(
+      this.mortgageModifier + (1 - this.mortgageModifier) * this.RATE_REVERSION);
   }
 
   /** Cuota hipotecaria efectiva de un activo (tipos + refinanciación). */
@@ -1223,7 +1249,7 @@ export class EconomyEngine {
       case 'neutral':
         break;
       case 'mortgage_cost_pct':
-        this.mortgageModifier = Math.max(0.5, this.mortgageModifier * (1 + ev.value));
+        this.mortgageModifier = this.clampRate(this.mortgageModifier * (1 + ev.value));
         break;
       case 'one_time_expense':
         adj.cashDelta -= ev.value;
@@ -1326,6 +1352,9 @@ export class EconomyEngine {
 
     // inflación: tu coste de vida sube poco a poco (~3,7%/año, más rápido cada era)
     this.expenseInflation *= this.inflationRate();
+
+    // los tipos vuelven poco a poco a su sitio: ninguna subida es para siempre
+    this.applyRateReversion();
 
     // amortización de saldo de deudas rojas (reduce balance según cuota)
     this.redDebts.forEach(d => { d.balance = Math.max(0, d.balance - d.monthly_payment); });
@@ -1473,7 +1502,9 @@ export class EconomyEngine {
     e.cash = data.cash;
     e.ownedAssets = data.ownedAssets || [];
     e.redDebts = data.redDebts || [];
-    e.mortgageModifier = data.mortgageModifier ?? 1;
+    // se encierra en la horquilla: las partidas guardadas antes del tope traían
+    // modificadores de ×7 que dejaban toda la cartera en pérdidas
+    e.mortgageModifier = e.clampRate(data.mortgageModifier ?? 1);
     e.taxVehicle = data.taxVehicle || 'personal';
     e.happiness = data.happiness ?? 70;
     e.energy = data.energy ?? 80;

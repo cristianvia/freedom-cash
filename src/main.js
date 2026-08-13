@@ -71,6 +71,7 @@ let activityLog = [];       // feed de actividad (jugador + rivales)
 let ach = null;             // logros + meta-progresión (persiste entre partidas)
 const sfx = new Sfx();      // sonido sintetizado + háptica
 let AUTO_MODE = false;      // demos/test: resuelve dilemas automáticamente
+let fastMode = false;       // avance rápido: encadena meses sin narrarlos uno a uno
 let globalView = false;     // alterna entre "mi ciudad" y "vista global"
 const spriteMap = {};       // key -> url para IsoCity
 
@@ -336,12 +337,18 @@ function buildCatalog() {
 const MARKET_SLOTS = 4;
 const MARKET_TTL = [3, 6];   // meses que aguanta una oportunidad en el tablón
 
-/** ¿Puedo pagarlo ahora mismo? (ignora el límite de acciones: es asequibilidad) */
+/**
+ * ¿Puedo pagarlo ahora mismo? (ignora el límite de acciones: es asequibilidad)
+ * Mira el precio de HOY, movido por el ciclo, que es el que enseña la tarjeta y
+ * el que aplica el botón de comprar: si no, en recesión el tablón se creía
+ * bloqueado con activos que sí podías pagar.
+ */
 function affordable(a) {
-  const cash = engine.cash >= a.financials.total_price;
+  const f = engine.pricedFinancials(a);
+  const cash = engine.cash >= f.total_price;
   const lev = a.leverage_allowed &&
-    a.financials.mortgage_available <= engine.creditLimit() &&
-    engine.cash >= a.financials.down_payment_required;
+    f.mortgage_available <= engine.creditLimit() &&
+    engine.cash >= f.down_payment_required;
   return cash || lev;
 }
 
@@ -354,6 +361,22 @@ function rivalsEyeing(asset) {
       (asset.leverage_allowed && f.mortgage_available <= b.engine.creditLimit() &&
        b.engine.cash >= f.down_payment_required);
   });
+}
+
+/**
+ * El "hueco de entrada": de todo lo que puedes pagar HOY, algo de la mitad alta
+ * de tu alcance. Sustituye al viejo rescate, que elegía por precio absoluto y
+ * por tanto te plantaba siempre el mismo activo mínimo del catálogo —el
+ * trastero— en cuanto ibas justo de caja. Como esto se mide contra tu bolsillo
+ * y no contra el catálogo, la puerta de entrada sube contigo.
+ */
+function entryPick(exclude = new Set()) {
+  const pool = catalog
+    .filter(a => engine.assetEligible(a) && !exclude.has(a.id) && affordable(a))
+    .sort((a, b) => a.financials.total_price - b.financials.total_price);
+  if (!pool.length) return null;
+  const from = Math.floor(pool.length / 2);
+  return pool[from + Math.floor(Math.random() * (pool.length - from))];
 }
 
 /** Rellena los huecos del tablón con oportunidades nuevas. */
@@ -371,12 +394,12 @@ function fillMarket() {
     const i = myProjects.indexOf(pick); if (i >= 0) myProjects.splice(i, 1);
     market.push({ asset: pick, left: Math.round(rand(MARKET_TTL[0], MARKET_TTL[1])) });
   }
-  // que nunca se bloquee el turno: si nada es asequible, entra algo que sí lo sea
+  // un hueco es siempre algo que puedes pagar hoy: el tablón nunca se atasca
   if (market.length && !market.some(m => affordable(m.asset))) {
-    const cheap = catalog
-      .filter(a => engine.assetEligible(a) && affordable(a))
-      .sort((a, b) => a.financials.down_payment_required - b.financials.down_payment_required)[0];
-    if (cheap) market[market.length - 1] = { asset: cheap, left: MARKET_TTL[1] };
+    const pick = entryPick(new Set(market.map(m => m.asset.id)));
+    if (pick) {
+      market[market.length - 1] = { asset: pick, left: Math.round(rand(MARKET_TTL[0], MARKET_TTL[1])) };
+    }
   }
 }
 
@@ -680,6 +703,91 @@ function endTurn() {
   }
 }
 
+/* -------------------------- AVANCE RÁPIDO -------------------------- */
+/*
+ * Casi la mitad de los meses no había nada que hacer y aun así había que pulsar
+ * "pasar de mes". Esto encadena meses solo y frena en cuanto vuelve a haber una
+ * decisión: un dilema, una oportunidad que ya puedes pagar, una era ganada o un
+ * apuro que conviene mirar. Nunca más de un año de un tirón.
+ */
+const FF_MAX = 12;
+
+/**
+ * ¿Hay algo en el tablón que puedas comprar SIN quedarte sin colchón? Poder
+ * pagar la entrada justa no es una jugada: si te deja a cero, el mes siguiente
+ * te hunde. Por eso el avance rápido no frena por una oportunidad al límite.
+ */
+function playableCost(a) {
+  const f = engine.pricedFinancials(a);
+  if (a.leverage_allowed && f.mortgage_available <= engine.creditLimit()) {
+    return f.down_payment_required;
+  }
+  return f.total_price;
+}
+
+function hasPlayableOffer() {
+  if (engine.actionsLeft() <= 0) return false;
+  const cushion = engine.fixedExpenses();   // un mes de gastos, siempre a salvo
+  return market.some(m => engine.cash - playableCost(m.asset) >= cushion);
+}
+
+/** Motivo por el que el avance rápido debe parar, o null si puede seguir. */
+function fastForwardStop() {
+  if (ended) return 'la partida ha terminado';
+  if (hasPlayableOffer()) return 'hay una oportunidad que ya puedes pagar';
+  if (engine.isBurnout()) return 'estás en burnout: cuídate antes de seguir';
+  if (engine.cash < 0) return 'tu caja está en números rojos';
+  return null;
+}
+
+function fastForward() {
+  if (ended) return;
+  const fromMonth = engine.month;
+  const fromCash = engine.cash;
+  let reason = 'ya has avanzado un año';
+  let dilemma = null;   // si el avance choca con una decisión, se plantea al salir
+
+  fastMode = true;
+  try {
+    for (let i = 0; i < FF_MAX; i++) {
+      // el evento se sortea aquí y se pasa entero: si sale un dilema hay que
+      // decidir, así que se corta el avance y se plantea con su modal de siempre
+      const ev = engine.pickEvent();
+      if (engine.isDilemma(ev)) { dilemma = ev; reason = 'te toca decidir'; break; }
+      resolveTurn(ev, null);
+      const stop = fastForwardStop();
+      if (stop) { reason = stop; break; }
+    }
+  } finally {
+    fastMode = false;
+  }
+
+  const months = engine.month - fromMonth;
+  if (!months && !dilemma) { endTurn(); return; }   // no cabía ni un mes: pasa uno normal
+  render();
+  if (ended) return;                               // el fin de partida ya tiene su pantalla
+
+  if (months) {
+    const delta = Math.round(engine.cash - fromCash);
+    sfx.play('month');
+    city.emitCoins();
+    toast(`⏩ ${months} ${months === 1 ? 'mes' : 'meses'} después`,
+      `Caja ${delta >= 0 ? '+' : ''}${euro(delta)}. Paramos porque ${reason}.`,
+      delta >= 0 ? 'good' : 'bad');
+    logActivity(`⏩ Avanzaste ${months} ${months === 1 ? 'mes' : 'meses'} (${reason})`, 'neutral');
+  }
+
+  // la decisión que cortó el avance se plantea de verdad: prometer "te toca
+  // decidir" y no enseñar nada sería mentir
+  if (dilemma) {
+    if (AUTO_MODE) resolveTurn(dilemma, engine.autoDilemmaChoice(dilemma));
+    else showDilemma(dilemma, (choiceIndex) => resolveTurn(dilemma, choiceIndex));
+  }
+}
+
+/** ¿Toca narrar el mes? En demos y en avance rápido, no: sería un bombardeo. */
+function quiet() { return AUTO_MODE || fastMode; }
+
 function resolveTurn(ev, choiceIndex) {
   const wasBurnout = engine.isBurnout();
   const snap = engine.endTurn(ev, choiceIndex);
@@ -692,8 +800,7 @@ function resolveTurn(ev, choiceIndex) {
   if (snap.adj && snap.adj._vacancyAsset) desc += ` (${snap.adj._vacancyAsset})`;
   if (snap.adj && snap.adj._choice) desc += ` → ${snap.adj._choice}`;
 
-  city.emitCoins();
-  sfx.play('month');
+  if (!fastMode) { city.emitCoins(); sfx.play('month'); }
   $('hud-month').textContent = engine.month;
 
   // ventas que se cierran este mes: entra el dinero y desaparece el edificio
@@ -706,9 +813,9 @@ function resolveTurn(ev, choiceIndex) {
   (snap.outcomes || []).forEach((o, i) => {
     ach.bumpRun(o.type === 'ruin' ? 'ruins' : 'booms');
     if (o.type === 'ruin') {
-      sfx.play('ruin');
+      if (!fastMode) sfx.play('ruin');
       logActivity(`💀 ${o.asset.title} se fue a cero`, 'bad');
-      if (!AUTO_MODE) setTimeout(() => toast(
+      if (!quiet()) setTimeout(() => toast(
         o.scam ? '🚨 Era una estafa' : '💀 La apuesta salió mal',
         o.scam
           ? `"${o.asset.title}" ha desaparecido con tu dinero. No queda nada que vender.`
@@ -716,7 +823,7 @@ function resolveTurn(ev, choiceIndex) {
         'bad'), 4600 + i * 2400);
     } else {
       logActivity(`🚀 ${o.asset.title} despegó (+40% de renta)`, 'good');
-      if (!AUTO_MODE) setTimeout(() => toast('🚀 Despegue',
+      if (!quiet()) setTimeout(() => toast('🚀 Despegue',
         `"${o.asset.title}" ha escalado: su renta sube un 40% para siempre.`, 'good'), 4600 + i * 2400);
     }
   });
@@ -724,17 +831,19 @@ function resolveTurn(ev, choiceIndex) {
   // cambio de fase del ciclo: es la noticia más importante del mes
   if (snap.newPhase) {
     const p = snap.newPhase;
-    sfx.play('cycle');
+    if (!fastMode) sfx.play('cycle');
     logActivity(`${p.emoji} Nueva fase: ${p.label}`, p.tone === 'good' ? 'good' : p.tone === 'bad' ? 'bad' : 'neutral');
-    if (!AUTO_MODE) setTimeout(() => toast(`${p.emoji} ${p.label}`, p.desc,
+    if (!quiet()) setTimeout(() => toast(`${p.emoji} ${p.label}`, p.desc,
       p.tone === 'good' ? 'good' : p.tone === 'bad' ? 'bad' : 'neutral'), 4600);
     if (p.id === 'recession') showTip('cycle_buy');
     if (p.id === 'peak') showTip('cycle_sell');
   }
 
   const sign = snap.cashflow >= 0 ? '+' : '';
-  toast(`📅 Mes ${engine.month - 1} · ${ev ? ev.title : 'Liquidación'}`,
-    `${desc}  ·  Cashflow del mes: ${sign}${euro(snap.cashflow)}`, tone);
+  if (!fastMode) {
+    toast(`📅 Mes ${engine.month - 1} · ${ev ? ev.title : 'Liquidación'}`,
+      `${desc}  ·  Cashflow del mes: ${sign}${euro(snap.cashflow)}`, tone);
+  }
   if (ev && ev.title) logActivity(`📅 ${ev.title}`, tone);
 
   // los rivales miran TU tablón antes que nada: lo que dejaste ahí con el aviso
@@ -758,7 +867,7 @@ function resolveTurn(ev, choiceIndex) {
   refreshP2P();
   render();
   // el aviso de "te lo quitaron" espera a que pase el toast del evento del mes
-  if (sniped.length && !AUTO_MODE) {
+  if (sniped.length && !quiet()) {
     const s0 = sniped[0];
     setTimeout(() => { sfx.play('alert'); toast('⚡ Te lo quitaron',
       `${s0.b.emoji} ${s0.b.name} compró ${s0.a.title}` +
@@ -1593,6 +1702,15 @@ function renderActions(s) {
   } else {
     hint.textContent = 'Comprar, un trabajo extra o cuidarte: cada jugada gasta una.';
   }
+
+  // el avance rápido se ofrece de verdad cuando no hay nada que decidir; si hay
+  // una oportunidad a tiro, sigue disponible pero avisa de que va a parar ya
+  const ff = $('btn-fastforward');
+  if (ff) {
+    const idle = !hasPlayableOffer();
+    ff.textContent = idle ? '⏩ Avanzar hasta que pase algo' : '⏩ Avanzar (hay una oportunidad a tiro)';
+    ff.classList.toggle('idle', idle);
+  }
 }
 
 /* ---------------------- VISTA (ciudad / global) ------------------- */
@@ -1926,7 +2044,7 @@ const TIPS = {
 function tipSeen(id) { try { return JSON.parse(localStorage.getItem(TIP_KEY) || '[]').includes(id); } catch (e) { return false; } }
 function markTip(id) { try { const a = JSON.parse(localStorage.getItem(TIP_KEY) || '[]'); if (!a.includes(id)) { a.push(id); localStorage.setItem(TIP_KEY, JSON.stringify(a)); } } catch (e) {} }
 function showTip(id) {
-  if (AUTO_MODE) return;
+  if (quiet()) return;   // en avance rápido las tips se apilarían de golpe
   const tip = TIPS[id];
   if (!tip || tipSeen(id)) return;
   markTip(id);
@@ -1958,6 +2076,7 @@ function toast(title, desc, tone = 'neutral') {
   await loadData();
   renderProfiles();
   $('btn-endturn').onclick = endTurn;
+  $('btn-fastforward').onclick = fastForward;
   $('btn-help').onclick = () => startTutorial();
   $('btn-view').onclick = toggleView;
   $('btn-leaderboard').onclick = () => showLeaderboard();
