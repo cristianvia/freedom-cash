@@ -260,6 +260,27 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .badge.cash { background: rgba(74,168,255,.15); color: var(--blue); }
 .empty { color: var(--txt-dim); font-size: 13px; text-align: center; padding: 20px 0; }
 
+.prof-opt.current { border-color: var(--green); }
+.era-teaser.finale { border-color: var(--amber); background: rgba(255,178,62,.08); }
+
+/* ---------- Cartera: filtros y grupos ---------- */
+.pf-filters { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+.pf-f { background: transparent; border: 1px solid var(--line); color: var(--txt-dim);
+  border-radius: 8px; padding: 4px 9px; font-size: 12px; line-height: 1.4; }
+.pf-f i { font-style: normal; font-size: 10px; opacity: .7; }
+.pf-f.on { border-color: var(--blue); color: var(--txt); background: rgba(74,168,255,.1); }
+.pf-f:disabled { opacity: .3; }
+.pf-group { display: flex; align-items: center; gap: 10px; padding: 9px 0;
+  border-bottom: 1px solid var(--line); }
+.pf-group img { width: 40px; height: 38px; object-fit: contain; }
+.pf-group .pf-t { font-size: 13px; font-weight: 600; flex: 1; }
+.pf-group .pf-cf { font-size: 12px; font-weight: 700; }
+.pf-n { background: rgba(74,168,255,.18); color: var(--blue); font-size: 11px;
+  padding: 1px 6px; border-radius: 6px; margin-left: 4px; }
+.pf-gd { display: block; font-size: 10.5px; color: var(--txt-dim); font-weight: 400; margin-top: 2px; }
+.pf-item.nested { padding-left: 14px; border-left: 2px solid var(--line);
+  margin-left: 6px; background: rgba(255,255,255,.015); }
+
 /* ---------- Equipo (gestores) ---------- */
 .tm-row { display: flex; align-items: center; gap: 9px; padding: 7px 0;
   border-bottom: 1px dashed var(--line); font-size: 13px; }

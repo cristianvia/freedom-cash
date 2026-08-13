@@ -16,6 +16,15 @@
     "maestria": { "label": "Maestría", "emoji": "👑" }
   },
   "achievements": [
+    { "id": "contract_first", "emoji": "🤝", "title": "Trato cerrado",
+      "desc": "Cumple tu primer encargo dentro de plazo.",
+      "cat": "estrategia", "tier": "bronce", "rules": [{ "run": "contracts", "gte": 1 }] },
+    { "id": "contract_10", "emoji": "📋", "title": "Hombre de palabra",
+      "desc": "Cumple 10 encargos a lo largo de tus partidas.",
+      "cat": "estrategia", "tier": "plata", "rules": [{ "life": "contracts", "gte": 10 }] },
+    { "id": "campaign_done", "emoji": "👑", "title": "Las diez eras",
+      "desc": "Completa la campaña entera: de la emancipación al legado.",
+      "cat": "maestria", "tier": "platino", "rules": [{ "run": "campaign", "gte": 1 }] },
     { "id": "merge_first", "emoji": "🔀", "title": "Reagrupador",
       "desc": "Fusiona tres activos iguales en uno del escalón superior. Crecer no es solo comprar más.",
       "cat": "cartera", "tier": "bronce", "rules": [{ "run": "merges", "gte": 1 }] },

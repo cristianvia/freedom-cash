@@ -28,6 +28,14 @@ export const ERA_LIFE_COST = 0.12;  // suelo mínimo de subida del coste de vida
  */
 export const ERA_START_RATIO = 0.55;
 
+/*
+ * La campaña tiene final. Diez eras con contenido valen infinitamente más que
+ * infinitas eras renombradas: sin una meta última no hay historia, solo una
+ * cinta de correr. Al coronar la décima se desbloquea el modo infinito, que
+ * sigue existiendo para quien persiga marca en la liga.
+ */
+export const CAMPAIGN_ERAS = 10;
+
 /** Nombres narrativos. Al agotarlos se reciclan con numeral: "Leyenda II". */
 export const ERA_NAMES = [
   'Emancipación', 'Consolidación', 'Expansión', 'Patrimonio', 'Imperio',
@@ -212,6 +220,7 @@ export class EconomyEngine {
 
     // --- Modo Legado: era actual y sus modificadores acumulados ---
     this.era = 1;
+    this.endless = false;  // true tras coronar la campaña: las eras siguen sin fin
     this.eraRisk = 1;      // multiplica los golpes negativos de los eventos
     this.creditBoost = 1;  // multiplica tu límite de crédito
     this.eraStartMonth = 1; // mes en el que empezó la era actual
@@ -243,6 +252,38 @@ export class EconomyEngine {
    * mismo hueco, así que cada turno obliga a priorizar. La experiencia
    * (encadenar eras) da margen; el burnout te lo quita.
    */
+
+  /* --------------------------- PROFESIÓN ---------------------------- */
+  /*
+   * Reciclarse a los cuarenta es más realista que elegir carrera en el minuto
+   * cero, sin información, y cargar con ella medio siglo. Cambiar cuesta dinero
+   * y energía —volver a formarse cansa— y abre otro catálogo de proyectos.
+   */
+
+  retrainCost() { return Math.round(this.fixedExpenses() * 4); }
+
+  canRetrain(id) {
+    if (id === this.professionId) return { ok: false, reason: 'Ya es tu profesión' };
+    if (this.era < 2) return { ok: false, reason: 'Podrás reciclarte a partir de la era 2' };
+    if (this.energy < 30) return { ok: false, reason: 'Sin energía para volver a formarte' };
+    const act = this.canAct();
+    if (!act.ok) return { ok: false, reason: act.reason };
+    const cost = this.retrainCost();
+    return { ok: this.cash >= cost, reason: 'Liquidez insuficiente para formarte', cost };
+  }
+
+  /** Cambia de profesión: pagas, te cansas y se te abre otro catálogo. */
+  retrain(id) {
+    const c = this.canRetrain(id);
+    if (!c.ok) return { ok: false, reason: c.reason };
+    this.spendAction();
+    this.cash -= c.cost;
+    this.professionId = id;
+    this.energy -= 20;
+    this.happiness += 5;     // hacer algo nuevo ilusiona
+    this._clampWellbeing();
+    return { ok: true, cost: c.cost };
+  }
 
   /* ---------------------------- GESTORES ---------------------------- */
   /*
@@ -928,6 +969,15 @@ export class EconomyEngine {
            this.cash >= WIN_MONTHS_CUSHION * this.fixedExpenses();
   }
 
+  /** ¿Es esta la última era de la campaña? */
+  isFinalEra() { return !this.endless && this.era >= CAMPAIGN_ERAS; }
+
+  /** Acabas de coronar la campaña entera. */
+  campaignComplete() { return this.isFinalEra() && this.hasWon(); }
+
+  /** Sigue jugando más allá del final: eras sin techo, para la liga. */
+  startEndless() { this.endless = true; return this.startNewEra(); }
+
   /** Descubierto que aguanta el banco antes de declararte insolvente. */
   insolvencyLimit() {
     return -Math.max(3000, this.fixedExpenses());   // escala con tu tamaño
@@ -1412,14 +1462,32 @@ export class EconomyEngine {
 
   contractDefs() { return (this.contractData && this.contractData.contracts) || []; }
 
-  /** Objetivo numérico de un encargo, ya escalado a tu situación de hoy. */
+  /**
+   * Objetivo numérico de un encargo, escalado a tu situación de hoy. La regla
+   * que no se puede saltar: SIEMPRE tiene que pedir avanzar desde donde estás.
+   * Los objetivos de estado (caja, renta, número de activos) se median contra
+   * lo que ya tienes; si no, aceptar "acumula 5 meses de colchón" teniendo ya
+   * doce era cobrar el premio gratis.
+   */
   contractGoalValue(def) {
     const g = def.goal || {};
     if (g.type === 'passive') {
       const base = Math.max(this.netPassiveIncome(), this.fixedExpenses() * 0.25);
       return Math.round(base * (g.scale || 1.35) + this.fixedExpenses() * 0.2);
     }
-    if (g.type === 'cash') return Math.round(this.fixedExpenses() * (g.scale || 5));
+    if (g.type === 'cash') {
+      const floor = this.fixedExpenses() * (g.scale || 5);
+      return Math.round(Math.max(floor, this.cash * 1.4 + this.fixedExpenses()));
+    }
+    if (g.type === 'category') {
+      const have = this.ownedAssets.filter(a => a.category === g.category && !a.ruined).length;
+      return Math.max(g.n || 1, have + 2);
+    }
+    if (g.type === 'spread') {
+      const cats = ['real_estate', 'digital_business', 'financial'];
+      const have = Math.min(...cats.map(k => this.categoryCount(k)));
+      return Math.max(g.n || 1, have + 1);
+    }
     return g.n || 1;
   }
 
@@ -1459,7 +1527,13 @@ export class EconomyEngine {
     const defs = this.contractDefs().filter(d => {
       if (d.goal.type === 'merges' && !this.ownedAssets.some(a => a.upgrade)) return false;
       if (d.goal.type === 'category' && this.ownedAssets.length < 1) return false;
-      return true;
+      // por si algún objetivo futuro se colase ya resuelto: no se ofrece
+      const probe = { ...this.contract };
+      this.contract = { def: d, goal: this.contractGoalValue(d),
+        startBuys: this.contractCounters.buys, startMerges: this.contractCounters.merges };
+      const yaHecho = this.contractDone();
+      this.contract = probe.def ? probe : null;
+      return !yaHecho;
     });
     if (!defs.length) return [];
     // determinista dentro del mes: no cambia la oferta al repintar la pantalla
@@ -1472,10 +1546,12 @@ export class EconomyEngine {
   /** Acepta un encargo. No cuesta acción: aceptar un reto no es una jugada. */
   acceptContract(def) {
     if (this.contract) return { ok: false, reason: 'Ya tienes un encargo en marcha' };
+    // no se firma un encargo que ya está hecho: sería cobrar por nada
+    const goal = this.contractGoalValue(def);
     this.contract = {
       id: def.id,
       def,
-      goal: this.contractGoalValue(def),
+      goal,
       endsMonth: this.month + def.months,
       startBuys: this.contractCounters.buys,
       startMerges: this.contractCounters.merges,
@@ -1870,6 +1946,9 @@ export class EconomyEngine {
       mode: this.mode.id,
       era: this.era,
       eraLabel: eraLabel(this.era),
+      finalEra: this.isFinalEra(),
+      campaignEras: CAMPAIGN_ERAS,
+      endless: this.endless,
       targetIE: this.winTargetIE(),
       creditLimit: this.creditLimit(),
       won: this.hasWon(),
@@ -1915,6 +1994,7 @@ export class EconomyEngine {
       expenseInflation: this.expenseInflation,
       lifeExpenses: this.lifeExpenses,
       era: this.era,
+      endless: this.endless,
       eraRisk: this.eraRisk,
       creditBoost: this.creditBoost,
       eraStartMonth: this.eraStartMonth,
@@ -1961,6 +2041,7 @@ export class EconomyEngine {
     });
     e.lifeExpenses = data.lifeExpenses ?? 0;
     e.era = data.era ?? 1;
+    e.endless = !!data.endless;
     e.eraRisk = data.eraRisk ?? 1;
     e.creditBoost = data.creditBoost ?? 1;
     e.eraStartMonth = data.eraStartMonth ?? 1;

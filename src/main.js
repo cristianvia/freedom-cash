@@ -72,6 +72,7 @@ let ach = null;             // logros + meta-progresión (persiste entre partida
 const sfx = new Sfx();      // sonido sintetizado + háptica
 let AUTO_MODE = false;      // demos/test: resuelve dilemas automáticamente
 let fastMode = false;       // avance rápido: encadena meses sin narrarlos uno a uno
+let awaitingChoice = false; // hay un dilema en pantalla esperando respuesta
 let globalView = false;     // alterna entre "mi ciudad" y "vista global"
 const spriteMap = {};       // key -> url para IsoCity
 
@@ -653,6 +654,58 @@ function doBuy(assetId, financing, rateType = 'variable') {
 }
 
 /* -------------------------- PORTFOLIO ----------------------------- */
+/* ------------------------ CAMBIAR DE PROFESIÓN --------------------- */
+/*
+ * La profesión se elige en el minuto cero sin información y decide qué 13 de
+ * los 53 activos verás en tu vida. Que se pueda cambiar es lo que convierte esa
+ * elección en una puerta en vez de una jaula.
+ */
+function showRetrain() {
+  const cost = engine.retrainCost();
+  const ov = document.createElement('div');
+  ov.className = 'overlay';
+  ov.innerHTML = `
+    <div class="modal">
+      <h2>Reciclarse</h2>
+      <p class="lead">Volver a formarte cuesta <b>${euro(cost)}</b> y <b>20 de energía</b>, y gasta una jugada
+        del mes. A cambio se te abre el catálogo de proyectos del nuevo campo.</p>
+      <div class="prof-grid">
+        ${DATA.professions.map(pr => {
+          const c = engine.canRetrain(pr.id);
+          const mine = pr.id === engine.professionId;
+          return `<button class="prof-opt ${mine ? 'current' : ''}"
+                    ${c.ok ? `data-retrain="${pr.id}"` : 'disabled'}
+                    title="${mine ? 'Es tu profesión actual' : (c.ok ? `Cambiar a ${pr.label}` : c.reason)}">
+            <span class="prof-em">${pr.emoji}</span>
+            <b>${pr.label}${mine ? ' · actual' : ''}</b>
+            <span class="prof-desc">${pr.desc}</span>
+            ${pr.projects ? `<span class="prof-proj">🔓 ${pr.projects.join(' · ')}</span>` : ''}
+          </button>`;
+        }).join('')}
+      </div>
+      <button class="btn-ghost" id="rt-close" style="width:100%;margin-top:14px">Dejarlo como está</button>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#rt-close').onclick = () => ov.remove();
+  ov.querySelectorAll('[data-retrain]').forEach(card => {
+    card.onclick = () => {
+      const pr = DATA.professions.find(x => x.id === card.dataset.retrain);
+      const r = engine.retrain(pr.id);
+      if (!r.ok) { toast('No se pudo', r.reason, 'bad'); return; }
+      ov.remove();
+      $('hud-prof').innerHTML = chipHTML(pr.emoji, pr.label);
+      $('hud-prof').style.display = pr.id === 'none' ? 'none' : '';
+      buildCatalog();
+      market = []; fillMarket();
+      sfx.play('buy');
+      logActivity(`🎓 Te reciclas a ${pr.label}`, 'neutral');
+      toast('🎓 Nueva profesión',
+        `Ahora eres ${pr.label}. El mercado empieza a ofrecerte sus proyectos.`, 'good');
+      render();
+    };
+  });
+}
+
 /* --------------------------- GESTORES ------------------------------ */
 /*
  * Comprar tiempo. Cada gestor da una jugada más al mes y cobra un sueldo que
@@ -856,65 +909,183 @@ function renderMerges() {
   });
 }
 
+/* ---------------------- CARTERA: FILTROS Y GRUPOS ------------------ */
+/*
+ * Con ciento cincuenta activos, una lista plana de una fila por cosa no es una
+ * cartera: es un muro. Se agrupan los ejemplares idénticos en una fila con su
+ * cashflow sumado, se pueden filtrar y se puede vender un grupo entero de una
+ * vez. Antes, deshacerse de doscientos trasteros en pérdidas eran doscientos
+ * clics.
+ */
+let pfFilter = 'all';
+const pfOpen = new Set();   // grupos desplegados
+
+const PF_FILTERS = [
+  { id: 'all',   label: 'Todos',       test: () => true },
+  { id: 'real_estate', label: '🏠',    title: 'Inmuebles',  test: a => a.category === 'real_estate' },
+  { id: 'digital_business', label: '💻', title: 'Negocios', test: a => a.category === 'digital_business' },
+  { id: 'financial', label: '📈',      title: 'Financieros', test: a => a.category === 'financial' },
+  { id: 'losing', label: '⚠️',         title: 'Los que pierden dinero',
+    test: a => engine.assetNetIncome(a) < 0 || a.ruined || engine.isVacant(a) },
+];
+
+/** Clave de agrupación: el mismo activo, del mismo calibre y con la misma financiación. */
+function pfGroupKey(a) {
+  return `${a.id}|${a.financing}|${a.rateType || ''}`;
+}
+
+function renderFilters(counts) {
+  const bar = $('pf-filters');
+  if (!bar) return;
+  bar.innerHTML = PF_FILTERS.map(f => {
+    const n = counts[f.id] || 0;
+    return `<button class="pf-f ${pfFilter === f.id ? 'on' : ''}" data-filter="${f.id}"
+      title="${f.title || f.label}" ${n ? '' : 'disabled'}>${f.label}${n ? ` <i>${n}</i>` : ''}</button>`;
+  }).join('');
+  bar.querySelectorAll('button[data-filter]').forEach(b => {
+    b.onclick = () => { pfFilter = b.dataset.filter; renderPortfolio(); };
+  });
+}
+
 function renderPortfolio() {
   renderContract();
   renderTeam();
   renderMerges();
   const wrap = $('portfolio');
   if (!engine.ownedAssets.length) {
+    renderFilters({});
     wrap.innerHTML = '<div class="empty">Aún no tienes activos. Compra en el Marketplace.</div>';
     return;
   }
+
+  // cuántos caen en cada filtro (para las pastillas) y qué se enseña ahora
+  const counts = {};
+  PF_FILTERS.forEach(f => { counts[f.id] = engine.ownedAssets.filter(f.test).length; });
+  renderFilters(counts);
+  const active = PF_FILTERS.find(f => f.id === pfFilter) || PF_FILTERS[0];
+  let visible = engine.ownedAssets.filter(active.test);
+  if (!visible.length) { pfFilter = 'all'; visible = engine.ownedAssets; }
+
+  // se agrupan los idénticos: una fila "Trastero ×12" en vez de doce filas
+  const groups = new Map();
+  visible.forEach(a => {
+    const k = pfGroupKey(a);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(a);
+  });
+
   wrap.innerHTML = '';
-  engine.ownedAssets.forEach(a => {
-    const cf = engine.assetNetIncome(a);
-    const band = engine.incomeBand(a);
-    const delta = engine.assetYieldDelta(a);
-    const gain = engine.assetGainPct(a);   // plusvalía latente si vendieras hoy
-    const wait = engine.liquidityMonths(a);            // lo que tarda en venderse
-    const selling = engine.pendingSales.find(x => x.instanceId === a.instanceId);
-    // flecha del mes: cómo ha salido este activo dentro de su horquilla
-    const arrow = delta > 3 ? `<span class="pf-d up" title="Buen mes: +${delta}% sobre su media">▲</span>`
-                : delta < -3 ? `<span class="pf-d down" title="Mal mes: ${delta}% bajo su media">▼</span>`
-                : `<span class="pf-d flat" title="Mes en su media">•</span>`;
-    let badge = a.financing === 'leverage'
-      ? `<span class="badge green">VERDE</span><span class="badge ${a.rateType === 'fixed' ? 'fixed">FIJO' : 'variable">VARIABLE'}</span>`
-      : '<span class="badge cash">CONTADO</span>';
-    if (a.refinanced) badge += '<span class="badge refi">REFI</span>';
-    if (a.ruined) badge += '<span class="badge ruined">💀 A CERO</span>';
-    if (engine.isVacant(a)) {
-      const m = a.vacantUntil - engine.month;
-      badge += `<span class="badge vacant">🚪 VACÍO ${m}m</span>`;
-    }
-    if (a.rentBonus && a.rentBonus > 1) {
-      badge += `<span class="badge review">📈 +${Math.round((a.rentBonus - 1) * 100)}%</span>`;
-    }
-    if (a.boomed) badge += `<span class="badge boom">🚀 ×${a.boomed}</span>`;
-    // botón de refinanciar solo en hipotecas no refinanciadas
-    const canRefi = a.financing === 'leverage' && !a.refinanced;
-    const refiBtn = canRefi
-      ? `<button class="btn-ghost btn-sm" data-refi="${a.instanceId}" title="Baja la cuota un 25% y fija el tipo · comisión ${euro(engine.refiFee(a))}">Refi</button>`
-      : '';
-    const el = document.createElement('div');
-    el.className = 'pf-item';
-    el.innerHTML = `
-      <img src="${a.sprite}" alt="">
-      <div class="pf-t">${a.title} ${badge}</div>
-      <div class="pf-cf" style="color:${cf >= 0 ? 'var(--green)' : 'var(--red)'}"
-           title="Horquilla: ${euro(band.min)} a ${euro(band.max)}/mes · media ${euro(band.expected)}">
-        ${cf >= 0 ? '+' : ''}${euro(cf)} ${arrow}</div>
-      <div class="pf-actions">
-        ${refiBtn}
-        ${selling
-          ? `<button class="btn-ghost btn-sm cancel" data-cancel="${a.instanceId}"
-               title="Retirar del mercado y quedártelo">En venta · ${selling.months}m ✕</button>`
-          : `<button class="btn-ghost btn-sm sell ${gain > 4 ? 'gain' : gain < -4 ? 'loss' : ''}"
-          data-sell="${a.instanceId}"
-          title="Recuperarías ${euro(engine.assetTransferValue(a) * 0.95)} (${gain >= 0 ? '+' : ''}${gain}% sobre tu capital, con 5% de costes de venta).${
-            wait ? ` Tarda ${wait} ${wait === 1 ? 'mes' : 'meses'} en cerrarse: sigue rentando mientras tanto.` : ' Se liquida al instante.'}">
-          Vender${wait ? ` <em>${wait}m</em>` : ''}${gain ? ` <em>${gain > 0 ? '+' : ''}${gain}%</em>` : ''}</button>`}
-      </div>`;
-    wrap.appendChild(el);
+  groups.forEach((list, key) => {
+    if (list.length > 1 && !pfOpen.has(key)) { renderPfGroup(wrap, key, list); return; }
+    if (list.length > 1) renderPfGroup(wrap, key, list, true);
+    list.forEach(a => renderPfItem(wrap, a, list.length > 1));
+  });
+
+  bindPortfolioActions(wrap);
+}
+
+/** Fila resumen de un grupo de activos idénticos. */
+function renderPfGroup(wrap, key, list, open = false) {
+  const cf = list.reduce((s, a) => s + engine.assetNetIncome(a), 0);
+  const value = list.reduce((s, a) => s + engine.assetTransferValue(a), 0);
+  const a0 = list[0];
+  const el = document.createElement('div');
+  el.className = `pf-group ${open ? 'open' : ''}`;
+  el.innerHTML = `
+    <img src="${a0.sprite}" alt="">
+    <div class="pf-t">${a0.title} <span class="pf-n">×${list.length}</span>
+      <span class="pf-gd">${a0.financing === 'leverage'
+        ? `hipoteca ${a0.rateType === 'fixed' ? 'fija' : 'variable'}` : 'al contado'} · vale ${euro(value)}</span></div>
+    <div class="pf-cf" style="color:${cf >= 0 ? 'var(--green)' : 'var(--red)'}">${cf >= 0 ? '+' : ''}${euro(cf)}</div>
+    <div class="pf-actions">
+      <button class="btn-ghost btn-sm" data-toggle="${key}" title="Ver uno a uno">${open ? '▾' : '▸'}</button>
+      <button class="btn-ghost btn-sm sell" data-sellgroup="${key}"
+        title="Pone a la venta los ${list.length} de golpe">Vender ${list.length}</button>
+    </div>`;
+  wrap.appendChild(el);
+}
+
+/** Fila de un activo suelto (o de uno dentro de un grupo desplegado). */
+function renderPfItem(wrap, a, nested = false) {
+  const cf = engine.assetNetIncome(a);
+  const band = engine.incomeBand(a);
+  const delta = engine.assetYieldDelta(a);
+  const gain = engine.assetGainPct(a);   // plusvalía latente si vendieras hoy
+  const wait = engine.liquidityMonths(a);            // lo que tarda en venderse
+  const selling = engine.pendingSales.find(x => x.instanceId === a.instanceId);
+  // flecha del mes: cómo ha salido este activo dentro de su horquilla
+  const arrow = delta > 3 ? `<span class="pf-d up" title="Buen mes: +${delta}% sobre su media">▲</span>`
+              : delta < -3 ? `<span class="pf-d down" title="Mal mes: ${delta}% bajo su media">▼</span>`
+              : `<span class="pf-d flat" title="Mes en su media">•</span>`;
+  let badge = a.financing === 'leverage'
+    ? `<span class="badge green">VERDE</span><span class="badge ${a.rateType === 'fixed' ? 'fixed">FIJO' : 'variable">VARIABLE'}</span>`
+    : '<span class="badge cash">CONTADO</span>';
+  if (a.refinanced) badge += '<span class="badge refi">REFI</span>';
+  if (a.ruined) badge += '<span class="badge ruined">💀 A CERO</span>';
+  if (engine.isVacant(a)) {
+    const m = a.vacantUntil - engine.month;
+    badge += `<span class="badge vacant">🚪 VACÍO ${m}m</span>`;
+  }
+  if (a.rentBonus && a.rentBonus > 1) {
+    badge += `<span class="badge review">📈 +${Math.round((a.rentBonus - 1) * 100)}%</span>`;
+  }
+  if (a.boomed) badge += `<span class="badge boom">🚀 ×${a.boomed}</span>`;
+  // botón de refinanciar solo en hipotecas no refinanciadas
+  const canRefi = a.financing === 'leverage' && !a.refinanced;
+  const refiBtn = canRefi
+    ? `<button class="btn-ghost btn-sm" data-refi="${a.instanceId}" title="Baja la cuota un 25% y fija el tipo · comisión ${euro(engine.refiFee(a))}">Refi</button>`
+    : '';
+  const el = document.createElement('div');
+  el.className = `pf-item ${nested ? 'nested' : ''}`;
+  el.innerHTML = `
+    <img src="${a.sprite}" alt="">
+    <div class="pf-t">${a.title} ${badge}</div>
+    <div class="pf-cf" style="color:${cf >= 0 ? 'var(--green)' : 'var(--red)'}"
+         title="Horquilla: ${euro(band.min)} a ${euro(band.max)}/mes · media ${euro(band.expected)}">
+      ${cf >= 0 ? '+' : ''}${euro(cf)} ${arrow}</div>
+    <div class="pf-actions">
+      ${refiBtn}
+      ${selling
+        ? `<button class="btn-ghost btn-sm cancel" data-cancel="${a.instanceId}"
+             title="Retirar del mercado y quedártelo">En venta · ${selling.months}m ✕</button>`
+        : `<button class="btn-ghost btn-sm sell ${gain > 4 ? 'gain' : gain < -4 ? 'loss' : ''}"
+        data-sell="${a.instanceId}"
+        title="Recuperarías ${euro(engine.assetTransferValue(a) * 0.95)} (${gain >= 0 ? '+' : ''}${gain}% sobre tu capital, con 5% de costes de venta).${
+          wait ? ` Tarda ${wait} ${wait === 1 ? 'mes' : 'meses'} en cerrarse: sigue rentando mientras tanto.` : ' Se liquida al instante.'}">
+        Vender${wait ? ` <em>${wait}m</em>` : ''}${gain ? ` <em>${gain > 0 ? '+' : ''}${gain}%</em>` : ''}</button>`}
+    </div>`;
+  wrap.appendChild(el);
+}
+
+/** Cuelga los manejadores de toda la cartera pintada. */
+function bindPortfolioActions(wrap) {
+  wrap.querySelectorAll('button[data-toggle]').forEach(btn => {
+    btn.onclick = () => {
+      const k = btn.dataset.toggle;
+      if (pfOpen.has(k)) pfOpen.delete(k); else pfOpen.add(k);
+      renderPortfolio();
+    };
+  });
+  wrap.querySelectorAll('button[data-sellgroup]').forEach(btn => {
+    btn.onclick = () => {
+      const key = btn.dataset.sellgroup;
+      const list = engine.ownedAssets.filter(a => pfGroupKey(a) === key && !engine.isForSale(a.instanceId));
+      let total = 0, n = 0, now = 0;
+      list.forEach(a => {
+        const cell = a.cell;
+        const r = engine.sellAsset(a.instanceId);
+        if (!r.ok) return;
+        total += r.proceeds; n++;
+        if (r.immediate) { now++; if (cell) city.removeBuilding(cell); }
+      });
+      if (!n) { toast('No se pudo vender', 'Ya estaban todos en venta.', 'bad'); return; }
+      toast('🏷️ Grupo a la venta',
+        `${n} ${n === 1 ? 'activo' : 'activos'} por ${euro(total)}.` +
+        `${now < n ? ' Los inmuebles y negocios tardan en colocarse: siguen rentando mientras tanto.' : ''}`,
+        'good');
+      logActivity(`🏷️ Pusiste a la venta ${n} × ${list[0].title}`, 'neutral');
+      render();
+    };
   });
   wrap.querySelectorAll('button[data-refi]').forEach(btn => {
     btn.onclick = () => {
@@ -952,15 +1123,22 @@ function renderPortfolio() {
 
 /* ---------------------------- TURNO ------------------------------- */
 function endTurn() {
-  if (ended) return;
+  if (ended || awaitingChoice) return;   // sin decidir el dilema no corre el mes
   // el evento del jugador se elige ANTES: si es un dilema, hay que decidir
   const ev = engine.pickEvent();
-  if (engine.isDilemma(ev)) {
-    if (AUTO_MODE) resolveTurn(ev, engine.autoDilemmaChoice(ev));
-    else showDilemma(ev, (choiceIndex) => resolveTurn(ev, choiceIndex));
-  } else {
-    resolveTurn(ev, null);
-  }
+  if (engine.isDilemma(ev)) askDilemma(ev);
+  else resolveTurn(ev, null);
+}
+
+/**
+ * Plantea un dilema y bloquea el paso del tiempo hasta que se responda. Sin
+ * este cerrojo, pulsar "avanzar" con la pregunta en pantalla apilaba modales
+ * y el mes no corría: el juego parecía colgado.
+ */
+function askDilemma(ev) {
+  if (AUTO_MODE) { resolveTurn(ev, engine.autoDilemmaChoice(ev)); return; }
+  awaitingChoice = true;
+  showDilemma(ev, (choiceIndex) => { awaitingChoice = false; resolveTurn(ev, choiceIndex); });
 }
 
 /* -------------------------- AVANCE RÁPIDO -------------------------- */
@@ -1001,7 +1179,7 @@ function fastForwardStop() {
 }
 
 function fastForward() {
-  if (ended) return;
+  if (ended || awaitingChoice) return;
   const fromMonth = engine.month;
   const fromCash = engine.cash;
   let reason = 'ya has avanzado un año';
@@ -1039,10 +1217,7 @@ function fastForward() {
 
   // la decisión que cortó el avance se plantea de verdad: prometer "te toca
   // decidir" y no enseñar nada sería mentir
-  if (dilemma) {
-    if (AUTO_MODE) resolveTurn(dilemma, engine.autoDilemmaChoice(dilemma));
-    else showDilemma(dilemma, (choiceIndex) => resolveTurn(dilemma, choiceIndex));
-  }
+  if (dilemma) askDilemma(dilemma);
 }
 
 /** ¿Toca narrar el mes? En demos y en avance rápido, no: sería un bombardeo. */
@@ -1330,12 +1505,24 @@ function checkEnd() {
   if (s.won) {
     ended = true;
     recordWin(s);
+    // coronar la décima era es el final de la campaña, no una era más
+    if (engine.campaignComplete()) {
+      ach.bumpLife('campaigns');
+      ach.bumpRun('campaign');
+      endModal('👑 Has completado la campaña',
+        `Diez eras, ${s.age} años y un Indicador de Emancipación del <b>${s.ie}%</b>.
+         Empezaste con ${euro(engine.profile.starting_cash)} y un sueldo; terminas con un patrimonio que
+         mantiene una vida que al empezar ni te planteabas. <b>Esto era el juego.</b>`,
+        true, true, false, true);
+      return;
+    }
     const first = s.era === 1;
     endModal(first ? '🏆 ¡Libertad alcanzada!' : `🏆 ${s.eraLabel} superada`,
       `Has llegado a un Indicador de Emancipación del <b>${s.ie}%</b> con
        ${s.cushionMonths} meses de colchón. ${first
          ? 'Tus activos pagan tu vida. Eres libre.'
-         : 'Tu patrimonio aguanta un nivel de vida que antes era inalcanzable.'}`, true, true);
+         : `Tu patrimonio aguanta un nivel de vida que antes era inalcanzable. Te quedan ${s.campaignEras - s.era} eras para completar la campaña.`}`,
+      true, true);
     return;
   }
   if (s.lost) {
@@ -1390,7 +1577,7 @@ function computeEndStats() {
  * @param {boolean} canContinue  ofrecer encadenar la siguiente era (Modo Legado)
  * @param {boolean} canResume    ofrecer seguir la misma era pese a la derrota
  */
-function endModal(title, html, win, canContinue = false, canResume = false) {
+function endModal(title, html, win, canContinue = false, canResume = false, finale = false) {
   sfx.play(win ? 'win' : 'lose');
   if (!canContinue && !canResume) clearSave();
   const st = computeEndStats();
@@ -1427,7 +1614,13 @@ function endModal(title, html, win, canContinue = false, canResume = false) {
         <div><span>Patrimonio</span><b>${euro(st.netWorth)}</b></div>
         <div><span>Puesto en la carrera</span><b>${rankTxt} de ${st.total}</b></div>
       </div>
-      ${canContinue ? `
+      ${finale ? `
+      <div class="era-teaser finale">
+        <b>Y a partir de aquí, lo que quieras.</b> El modo infinito encadena eras sin
+        techo: el listón no deja de subir y la puntuación tampoco. Es el terreno de
+        juego de la liga, para quien quiera ver hasta dónde aguanta.
+      </div>` : ''}
+      ${canContinue && !finale ? `
       <div class="era-teaser">
         <b>¿Sigues?</b> Conservas caja, activos y patrimonio — pero también subes de
         nivel de vida: tu día a día se encarece hasta que lo que ya tienes cubre
@@ -1445,8 +1638,8 @@ function endModal(title, html, win, canContinue = false, canResume = false) {
         <button class="btn-ghost" id="btn-lb">🏆 Clasificación</button>
         <button class="btn-ghost" id="btn-ach-end">🏅 Logros <small>${ach.progress().unlocked}/${ach.progress().total}</small></button>
         ${canContinue
-          ? `<button class="btn-primary" id="btn-continue" style="flex:1">▶️ Continuar · Nueva era</button>
-             <button class="btn-ghost" id="btn-again">Cerrar partida</button>`
+          ? `<button class="btn-primary" id="btn-continue" style="flex:1">${finale ? '♾️ Modo infinito' : '▶️ Continuar · Nueva era'}</button>
+             <button class="btn-ghost" id="btn-again">${finale ? 'Terminar aquí' : 'Cerrar partida'}</button>`
           : canResume
             ? `<button class="btn-primary" id="btn-keep-playing" style="flex:1">▶️ Seguir jugando</button>
                <button class="btn-ghost" id="btn-again">Cerrar partida</button>`
@@ -1458,7 +1651,7 @@ function endModal(title, html, win, canContinue = false, canResume = false) {
   ov.querySelector('#btn-lb').onclick = () => showLeaderboard();
   ov.querySelector('#btn-ach-end').onclick = () => showAchievementsGallery();
   const contBtn = ov.querySelector('#btn-continue');
-  if (contBtn) contBtn.onclick = () => { ov.remove(); startNextEra(); };
+  if (contBtn) contBtn.onclick = () => { ov.remove(); if (finale) engine.endless = true; startNextEra(); };
   const resBtn = ov.querySelector('#btn-keep-playing');
   if (resBtn) resBtn.onclick = () => { ov.remove(); resumeAfterRival(); };
 }
@@ -2356,6 +2549,7 @@ function toast(title, desc, tone = 'neutral') {
   renderProfiles();
   $('btn-endturn').onclick = endTurn;
   $('btn-fastforward').onclick = fastForward;
+  $('hud-prof-chip').onclick = () => { if (engine) showRetrain(); };
   $('btn-help').onclick = () => startTutorial();
   $('btn-view').onclick = toggleView;
   $('btn-leaderboard').onclick = () => showLeaderboard();
