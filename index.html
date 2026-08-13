@@ -63,7 +63,7 @@
 
       <!-- maqueta del dashboard real del juego -->
       <div class="mock" aria-hidden="true">
-        <div class="mock-head"><i></i><i></i><i></i><b>Mes 18 · Era 2</b></div>
+        <div class="mock-head"><i></i><i></i><i></i><b>Marzo 2028 · 29 años · Era 2</b></div>
         <div class="mock-ie">
           <div class="lbl">Indicador de Emancipación</div>
           <div class="val">126%</div>
@@ -71,15 +71,15 @@
         </div>
         <div class="mock-rows">
           <div class="mock-row">
-            <img src="assets/sprites/b_vacation.png" alt="" />
+            <img data-mock="re_apt_01" data-tier="1" alt="" />
             <span class="t">Apartamento en costa</span><span class="c">+1.105 €</span>
           </div>
           <div class="mock-row">
-            <img src="assets/sprites/b_startup.png" alt="" />
+            <img data-mock="biz_saas_01" data-tier="1" alt="" />
             <span class="t">Micro-SaaS automatizado</span><span class="c">+840 €</span>
           </div>
           <div class="mock-row">
-            <img src="assets/sprites/b_bank.png" alt="" />
+            <img data-mock="fin_cartera_global" data-tier="2" alt="" />
             <span class="t">Cartera indexada</span><span class="c">+415 €</span>
           </div>
         </div>
@@ -282,6 +282,19 @@
       </div>
     </div>
   </footer>
+
+  <script type="module">
+    // Los edificios del escaparate salen del mismo motor que la ciudad del
+    // juego: si el arte cambia, la portada cambia con él y no se queda vieja.
+    import { buildingThumb } from './src/engine/CityArt.js';
+    try {
+      const db = await fetch('src/data/assets_database.json').then(r => r.json());
+      document.querySelectorAll('img[data-mock]').forEach(img => {
+        const a = db.assets.find(x => x.id === img.dataset.mock);
+        if (a) img.src = buildingThumb(a, parseInt(img.dataset.tier, 10) || 1, 96);
+      });
+    } catch (e) { /* sin JS o sin red: la maqueta se queda sin iconos, nada más */ }
+  </script>
 
   <script>
     // borde de la barra al hacer scroll
