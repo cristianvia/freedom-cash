@@ -231,6 +231,14 @@ button:disabled { opacity: .4; cursor: not-allowed; }
   border: 1px solid var(--line); border-radius: 30px; padding: 8px 16px;
   font-size: 13px; font-weight: 700; box-shadow: var(--shadow); }
 .chip .k { color: var(--txt-dim); font-weight: 500; margin-right: 6px; }
+.chip-mes { text-transform: capitalize; }
+.chip-rate[data-tone="bad"] #hud-rate { color: var(--red); }
+.chip-rate[data-tone="good"] #hud-rate { color: var(--green); }
+.badge.fixed { background: rgba(74,168,255,.15); color: var(--blue); }
+.badge.variable { background: rgba(255,178,62,.15); color: var(--amber); }
+.btn-lever.alt { background: transparent; color: var(--blue); border: 1px solid var(--blue); }
+.btn-lever.alt:hover:not(:disabled) { background: rgba(74,168,255,.12); }
+.chip-mes .k { margin-right: 0; margin-left: 7px; text-transform: none; }
 .event-toast { position: fixed; z-index: 40; bottom: 24px; left: 50%; transform: translateX(-50%);
   max-width: 460px; background: rgba(20,25,38,.92); backdrop-filter: blur(10px);
   border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px;
@@ -251,6 +259,40 @@ button:disabled { opacity: .4; cursor: not-allowed; }
 .badge.green { background: rgba(46,230,160,.15); color: var(--green); }
 .badge.cash { background: rgba(74,168,255,.15); color: var(--blue); }
 .empty { color: var(--txt-dim); font-size: 13px; text-align: center; padding: 20px 0; }
+
+/* ---------- Equipo (gestores) ---------- */
+.tm-row { display: flex; align-items: center; gap: 9px; padding: 7px 0;
+  border-bottom: 1px dashed var(--line); font-size: 13px; }
+.tm-em { font-size: 17px; }
+.tm-t { flex: 1; font-weight: 600; }
+.tm-d { display: block; font-size: 11px; color: var(--txt-dim); font-weight: 400; }
+.tm-c { font-size: 12px; color: var(--red); font-variant-numeric: tabular-nums; }
+.tm-hire { width: 100%; margin-top: 10px; }
+.tm-hire:not(:disabled) { color: var(--blue); border-color: var(--blue); }
+.tm-fire { width: 100%; margin-top: 6px; font-size: 11px; }
+
+/* ---------- Encargos ---------- */
+.contract-panel { border-left: 3px solid var(--violet); }
+.ct-intro { font-size: 11.5px; color: var(--txt-dim); margin-bottom: 10px; line-height: 1.4; }
+.ct-offer, .ct-active { background: #0d1320; border: 1px solid var(--line);
+  border-radius: 11px; padding: 10px 11px; }
+.ct-offer + .ct-offer { margin-top: 8px; }
+.ct-active.done { border-color: var(--green); background: rgba(46,230,160,.07); }
+.ct-active.urgent { border-color: var(--amber); }
+.ct-top { display: flex; align-items: center; gap: 7px; font-size: 13px; }
+.ct-top b { flex: 1; min-width: 0; }
+.ct-em { font-size: 17px; line-height: 1; }
+.ct-when { font-size: 10.5px; color: var(--txt-dim); white-space: nowrap; }
+.ct-when.hot { color: var(--amber); font-weight: 700; }
+.ct-desc { font-size: 11.5px; color: var(--txt-dim); line-height: 1.4; margin: 6px 0; }
+.ct-bar { height: 7px; background: #060a12; border-radius: 5px; overflow: hidden; margin: 8px 0 4px; }
+.ct-bar > i { display: block; height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--violet), var(--blue)); transition: width .5s; }
+.ct-prog { font-size: 11px; color: var(--txt-dim); font-variant-numeric: tabular-nums; text-align: right; }
+.ct-reward { font-size: 11px; color: var(--green); margin-top: 6px; }
+.ct-take { width: 100%; margin-top: 8px; }
+.badge.vacant { background: rgba(255,178,62,.15); color: var(--amber); }
+.badge.review { background: rgba(46,230,160,.15); color: var(--green); }
 
 /* ---------- Reagrupar (fusión de activos) ---------- */
 .merge-box { border: 1px solid var(--green-dim); border-radius: 12px;

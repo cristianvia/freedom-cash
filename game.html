@@ -22,7 +22,7 @@
       <div class="mh-block"><span class="mh-k">Caja</span><b id="m-cash">0 €</b></div>
       <div class="mh-block mh-wb"><span>😊<b id="m-happy">70</b></span><span>⚡<b id="m-energy">80</b></span></div>
       <div class="mh-block"><span class="mh-k">Acc.</span><b id="m-actions">3</b></div>
-      <div class="mh-block"><span class="mh-k">Mes</span><b id="m-month">1</b></div>
+      <div class="mh-block"><span class="mh-k">Edad</span><b id="m-month">28a</b></div>
     </div>
 
     <!-- ===== IZQUIERDA: Dashboard financiero ===== -->
@@ -187,12 +187,13 @@
     <main class="col center">
       <canvas id="city"></canvas>
       <div class="hud-top">
-        <div class="chip chip-mes"><span class="k">Mes</span><span id="hud-month">1</span></div>
+        <div class="chip chip-mes"><span id="hud-month">enero</span><span class="k" id="hud-age">28 años</span></div>
         <div class="chip"><span class="k">Perfil</span><span id="hud-profile">—</span></div>
         <div class="chip" id="hud-prof-chip"><span class="k">Profesión</span><span id="hud-prof" style="display:none">—</span></div>
         <div class="chip" id="hud-mode-chip"><span class="k">Modo</span><span id="hud-mode" style="display:none">—</span></div>
         <div class="chip chip-era" id="hud-era-chip" style="display:none"><span class="k">Era</span><span id="hud-era">1</span></div>
         <div class="chip chip-activos"><span class="k">Activos</span><span id="hud-assets">0</span></div>
+        <div class="chip chip-rate" id="hud-rate-chip" title="Cómo están los tipos frente a lo que firmaste. Solo afecta a tus hipotecas variables."><span class="k">Tipos</span><span id="hud-rate">0%</span></div>
         <button class="chip chip-btn" id="btn-view"><span class="chip-ic">🌍</span><span class="chip-txt" id="view-txt"> Vista global</span></button>
         <button class="chip chip-btn" id="btn-sound" title="Sonido"><span class="chip-ic" id="sound-ic">🔊</span></button>
         <button class="chip chip-btn" id="btn-ach"><span class="chip-ic">🏅</span><span class="chip-txt" id="ach-txt"> Logros</span></button>
@@ -214,6 +215,11 @@
         <div class="cyc-mods" id="cyc-mods"></div>
       </div>
 
+      <div class="panel contract-panel" id="panel-contract" data-tab="market">
+        <h2>Encargo</h2>
+        <div id="contract"></div>
+      </div>
+
       <div class="panel" id="panel-market" data-tab="market">
         <h2>Marketplace · Oportunidades</h2>
         <div id="market"></div>
@@ -228,6 +234,11 @@
         <h2>Tu Portfolio</h2>
         <div id="merge-box" class="merge-box" style="display:none"></div>
         <div id="portfolio"><div class="empty">Aún no tienes activos. Compra en el Marketplace.</div></div>
+      </div>
+
+      <div class="panel" id="panel-team" data-tab="market" style="display:none">
+        <h2>Equipo</h2>
+        <div id="team"></div>
       </div>
 
       <div class="actions-bar" id="actions-bar">

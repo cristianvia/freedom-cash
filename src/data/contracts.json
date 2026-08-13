@@ -1,0 +1,65 @@
+{
+  "$schema_note": "Encargos con plazo. 'goal' se mide contra contadores del motor; los objetivos con 'scale' se calculan sobre tu situación al aceptarlo, así que el encargo siempre está a tu medida. 'reward' se cobra al cumplirlo.",
+  "contracts": [
+    {
+      "id": "bank_placement",
+      "emoji": "🏦",
+      "title": "Encargo del banco",
+      "desc": "Tu gestor quiere ver movimiento en la cuenta. Cierra {n} operaciones y te amplían el límite de crédito.",
+      "goal": { "type": "buys", "n": 3 },
+      "months": 8,
+      "reward": { "creditBoost": 0.2, "happiness": 4 },
+      "rewardText": "Límite de crédito +20%"
+    },
+    {
+      "id": "consolidate",
+      "emoji": "🔀",
+      "title": "Ordena la cartera",
+      "desc": "Tienes demasiadas cosas sueltas. Reagrupa {n} veces y te llevas una prima de gestión.",
+      "goal": { "type": "merges", "n": 2 },
+      "months": 10,
+      "reward": { "scaleCash": 2.5, "happiness": 6 },
+      "rewardText": "Prima equivalente a 2,5 meses de gastos"
+    },
+    {
+      "id": "rent_target",
+      "emoji": "📈",
+      "title": "Objetivo de renta",
+      "desc": "Llega a {n} €/mes de renta pasiva neta antes de que se acabe el plazo.",
+      "goal": { "type": "passive", "scale": 1.35 },
+      "months": 9,
+      "reward": { "scaleCash": 3, "happiness": 5 },
+      "rewardText": "Prima equivalente a 3 meses de gastos"
+    },
+    {
+      "id": "war_chest",
+      "emoji": "🪙",
+      "title": "Colchón de guerra",
+      "desc": "Acumula {n} € en caja sin tocarlos. Quien tiene liquidez compra en la recesión.",
+      "goal": { "type": "cash", "scale": 5 },
+      "months": 7,
+      "reward": { "creditBoost": 0.15, "happiness": 8 },
+      "rewardText": "Límite de crédito +15% y tranquilidad"
+    },
+    {
+      "id": "diversify",
+      "emoji": "🧺",
+      "title": "No lo pongas todo en un sitio",
+      "desc": "Ten al menos {n} activos en cada una de las tres categorías a la vez.",
+      "goal": { "type": "spread", "n": 2 },
+      "months": 12,
+      "reward": { "scaleCash": 2, "happiness": 10 },
+      "rewardText": "Prima de 2 meses de gastos y mucha calma"
+    },
+    {
+      "id": "landlord",
+      "emoji": "🏘️",
+      "title": "Cartera de ladrillo",
+      "desc": "Reúne {n} inmuebles. El ladrillo es lo que sobrevive a la inflación.",
+      "goal": { "type": "category", "category": "real_estate", "n": 4 },
+      "months": 12,
+      "reward": { "scaleCash": 3, "happiness": 4 },
+      "rewardText": "Prima equivalente a 3 meses de gastos"
+    }
+  ]
+}

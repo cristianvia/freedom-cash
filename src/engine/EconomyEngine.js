@@ -70,6 +70,33 @@ export function eraLabel(era) {
   return `Era ${era} · ${eraName(era)}`;
 }
 
+/* --- El calendario: el tiempo tiene que pesar --- */
+/*
+ * "Mes 671" no significa nada. "Marzo de 2081 · 58 años" significa todo: es la
+ * diferencia entre un contador y una vida. La partida arranca en enero del año
+ * en curso con 28 años, que es la edad a la que esta pregunta aprieta de verdad.
+ */
+export const START_AGE = 28;
+const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+/** Fecha de juego del mes N (1 = enero del año de arranque). */
+export function gameDate(month, startYear) {
+  const i = Math.max(0, month - 1);
+  return { month: i % 12, year: startYear + Math.floor(i / 12) };
+}
+
+/** "marzo 2081" */
+export function dateLabel(month, startYear) {
+  const d = gameDate(month, startYear);
+  return `${MONTH_NAMES[d.month]} ${d.year}`;
+}
+
+/** Edad del jugador en el mes N. */
+export function ageAt(month) {
+  return START_AGE + Math.floor((month - 1) / 12);
+}
+
 export class EconomyEngine {
   /**
    * @param {object} profile  ficha de vida (de profiles.json)
@@ -83,6 +110,7 @@ export class EconomyEngine {
     this.professionId = 'none'; // profesión: desbloquea proyectos temáticos
 
     this.month = 1;
+    this.startYear = new Date().getFullYear();   // el calendario arranca hoy
     this.cash = Math.round(profile.starting_cash * this.mode.cashMult);
     this.extraRent = this.mode.extraRent || 0;
     this.gigsUsed = new Set();
@@ -100,6 +128,13 @@ export class EconomyEngine {
     this.RATE_MIN = 0.6;        // suelo: una hipoteca nunca sale casi gratis
     this.RATE_MAX = 1.8;        // techo: ni cuesta nunca el doble de lo firmado
     this.RATE_REVERSION = 0.02; // fracción del camino de vuelta a 1,0 cada mes
+
+    /*
+     * Y al firmar eliges: variable, más barata hoy pero atada al mercado, o
+     * fija, más cara y a prueba de sustos. Ahí está el juego de mirar el ciclo
+     * antes de firmar, en vez de sufrir un tipo que solo te pasaba por encima.
+     */
+    this.VARIABLE_DISCOUNT = 0.85;  // la cuota variable arranca un 15% más barata
     this.history = [];       // snapshots de IE por mes (para la gráfica)
     this._seq = 0;
 
@@ -131,14 +166,21 @@ export class EconomyEngine {
     this.cycleLeft = 4;
 
     // --- Acciones por mes: tu tiempo es el recurso más escaso ---
-    this.ACTIONS_BASE = 3;      // jugadas que caben en un mes
-    this.ACTIONS_MAX = 5;       // tope aunque encadenes eras
+    this.ACTIONS_BASE = 3;      // jugadas que caben en un mes por ti solo
+    this.ACTIONS_MAX = 5;       // tope con toda la plantilla contratada
     this.actionsUsed = 0;
+    this.managers = 0;             // gestores contratados (cada uno, +1 jugada)
+    this.managerSalaries = [];     // lo que cobra cada uno, congelado al firmar
 
     // --- Horquilla de rendimiento: ningún activo renta lo mismo todos los meses ---
     this.YIELD_SPREAD_BASE = 0.10;  // volatilidad mínima (hasta un bono se mueve)
     this.YIELD_SPREAD_RISK = 0.80;  // cuánto amplía la horquilla el riesgo del activo
     this.YIELD_SPREAD_MAX = 0.60;   // tope de la horquilla (±60%)
+
+    // --- Encargos: objetivos a medio plazo, con plazo y recompensa ---
+    this.contract = null;          // encargo activo, o null
+    this.contractData = null;      // catálogo (contracts.json)
+    this.contractCounters = { buys: 0, merges: 0 };
 
     // --- Fusión de activos: crecer hacia arriba, no solo a lo ancho ---
     this.MERGE_NEED = 3;   // ejemplares iguales que hacen falta para subir de escalón
@@ -202,9 +244,59 @@ export class EconomyEngine {
    * (encadenar eras) da margen; el burnout te lo quita.
    */
 
+  /* ---------------------------- GESTORES ---------------------------- */
+  /*
+   * A partir de la era 2 el tiempo se compra. Un gestor te da una jugada más
+   * al mes a cambio de un sueldo que entra en tus gastos fijos — y por tanto
+   * sube tu listón de libertad. Ese es el dilema entero: más manos ahora a
+   * cambio de un objetivo más alto. Antes la acción extra por era te caía sola
+   * y no decidías nada.
+   */
+
+  /** ¿Puede contratarse ya al primer gestor? */
+  managersUnlocked() { return this.era >= 2; }
+
+  managersMax() { return Math.min(2, Math.max(0, this.era - 1)); }
+
+  /** Sueldo mensual del siguiente gestor: escala con tu tamaño, no con la era. */
+  managerCost(n = this.managers) {
+    const base = Math.max(this.profile.fixed_expenses * this.expenseInflation * 0.28,
+      this.totalPassiveIncome() * 0.05);
+    return Math.round(base * Math.pow(1.6, n));
+  }
+
+  /** Coste mensual de toda tu plantilla. */
+  managersMonthly() {
+    let sum = 0;
+    for (let i = 0; i < this.managers; i++) sum += this.managerSalaries[i] || 0;
+    return sum;
+  }
+
+  canHireManager() {
+    if (!this.managersUnlocked()) return { ok: false, reason: 'Se desbloquea en la era 2' };
+    if (this.managers >= this.managersMax()) return { ok: false, reason: 'Ya tienes toda la plantilla de esta era' };
+    const cost = this.managerCost();
+    // hay que poder pagarle: tres meses de sueldo por delante
+    return { ok: this.cash >= cost * 3, reason: 'Necesitas colchón para pagar su sueldo', cost };
+  }
+
+  hireManager() {
+    const c = this.canHireManager();
+    if (!c.ok) return { ok: false, reason: c.reason };
+    this.managerSalaries[this.managers] = c.cost;
+    this.managers += 1;
+    return { ok: true, cost: c.cost, managers: this.managers };
+  }
+
+  fireManager() {
+    if (!this.managers) return { ok: false, reason: 'No tienes gestores' };
+    this.managers -= 1;
+    const salary = this.managerSalaries.splice(this.managers, 1)[0] || 0;
+    return { ok: true, salary, managers: this.managers };
+  }
+
   actionsMax() {
-    const era = Math.min(this.ACTIONS_MAX - this.ACTIONS_BASE, this.era - 1);
-    return Math.max(1, this.ACTIONS_BASE + era - (this.isBurnout() ? 1 : 0));
+    return Math.max(1, this.ACTIONS_BASE + this.managers - (this.isBurnout() ? 1 : 0));
   }
 
   actionsLeft() { return Math.max(0, this.actionsMax() - this.actionsUsed); }
@@ -338,12 +430,22 @@ export class EconomyEngine {
       this.mortgageModifier + (1 - this.mortgageModifier) * this.RATE_REVERSION);
   }
 
-  /** Cuota hipotecaria efectiva de un activo (tipos + refinanciación). */
+  /** Cuota hipotecaria efectiva de un activo (tipo elegido + refinanciación). */
   mortgageCostOf(a) {
     if (a.financing !== 'leverage') return 0;
-    // un activo refinanciado fija su tipo (inmune a subidas) y baja la cuota
+    // fija o refinanciada = inmune a las subidas; variable = sigue al mercado
     const rate = a.rateLocked ? 1 : this.mortgageModifier;
-    return a.financials.monthly_mortgage_cost * rate * (a.refiFactor ?? 1);
+    return a.financials.monthly_mortgage_cost * (a.rateFactor ?? 1) * rate * (a.refiFactor ?? 1);
+  }
+
+  /**
+   * Sello del tipo elegido al firmar. 'variable' arranca más barata y sigue al
+   * mercado; 'fixed' cuesta la cuota íntegra pero queda blindada para siempre.
+   */
+  rateStamp(rateType) {
+    return rateType === 'fixed'
+      ? { rateType: 'fixed', rateLocked: true, rateFactor: 1 }
+      : { rateType: 'variable', rateLocked: false, rateFactor: this.VARIABLE_DISCOUNT };
   }
 
   /* ------------------------ CICLO ECONÓMICO ------------------------- */
@@ -431,12 +533,16 @@ export class EconomyEngine {
     return a.financials.maintenance_and_taxes * idx;
   }
 
+  /** ¿Está este activo vacío ahora mismo por un suceso? */
+  isVacant(a) { return (a.vacantUntil || 0) > this.month; }
+
   /** Renta bruta del mes: catálogo × indexación × despegues × ciclo × horquilla. */
   grossIncomeOf(a) {
-    if (a.ruined) return 0;   // se fue a cero: sigue en la ciudad, pero no paga
+    if (a.ruined) return 0;      // se fue a cero: sigue en la ciudad, pero no paga
+    if (this.isVacant(a)) return 0;  // sin inquilino este mes
     const boom = Math.pow(1.4, a.boomed || 0);
     return a.financials.gross_monthly_income * this.indexationFactor(a) * boom *
-      this.cycleYieldMult() * (a.yieldFactor ?? 1);
+      (a.rentBonus ?? 1) * this.cycleYieldMult() * (a.yieldFactor ?? 1);
   }
 
   /**
@@ -719,7 +825,8 @@ export class EconomyEngine {
   /* ------------------------- MÉTRICAS CLAVE ------------------------- */
 
   fixedExpenses() {
-    return Math.round(this.profile.fixed_expenses * this.expenseInflation) + this.lifeExpenses + this.extraRent;
+    return Math.round(this.profile.fixed_expenses * this.expenseInflation) +
+      this.lifeExpenses + this.extraRent + this.managersMonthly();
   }
 
   /**
@@ -876,7 +983,7 @@ export class EconomyEngine {
    * Compra un activo. financing: 'cash' | 'leverage'.
    * @returns {{ok:boolean, reason?:string, instance?:object}}
    */
-  buyAsset(asset, financing) {
+  buyAsset(asset, financing, rateType = 'variable') {
     const check = this.canBuy(asset, financing);
     if (!check.ok) return { ok: false, reason: check.reason };
 
@@ -888,6 +995,7 @@ export class EconomyEngine {
       ...asset,
       financials: this.pricedFinancials(asset),
       financing,
+      ...(financing === 'leverage' ? this.rateStamp(rateType) : {}),
       instanceId: `${asset.id}#${++this._seq}`,
       purchasedMonth: this.month,
       purchasePriceMult: this.cyclePriceMult(),
@@ -895,6 +1003,7 @@ export class EconomyEngine {
     };
     instance.yieldFactor = this.rollYieldFactor(instance);  // ya renta dentro de su horquilla
     this.ownedAssets.push(instance);
+    this.contractCounters.buys += 1;
     return { ok: true, instance };
   }
 
@@ -1277,6 +1386,7 @@ export class EconomyEngine {
       ...target,
       financials: this.pricedFinancials(target),
       financing: c.financing,
+      ...(c.financing === 'leverage' ? this.rateStamp('variable') : {}),
       instanceId: `${target.id}#m${++this._seq}`,
       purchasedMonth: this.month,
       purchasePriceMult: this.cyclePriceMult(),
@@ -1286,7 +1396,112 @@ export class EconomyEngine {
     instance.yieldFactor = this.rollYieldFactor(instance);
     this.ownedAssets.push(instance);
 
+    this.contractCounters.merges += 1;
     return { ok: true, instance, extra: c.extra, freedCells, merged: picks.length };
+  }
+
+  /* --------------------------- ENCARGOS ----------------------------- */
+  /*
+   * Lo que faltaba entre "este mes" y "esta era". Un encargo es un objetivo a
+   * seis o doce meses con recompensa y con plazo: da una razón para hacer algo
+   * concreto en un mes en el que, si no, solo pasarías de pantalla. Se escalan
+   * a tu situación al aceptarlos, así que no se quedan pequeños nunca.
+   */
+
+  setContractData(data) { this.contractData = data; }
+
+  contractDefs() { return (this.contractData && this.contractData.contracts) || []; }
+
+  /** Objetivo numérico de un encargo, ya escalado a tu situación de hoy. */
+  contractGoalValue(def) {
+    const g = def.goal || {};
+    if (g.type === 'passive') {
+      const base = Math.max(this.netPassiveIncome(), this.fixedExpenses() * 0.25);
+      return Math.round(base * (g.scale || 1.35) + this.fixedExpenses() * 0.2);
+    }
+    if (g.type === 'cash') return Math.round(this.fixedExpenses() * (g.scale || 5));
+    return g.n || 1;
+  }
+
+  /** Progreso actual hacia el objetivo del encargo activo. */
+  contractProgress() {
+    const c = this.contract;
+    if (!c) return 0;
+    const g = c.def.goal || {};
+    switch (g.type) {
+      case 'buys':   return this.contractCounters.buys - c.startBuys;
+      case 'merges': return this.contractCounters.merges - c.startMerges;
+      case 'passive': return Math.round(this.netPassiveIncome());
+      case 'cash':   return Math.round(this.cash);
+      case 'category':
+        return this.ownedAssets.filter(a => a.category === g.category && !a.ruined).length;
+      case 'spread': {
+        const cats = ['real_estate', 'digital_business', 'financial'];
+        return Math.min(...cats.map(k => this.categoryCount(k)));
+      }
+      default: return 0;
+    }
+  }
+
+  contractDone() {
+    return !!this.contract && this.contractProgress() >= this.contract.goal;
+  }
+
+  contractMonthsLeft() {
+    return this.contract ? Math.max(0, this.contract.endsMonth - this.month) : 0;
+  }
+
+  /**
+   * Los dos encargos que se te ofrecen cuando no tienes ninguno. Se descartan
+   * los imposibles de arrancar (pedir 4 inmuebles sin tener ninguno con qué).
+   */
+  contractOffers() {
+    const defs = this.contractDefs().filter(d => {
+      if (d.goal.type === 'merges' && !this.ownedAssets.some(a => a.upgrade)) return false;
+      if (d.goal.type === 'category' && this.ownedAssets.length < 1) return false;
+      return true;
+    });
+    if (!defs.length) return [];
+    // determinista dentro del mes: no cambia la oferta al repintar la pantalla
+    const seed = this.month * 7 + this.era * 13;
+    return [defs[seed % defs.length], defs[(seed + 3) % defs.length]]
+      .filter((d, i, arr) => arr.indexOf(d) === i)
+      .map(def => ({ def, goal: this.contractGoalValue(def), months: def.months }));
+  }
+
+  /** Acepta un encargo. No cuesta acción: aceptar un reto no es una jugada. */
+  acceptContract(def) {
+    if (this.contract) return { ok: false, reason: 'Ya tienes un encargo en marcha' };
+    this.contract = {
+      id: def.id,
+      def,
+      goal: this.contractGoalValue(def),
+      endsMonth: this.month + def.months,
+      startBuys: this.contractCounters.buys,
+      startMerges: this.contractCounters.merges,
+    };
+    return { ok: true, contract: this.contract };
+  }
+
+  /** Abandona el encargo activo. Sin penalización más allá de perder el premio. */
+  dropContract() {
+    if (!this.contract) return { ok: false };
+    this.contract = null;
+    return { ok: true };
+  }
+
+  /** Cobra la recompensa de un encargo cumplido. */
+  claimContract() {
+    if (!this.contractDone()) return { ok: false, reason: 'Aún no lo has cumplido' };
+    const { def } = this.contract;
+    const r = def.reward || {};
+    const cash = Math.round((r.cash || 0) + this.fixedExpenses() * (r.scaleCash || 0));
+    this.cash += cash;
+    if (r.creditBoost) this.creditBoost *= (1 + r.creditBoost);
+    if (r.happiness) this.happiness += r.happiness;
+    this._clampWellbeing();
+    this.contract = null;
+    return { ok: true, def, cash, creditBoost: r.creditBoost || 0 };
   }
 
   /** Pide un préstamo de consumo (DEUDA ROJA): entra caja, resta liquidez cada mes. */
@@ -1350,6 +1565,8 @@ export class EconomyEngine {
     if (e.requires === 'vehicle') return !!this.vehicle;         // solo si tienes coche
     if (e.requires === 'no_vehicle') return !this.vehicle;
     if (e.requires === 'real_estate') return this.ownedAssets.some(a => a.category === 'real_estate');
+    // sucesos que le pasan a un activo: hace falta tener alguno vivo
+    if (e.requires === 'any_asset') return this.ownedAssets.some(a => !a.ruined);
     return true;
   }
 
@@ -1439,6 +1656,46 @@ export class EconomyEngine {
         }
         break;
       }
+      /*
+       * Sucesos que le pasan a UN activo tuyo, con nombre y apellidos. Antes
+       * todo lo que ocurría le ocurría al jugador en abstracto; tener cuarenta
+       * activos no hacía que pasara nada en ninguno de ellos. Esto es lo que
+       * convierte la cartera en algo vivo que hay que atender.
+       */
+      case 'asset_shock': {
+        const pool = this.ownedAssets.filter(a =>
+          !a.ruined && !this.isVacant(a) && (!ev.sector || a.category === ev.sector));
+        if (!pool.length) break;
+        const hit = pool[Math.floor(Math.random() * pool.length)];
+        adj._asset = hit.title;
+        switch (ev.shock) {
+          case 'vacancy': {
+            const months = ev.months || 2;
+            hit.vacantUntil = this.month + months;
+            adj._shock = `${hit.title}: sin inquilino ${months} ${months === 1 ? 'mes' : 'meses'}`;
+            break;
+          }
+          case 'capex': {
+            // una derrama es proporcional al activo, no una cifra plana
+            const cost = Math.round(this.assetTransferValue(hit) * (ev.value || 0.04));
+            adj.cashDelta -= cost;
+            adj._shock = `${hit.title}: derrama de ${Math.round(cost).toLocaleString('es-ES')} €`;
+            break;
+          }
+          case 'windfall': {
+            const gain = Math.round(this.grossIncomeOf(hit) * (ev.value || 6));
+            adj.cashDelta += gain;
+            adj._shock = `${hit.title}: cobras ${gain.toLocaleString('es-ES')} € por adelantado`;
+            break;
+          }
+          case 'rent_review': {
+            hit.rentBonus = (hit.rentBonus ?? 1) * (1 + (ev.value || 0.08));
+            adj._shock = `${hit.title}: renta revisada +${Math.round((ev.value || 0.08) * 100)}% para siempre`;
+            break;
+          }
+        }
+        break;
+      }
       case 'vacancy_real_estate': {
         const re = this.ownedAssets.filter(a => a.category === 'real_estate');
         if (re.length) {
@@ -1524,6 +1781,13 @@ export class EconomyEngine {
     // los tipos vuelven poco a poco a su sitio: ninguna subida es para siempre
     this.applyRateReversion();
 
+    // el encargo caduca si se le acaba el plazo sin cumplirse
+    let contractExpired = null;
+    if (this.contract && this.month >= this.contract.endsMonth && !this.contractDone()) {
+      contractExpired = this.contract.def;
+      this.contract = null;
+    }
+
     // amortización de saldo de deudas rojas (reduce balance según cuota)
     this.redDebts.forEach(d => { d.balance = Math.max(0, d.balance - d.monthly_payment); });
     this.redDebts = this.redDebts.filter(d => d.balance > 0);
@@ -1555,7 +1819,7 @@ export class EconomyEngine {
     this.rollYields();
 
     const snap = this.recordSnapshot({
-      salary, event, adj, newPhase, outcomes, salesClosed,
+      salary, event, adj, newPhase, outcomes, salesClosed, contractExpired,
       cashflow: monthResult,
       baseCashflow,
     });
@@ -1568,6 +1832,9 @@ export class EconomyEngine {
   _metrics() {
     return {
       month: this.month,
+      dateLabel: dateLabel(this.month, this.startYear),
+      age: ageAt(this.month),
+      rateDelta: Math.round((this.mortgageModifier - 1) * 100),
       cash: Math.round(this.cash),
       passiveIncome: Math.round(this.totalPassiveIncome()),
       netPassiveIncome: Math.round(this.netPassiveIncome()),
@@ -1633,11 +1900,14 @@ export class EconomyEngine {
       mode: this.mode,
       extraRent: this.extraRent,
       month: this.month,
+      startYear: this.startYear,
       cash: this.cash,
       ownedAssets: this.ownedAssets,
       redDebts: this.redDebts,
       mortgageModifier: this.mortgageModifier,
       taxVehicle: this.taxVehicle,
+      contract: this.contract,
+      contractCounters: this.contractCounters,
       happiness: this.happiness,
       energy: this.energy,
       salaryBoost: this.salaryBoost,
@@ -1649,6 +1919,8 @@ export class EconomyEngine {
       creditBoost: this.creditBoost,
       eraStartMonth: this.eraStartMonth,
       actionsUsed: this.actionsUsed,
+      managers: this.managers,
+      managerSalaries: this.managerSalaries,
       cycleIndex: this.cycleIndex,
       cycleLeft: this.cycleLeft,
       investigated: [...this.investigated],
@@ -1667,6 +1939,7 @@ export class EconomyEngine {
     e.professionId = data.professionId || 'none';
     e.extraRent = data.extraRent ?? (data.mode && data.mode.extraRent) ?? 0;
     e.month = data.month;
+    e.startYear = data.startYear ?? new Date().getFullYear();
     e.cash = data.cash;
     e.ownedAssets = data.ownedAssets || [];
     e.redDebts = data.redDebts || [];
@@ -1674,6 +1947,8 @@ export class EconomyEngine {
     // modificadores de ×7 que dejaban toda la cartera en pérdidas
     e.mortgageModifier = e.clampRate(data.mortgageModifier ?? 1);
     e.taxVehicle = data.taxVehicle || 'personal';
+    e.contract = data.contract || null;
+    e.contractCounters = data.contractCounters || { buys: 0, merges: 0 };
     e.happiness = data.happiness ?? 70;
     e.energy = data.energy ?? 80;
     e.salaryBoost = data.salaryBoost ?? 1;
@@ -1690,6 +1965,8 @@ export class EconomyEngine {
     e.creditBoost = data.creditBoost ?? 1;
     e.eraStartMonth = data.eraStartMonth ?? 1;
     e.actionsUsed = data.actionsUsed ?? 0;
+    e.managers = data.managers ?? 0;
+    e.managerSalaries = data.managerSalaries || [];
     e.cycleIndex = data.cycleIndex ?? 3;
     e.cycleLeft = data.cycleLeft ?? 4;
     e.investigated = new Set(data.investigated || []);

@@ -83,7 +83,7 @@ const loadJSON = (file) =>
   fetch(`src/data/${file}`, { cache: 'no-cache' }).then(r => r.json());
 
 async function loadData() {
-  const [a, p, e, l, v, d, g, pr, ac, tx, ins] = await Promise.all([
+  const [a, p, e, l, v, d, g, pr, ac, tx, ins, ct] = await Promise.all([
     loadJSON('assets_database.json'),
     loadJSON('profiles.json'),
     loadJSON('events.json'),
@@ -95,6 +95,7 @@ async function loadData() {
     loadJSON('achievements.json'),
     loadJSON('tax.json'),
     loadJSON('insurance.json'),
+    loadJSON('contracts.json'),
   ]);
   ach = new Achievements(ac);
   DATA.assets = a.assets;
@@ -107,6 +108,7 @@ async function loadData() {
   DATA.professions = pr.professions;
   DATA.tax = tx;
   DATA.insurance = ins;
+  DATA.contracts = ct;
 
   // todos los sprites (suelo, decoración, edificios y coches) por su clave
   const TILE_KEYS = ['t_ground', 't_grass', 't_plaza', 't_tree', 't_water', 't_road'];
@@ -228,6 +230,7 @@ async function startGame(profile, mode = null, profession = null) {
   engine = new EconomyEngine(profile, DATA.events, mode);
   engine.setTaxData(DATA.tax);
   engine.setInsuranceData(DATA.insurance);
+  engine.setContractData(DATA.contracts);
   engine.professionId = profession.id;
   buildCatalog();
   ended = false;
@@ -379,6 +382,38 @@ function entryPick(exclude = new Set()) {
   return pool[from + Math.floor(Math.random() * (pool.length - from))];
 }
 
+/** Lo que cuesta entrar en un activo: la entrada si se puede hipotecar. */
+function entryCost(a) {
+  const f = engine.pricedFinancials(a);
+  return a.leverage_allowed && f.mortgage_available <= engine.creditLimit()
+    ? f.down_payment_required : f.total_price;
+}
+
+/**
+ * Peso de una oportunidad en el sorteo del tablón. Es una campana en escala
+ * logarítmica centrada en lo que hoy puedes mover: con tres millones en caja
+ * ya no te ofrece el trastero de 9.000 €, y con veinte mil no te llena el
+ * tablón de naves industriales. La cola derecha deja pasar alguna que aún no
+ * puedes pagar — la zanahoria por la que merece la pena ahorrar.
+ * Y lo que ya tienes por triplicado sale la mitad de veces: repetir aburre.
+ */
+function bandWeight(a) {
+  const ref = Math.max(2500, engine.cash * 0.55);
+  const d = Math.log(Math.max(1, entryCost(a)) / ref);
+  const band = Math.exp(-(d * d) / 1.7);
+  const mine = engine.ownedAssets.filter(x => engine.baseIdOf(x) === (a.baseId || a.id)).length;
+  return band * (mine >= 3 ? 0.5 : 1);
+}
+
+/** Sorteo ponderado por la franja. */
+function pickWeighted(pool) {
+  const total = pool.reduce((s, a) => s + bandWeight(a), 0);
+  if (total <= 0) return pool[Math.floor(Math.random() * pool.length)];
+  let r = Math.random() * total;
+  for (const a of pool) { r -= bandWeight(a); if (r <= 0) return a; }
+  return pool[pool.length - 1];
+}
+
 /** Rellena los huecos del tablón con oportunidades nuevas. */
 function fillMarket() {
   const inMarket = new Set(market.map(m => m.asset.id));
@@ -389,7 +424,7 @@ function fillMarket() {
     const wantsProject = engine.professionId !== 'none' && myProjects.length &&
       !market.some(m => m.asset.profession) && Math.random() < 0.6;
     const src = wantsProject ? myProjects : pool;
-    const pick = src[Math.floor(Math.random() * src.length)];
+    const pick = pickWeighted(src);
     pool = pool.filter(a => a.id !== pick.id);
     const i = myProjects.indexOf(pick); if (i >= 0) myProjects.splice(i, 1);
     market.push({ asset: pick, left: Math.round(rand(MARKET_TTL[0], MARKET_TTL[1])) });
@@ -542,15 +577,24 @@ function renderMarket() {
         <button class="btn-cash" ${cashCheck.ok ? '' : 'disabled'} data-buy="cash" data-id="${a.id}"
           title="${cashCheck.ok ? 'Pagar al contado' : (cashCheck.reason || 'No disponible')}">
           Contado</button>
-        <button class="btn-lever" ${(a.leverage_allowed && levCheck.ok) ? '' : 'disabled'} data-buy="leverage" data-id="${a.id}"
-          title="${!a.leverage_allowed ? 'Este activo no admite financiación' : (levCheck.ok ? 'Financiar con hipoteca' : (levCheck.reason || 'No disponible'))}">
-          ${a.leverage_allowed ? 'Hipoteca' : 'Sin deuda'}</button>
+        ${a.leverage_allowed ? `
+        <button class="btn-lever" ${levCheck.ok ? '' : 'disabled'} data-buy="leverage" data-rate="variable" data-id="${a.id}"
+          title="${levCheck.ok
+            ? `Cuota variable: ${euro(f.monthly_mortgage_cost * engine.VARIABLE_DISCOUNT * engine.mortgageModifier)}/mes hoy, sigue al mercado. Más barata ahora, expuesta a las subidas.`
+            : (levCheck.reason || 'No disponible')}">
+          Variable</button>
+        <button class="btn-lever alt" ${levCheck.ok ? '' : 'disabled'} data-buy="leverage" data-rate="fixed" data-id="${a.id}"
+          title="${levCheck.ok
+            ? `Cuota fija: ${euro(f.monthly_mortgage_cost)}/mes para siempre. Más cara hoy, inmune a las subidas de tipos.`
+            : (levCheck.reason || 'No disponible')}">
+          Fija</button>`
+        : `<button class="btn-lever" disabled title="Este activo no admite financiación">Sin deuda</button>`}
       </div>`;
     wrap.appendChild(el);
   });
 
   wrap.querySelectorAll('button[data-buy]').forEach(btn => {
-    btn.onclick = () => doBuy(btn.dataset.id, btn.dataset.buy);
+    btn.onclick = () => doBuy(btn.dataset.id, btn.dataset.buy, btn.dataset.rate || 'variable');
   });
   wrap.querySelectorAll('button[data-dd]').forEach(btn => {
     btn.onclick = () => {
@@ -572,12 +616,12 @@ function renderMarket() {
   });
 }
 
-function doBuy(assetId, financing) {
+function doBuy(assetId, financing, rateType = 'variable') {
   const entry = market.find(m => m.asset.id === assetId);
   // el tablón manda: es el precio que el jugador está viendo
   const asset = (entry && entry.asset) || catalog.find(a => a.id === assetId);
   if (!asset) { toast('Oportunidad no disponible', 'Ya no está en el tablón.', 'bad'); return; }
-  const res = engine.buyAsset(asset, financing);
+  const res = engine.buyAsset(asset, financing, rateType);
   if (!res.ok) { toast('No se pudo comprar', res.reason, 'bad'); return; }
 
   ach.bumpLife('assets_bought');
@@ -594,9 +638,11 @@ function doBuy(assetId, financing) {
   fillMarket();
 
   sfx.play('buy');
+  const rateTxt = rateType === 'fixed'
+    ? 'hipoteca a tipo fijo (blindada ante subidas)'
+    : 'hipoteca a tipo variable (más barata hoy, sigue al mercado)';
   toast('✅ Activo adquirido',
-    `${asset.title} · ${financing === 'leverage' ? 'financiado con hipoteca (deuda verde)' : 'pagado al contado'}`,
-    'good');
+    `${asset.title} · ${financing === 'leverage' ? rateTxt : 'pagado al contado'}`, 'good');
   logActivity(`🫵 Compraste ${asset.title}`, 'good');
   if (engine.ownedAssets.length === 1) showTip('first_asset');
   if (financing === 'leverage') showTip('leverage');
@@ -607,6 +653,138 @@ function doBuy(assetId, financing) {
 }
 
 /* -------------------------- PORTFOLIO ----------------------------- */
+/* --------------------------- GESTORES ------------------------------ */
+/*
+ * Comprar tiempo. Cada gestor da una jugada más al mes y cobra un sueldo que
+ * entra en tus gastos fijos, así que también sube el listón que tienes que
+ * superar. Más manos hoy a cambio de una meta más alta: eso es una decisión.
+ */
+function renderTeam() {
+  const panel = $('panel-team');
+  const box = $('team');
+  if (!panel || !box) return;
+  if (!engine.managersUnlocked()) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+
+  const hire = engine.canHireManager();
+  const rows = [];
+  for (let i = 0; i < engine.managers; i++) {
+    rows.push(`<div class="tm-row">
+      <span class="tm-em">🧑‍💼</span>
+      <span class="tm-t">Gestor ${i + 1}<span class="tm-d">+1 jugada al mes</span></span>
+      <span class="tm-c">${euro(engine.managerSalaries[i] || 0)}/mes</span>
+    </div>`);
+  }
+  const full = engine.managers >= engine.managersMax();
+  box.innerHTML = (rows.join('') || '<div class="empty">Trabajas solo. Tres jugadas al mes.</div>') +
+    (full
+      ? `<div class="hint">Plantilla completa para la ${engine.status().eraLabel}.</div>`
+      : `<button class="btn-ghost btn-sm tm-hire" id="btn-hire" ${hire.ok ? '' : 'disabled'}
+           title="${hire.ok
+             ? 'Sube tus gastos fijos, así que también sube tu meta de IE. A cambio, una jugada más cada mes.'
+             : hire.reason}">
+           Contratar gestor · ${euro(hire.cost || engine.managerCost())}/mes</button>`) +
+    (engine.managers ? `<button class="btn-ghost btn-sm tm-fire" id="btn-fire">Prescindir del último</button>` : '');
+
+  const b = $('btn-hire');
+  if (b) b.onclick = () => {
+    const r = engine.hireManager();
+    if (!r.ok) { toast('No se pudo contratar', r.reason, 'bad'); return; }
+    sfx.play('buy');
+    logActivity(`🧑‍💼 Contratas un gestor (${euro(r.cost)}/mes)`, 'neutral');
+    toast('🧑‍💼 Gestor contratado',
+      `Una jugada más al mes por ${euro(r.cost)}. Ojo: sus honorarios entran en tus gastos fijos, así que tu meta de IE sube.`,
+      'neutral');
+    render();
+  };
+  const f = $('btn-fire');
+  if (f) f.onclick = () => {
+    const r = engine.fireManager();
+    if (!r.ok) return;
+    logActivity('Prescindes de un gestor', 'neutral');
+    render();
+  };
+}
+
+/* --------------------------- ENCARGOS ----------------------------- */
+/*
+ * Un objetivo a seis o doce meses, con plazo y premio. Es la capa que faltaba:
+ * la era es un objetivo a treinta meses y el turno es un objetivo a uno; entre
+ * medias no había nada que perseguir.
+ */
+function renderContract() {
+  const box = $('contract');
+  if (!box) return;
+  const c = engine.contract;
+
+  if (!c) {
+    const offers = engine.contractOffers();
+    if (!offers.length) { box.innerHTML = '<div class="empty">Sin encargos disponibles.</div>'; return; }
+    box.innerHTML = `<div class="ct-intro">Acepta uno. No gasta acciones y puedes dejarlo cuando quieras.</div>` +
+      offers.map((o, i) => `
+        <div class="ct-offer">
+          <div class="ct-top"><span class="ct-em">${o.def.emoji}</span><b>${o.def.title}</b>
+            <span class="ct-when">${o.months} meses</span></div>
+          <div class="ct-desc">${o.def.desc.replace('{n}', fmtGoal(o.def, o.goal))}</div>
+          <div class="ct-reward">🎁 ${o.def.rewardText}</div>
+          <button class="btn-ghost btn-sm ct-take" data-take="${i}">Aceptar</button>
+        </div>`).join('');
+    box.querySelectorAll('button[data-take]').forEach(btn => {
+      btn.onclick = () => {
+        const o = offers[parseInt(btn.dataset.take, 10)];
+        if (!engine.acceptContract(o.def).ok) return;
+        logActivity(`${o.def.emoji} Encargo aceptado: ${o.def.title}`, 'neutral');
+        render();
+      };
+    });
+    return;
+  }
+
+  const prog = engine.contractProgress();
+  const done = engine.contractDone();
+  const left = engine.contractMonthsLeft();
+  const pct = Math.min(100, Math.round(prog / Math.max(1, c.goal) * 100));
+  box.innerHTML = `
+    <div class="ct-active ${done ? 'done' : left <= 2 ? 'urgent' : ''}">
+      <div class="ct-top"><span class="ct-em">${c.def.emoji}</span><b>${c.def.title}</b>
+        <span class="ct-when ${left <= 2 ? 'hot' : ''}">${left} ${left === 1 ? 'mes' : 'meses'}</span></div>
+      <div class="ct-desc">${c.def.desc.replace('{n}', fmtGoal(c.def, c.goal))}</div>
+      <div class="ct-bar"><i style="width:${pct}%"></i></div>
+      <div class="ct-prog">${fmtGoal(c.def, prog)} / ${fmtGoal(c.def, c.goal)}</div>
+      <div class="ct-reward">🎁 ${c.def.rewardText}</div>
+      <div class="buy-row">
+        ${done
+          ? `<button class="btn-cash" id="ct-claim" style="flex:1">Cobrar recompensa</button>`
+          : `<button class="btn-ghost btn-sm" id="ct-drop" style="flex:1">Abandonar</button>`}
+      </div>
+    </div>`;
+
+  const claim = $('ct-claim');
+  if (claim) claim.onclick = () => {
+    const r = engine.claimContract();
+    if (!r.ok) { toast('Aún no', r.reason, 'bad'); return; }
+    sfx.play('buy');
+    ach.bumpLife('contracts');
+    ach.bumpRun('contracts');
+    logActivity(`${r.def.emoji} Encargo cumplido: ${r.def.title}`, 'good');
+    toast(`${r.def.emoji} Encargo cumplido`,
+      `${r.def.rewardText}.${r.cash ? ` Cobras ${euro(r.cash)}.` : ''}`, 'good');
+    render();
+  };
+  const drop = $('ct-drop');
+  if (drop) drop.onclick = () => {
+    engine.dropContract();
+    logActivity('Encargo abandonado', 'neutral');
+    render();
+  };
+}
+
+/** Los objetivos de dinero se leen en euros; los de contar, en unidades. */
+function fmtGoal(def, v) {
+  const t = def.goal.type;
+  return (t === 'passive' || t === 'cash') ? euro(v) : String(v);
+}
+
 /* ----------------------- REAGRUPAR (fusión) ----------------------- */
 /*
  * La jugada que convierte acumular en construir. El aviso vive encima de la
@@ -679,6 +857,8 @@ function renderMerges() {
 }
 
 function renderPortfolio() {
+  renderContract();
+  renderTeam();
   renderMerges();
   const wrap = $('portfolio');
   if (!engine.ownedAssets.length) {
@@ -698,9 +878,17 @@ function renderPortfolio() {
                 : delta < -3 ? `<span class="pf-d down" title="Mal mes: ${delta}% bajo su media">▼</span>`
                 : `<span class="pf-d flat" title="Mes en su media">•</span>`;
     let badge = a.financing === 'leverage'
-      ? '<span class="badge green">VERDE</span>' : '<span class="badge cash">CONTADO</span>';
+      ? `<span class="badge green">VERDE</span><span class="badge ${a.rateType === 'fixed' ? 'fixed">FIJO' : 'variable">VARIABLE'}</span>`
+      : '<span class="badge cash">CONTADO</span>';
     if (a.refinanced) badge += '<span class="badge refi">REFI</span>';
     if (a.ruined) badge += '<span class="badge ruined">💀 A CERO</span>';
+    if (engine.isVacant(a)) {
+      const m = a.vacantUntil - engine.month;
+      badge += `<span class="badge vacant">🚪 VACÍO ${m}m</span>`;
+    }
+    if (a.rentBonus && a.rentBonus > 1) {
+      badge += `<span class="badge review">📈 +${Math.round((a.rentBonus - 1) * 100)}%</span>`;
+    }
     if (a.boomed) badge += `<span class="badge boom">🚀 ×${a.boomed}</span>`;
     // botón de refinanciar solo en hipotecas no refinanciadas
     const canRefi = a.financing === 'leverage' && !a.refinanced;
@@ -870,10 +1058,17 @@ function resolveTurn(ev, choiceIndex) {
   const tone = ev ? ev.tone : 'neutral';
   let desc = ev ? ev.description : '';
   if (snap.adj && snap.adj._vacancyAsset) desc += ` (${snap.adj._vacancyAsset})`;
+  // los sucesos de activo dicen A CUÁL le ha pasado: es media gracia del suceso
+  if (snap.adj && snap.adj._shock) desc += ` → ${snap.adj._shock}`;
+  if (snap.contractExpired && !quiet()) {
+    setTimeout(() => toast('⌛ Encargo caducado',
+      `Se acabó el plazo de "${snap.contractExpired.title}". Puedes aceptar otro.`, 'bad'), 4600);
+  }
+  if (snap.contractExpired) logActivity(`⌛ Caducó el encargo: ${snap.contractExpired.title}`, 'bad');
   if (snap.adj && snap.adj._choice) desc += ` → ${snap.adj._choice}`;
 
   if (!fastMode) { city.emitCoins(); sfx.play('month'); }
-  $('hud-month').textContent = engine.month;
+  $('hud-month').textContent = engine.status().dateLabel;
 
   // ventas que se cierran este mes: entra el dinero y desaparece el edificio
   (snap.salesClosed || []).forEach(sale => {
@@ -1426,7 +1621,18 @@ function render() {
   $('hud-assets').textContent = s.assetsCount;
   const ap = ach.progress();
   $('ach-txt').textContent = ` Logros ${ap.unlocked}/${ap.total}`;
-  $('hud-month').textContent = s.month;
+  // el chip del tiempo cuenta una vida, no un contador: fecha y edad
+  $('hud-month').textContent = s.dateLabel;
+  const ageEl = $('hud-age');
+  if (ageEl) ageEl.textContent = `${s.age} años`;
+
+  // los tipos, a la vista: es lo que decide si tu hipoteca variable fue buena idea
+  const rateEl = $('hud-rate');
+  if (rateEl) {
+    rateEl.textContent = `${s.rateDelta >= 0 ? '+' : ''}${s.rateDelta}%`;
+    const chip = $('hud-rate-chip');
+    if (chip) chip.dataset.tone = s.rateDelta > 8 ? 'bad' : s.rateDelta < -8 ? 'good' : 'flat';
+  }
 
   // HUD compacto móvil
   const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
@@ -1434,7 +1640,7 @@ function render() {
   set('m-cash', euro(s.cash));
   set('m-happy', s.happiness);
   set('m-energy', s.energy);
-  set('m-month', s.month);
+  set('m-month', `${s.age}a`);   // en móvil manda la edad: cabe y dice más
   set('m-actions', s.actionsLeft);
 
   // reevalúa las tarjetas del Marketplace con la caja actual (botones Contado/Hipoteca)
@@ -2003,6 +2209,7 @@ async function resumeGame(save) {
   engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events);
   engine.setTaxData(DATA.tax);
   engine.setInsuranceData(DATA.insurance);
+  engine.setContractData(DATA.contracts);
   buildCatalog();
   ended = false;
   rivalWinsSeen = [...(save.rivalWinsSeen || [])];   // no repreguntar por rivales ya avisados
