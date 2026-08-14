@@ -14,22 +14,44 @@ export class Sfx {
     this.ctx = null;
     this.enabled = true;
     this.volume = 0.5;
+    this.haptics = true;
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
         const d = JSON.parse(raw);
         this.enabled = d.enabled !== false;
         this.volume = typeof d.volume === 'number' ? d.volume : 0.5;
+        this.haptics = d.haptics !== false;
       }
     } catch (e) { /* sin almacenamiento: valores por defecto */ }
   }
 
   save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ enabled: this.enabled, volume: this.volume })); }
-    catch (e) { /* noop */ }
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        enabled: this.enabled, volume: this.volume, haptics: this.haptics,
+      }));
+    } catch (e) { /* noop */ }
   }
 
-  toggle() { this.enabled = !this.enabled; this.save(); if (this.enabled) this.play('click'); return this.enabled; }
+  /* Los ajustes se tocan desde el panel de configuración: que la persistencia
+     viva aquí evita que cada pantalla se acuerde de llamar a save(). */
+  setEnabled(v) {
+    this.enabled = !!v;
+    this.save();
+    if (this.enabled) this.play('click');   // confirmación audible al reactivar
+    return this.enabled;
+  }
+
+  setVolume(v) {
+    this.volume = Math.min(1, Math.max(0, v));
+    this.save();
+    return this.volume;
+  }
+
+  setHaptics(v) { this.haptics = !!v; this.save(); return this.haptics; }
+
+  toggle() { return this.setEnabled(!this.enabled); }
 
   /** Crea el contexto en el primer gesto real del usuario. */
   unlock() {
@@ -43,7 +65,7 @@ export class Sfx {
 
   /** Una nota con envolvente suave (sin clicks de recorte). */
   _tone(freq, { at = 0, dur = 0.14, type = 'sine', gain = 0.3, slideTo = null } = {}) {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.enabled) return;
     const t0 = this.ctx.currentTime + at;
     const osc = this.ctx.createOscillator();
     const env = this.ctx.createGain();
@@ -61,7 +83,7 @@ export class Sfx {
 
   /** Ráfaga de ruido: sirve para golpes secos y para el "cling" de monedas. */
   _noise({ at = 0, dur = 0.18, gain = 0.15, freq = 1200, q = 1 } = {}) {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.enabled) return;
     const t0 = this.ctx.currentTime + at;
     const len = Math.max(1, Math.floor(this.ctx.sampleRate * dur));
     const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
@@ -86,9 +108,12 @@ export class Sfx {
 
   /* --------------------------- CATÁLOGO ---------------------------- */
 
-  /** Vibración corta en móvil, si el dispositivo la soporta. */
+  /**
+   * Vibración corta en móvil, si el dispositivo la soporta. Va por su cuenta:
+   * silenciar el juego en el metro no debería quitarte también la respuesta táctil.
+   */
   haptic(pattern) {
-    if (!this.enabled) return;
+    if (!this.haptics) return;
     try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* noop */ }
   }
 
@@ -102,9 +127,10 @@ export class Sfx {
   }
 
   play(name) {
-    if (!this.enabled) return;
-    this.unlock();
-    if (!this.ctx) return;
+    // Con el sonido apagado seguimos entrando: dentro del switch hay hápticas,
+    // y esas dependen de su propio ajuste. Las notas se cortan en _tone/_noise.
+    if (!this.enabled && !this.haptics) return;
+    if (this.enabled) this.unlock();
     this._lastAt = Date.now();
     switch (name) {
       case 'click':

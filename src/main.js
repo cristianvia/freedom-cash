@@ -7,6 +7,7 @@ import { IsoCity } from './engine/IsoCity.js';
 import { specFor, buildingThumb } from './engine/CityArt.js';
 import { takeBotTurn } from './engine/BotAI.js';
 import { Tutorial } from './ui/tutorial.js';
+import { showSettings } from './ui/settings.js';
 import { computeScore, submitScore, topScores } from './engine/Leaderboard.js';
 import { Achievements } from './engine/Achievements.js';
 import { Sfx } from './engine/Sfx.js';
@@ -2165,6 +2166,52 @@ function showAchievementsGallery() {
   ov.querySelector('#ach-close').onclick = () => ov.remove();
 }
 
+/* ---------------------------- AJUSTES ----------------------------- */
+/*
+ * La configuración es una lista de opciones declaradas, no un formulario a
+ * medida: cuando haya más ajustes (velocidad de animación, avisos, idioma…)
+ * bastará con añadir su descriptor —o un grupo nuevo— a este array.
+ */
+function syncSettingsChip() {
+  const btn = $('btn-settings');
+  if (btn) btn.title = sfx.enabled ? 'Ajustes' : 'Ajustes · sonido silenciado';
+}
+
+function openSettings() {
+  showSettings([
+    {
+      title: '🔊 Sonido',
+      options: [
+        {
+          type: 'toggle',
+          label: 'Efectos de sonido',
+          hint: 'Compras, cobro del mes, eventos y logros. Todo se sintetiza en el navegador: no descarga nada.',
+          get: () => sfx.enabled,
+          set: (v) => { sfx.setEnabled(v); syncSettingsChip(); },
+        },
+        {
+          type: 'range',
+          label: 'Volumen',
+          hint: 'Bájalo sin llegar a silenciarlo del todo.',
+          min: 0, max: 100, step: 5,
+          enabled: () => sfx.enabled,
+          get: () => Math.round(sfx.volume * 100),
+          set: (v) => sfx.setVolume(v / 100),
+          commit: () => sfx.play('click'),   // muestra al soltar el deslizador
+          format: (v) => `${v}%`,
+        },
+        {
+          type: 'toggle',
+          label: 'Vibración',
+          hint: 'Respuesta táctil en móvil. Es independiente del sonido.',
+          get: () => sfx.haptics,
+          set: (v) => { sfx.setHaptics(v); if (v) sfx.haptic(20); },
+        },
+      ],
+    },
+  ]);
+}
+
 /* ------------------------ ACCIONES DEL MES ------------------------ */
 /*
  * El mes tiene un número de jugadas. Comprar, currar un extra, cuidarte o
@@ -2564,9 +2611,9 @@ function toast(title, desc, tone = 'neutral') {
   // el AudioContext solo puede nacer de un gesto real del usuario
   const unlockOnce = () => { sfx.unlock(); document.removeEventListener('pointerdown', unlockOnce); };
   document.addEventListener('pointerdown', unlockOnce);
-  const soundIc = $('sound-ic');
-  soundIc.textContent = sfx.enabled ? '🔊' : '🔇';
-  $('btn-sound').onclick = () => { soundIc.textContent = sfx.toggle() ? '🔊' : '🔇'; };
+  syncSettingsChip();
+  $('btn-settings').onclick = () => openSettings();
+  $('btn-settings-start').onclick = () => openSettings();
 
   $('btn-ach').onclick = () => showAchievementsGallery();
   $('btn-ach-start').onclick = () => showAchievementsGallery();
