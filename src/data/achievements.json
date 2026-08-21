@@ -339,12 +339,12 @@
       "rules": [{ "life": "tax_socimi", "gte": 1 }]
     },
     {
-      "id": "amortizer",
+      "id": "brick_appreciates",
       "emoji": "🧱",
-      "title": "El ladrillo desgrava",
-      "desc": "Acumula 1.000 €/mes de amortizaciones deducibles con tus inmuebles.",
+      "title": "El ladrillo se revaloriza",
+      "desc": "Acumula 20.000 € de plusvalía latente en tus inmuebles: sube el piso entero, no solo tu entrada.",
       "cat": "estrategia", "tier": "plata",
-      "rules": [{ "stat": "amortization", "gte": 1000 }]
+      "rules": [{ "run": "re_unrealized_gain", "gte": 20000 }]
     },
     {
       "id": "first_p2p",

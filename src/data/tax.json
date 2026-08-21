@@ -26,12 +26,6 @@
   "$base_note": "Qué categoría de activo va a cada base imponible.",
   "savings_categories": ["financial"],
 
-  "amortization": {
-    "building_share": 0.7,
-    "annual_rate": 0.03,
-    "note": "Amortización del inmueble: solo la construcción (≈70% del precio) se amortiza, al 3% anual. Es gasto deducible sin salida de caja — la razón fiscal de que el ladrillo sea tan eficiente."
-  },
-
   "structures": [
     {
       "id": "personal",

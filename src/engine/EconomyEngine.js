@@ -193,9 +193,26 @@ export class EconomyEngine {
     // --- Fusión de activos: crecer hacia arriba, no solo a lo ancho ---
     this.MERGE_NEED = 3;   // ejemplares iguales que hacen falta para subir de escalón
 
+    /*
+     * --- Revalorización: lo que sube es el ACTIVO, no tu capital ---
+     * El precio de un activo se mide contra la inflación, no contra un número
+     * fijo: por eso en el Modo Legado el ladrillo sigue protegiendo aunque la
+     * vida se encarezca. Cada categoría se comporta distinto:
+     *   ipcExp   exponente sobre el IPC (>1 gana al coste de vida, <1 lo pierde)
+     *   maxReal  tope de ventaja REAL acumulada sobre el IPC
+     *   beta     cuánto le pega el ciclo (el ladrillo oscila menos que la bolsa)
+     * El ladrillo sube despacio, pero como se compra con hipoteca la subida
+     * del piso ENTERO se la queda quien puso solo la entrada: ahí está el
+     * apalancamiento trabajando a tu favor… y en contra si el mercado cae.
+     */
+    this.APPRECIATION = {
+      real_estate:      { ipcExp: 1.15, maxReal: 0.60, beta: 0.55 },
+      digital_business: { ipcExp: 0.50, maxReal: 0.20, beta: 1.00 },
+      financial:        { ipcExp: 1.35, maxReal: 1.00, beta: 1.15 },
+    };
+    this.APPRECIATION_DEFAULT = { ipcExp: 1.00, maxReal: 0.30, beta: 1.00 };
+
     // --- Traspasos entre jugadores (mercado P2P) ---
-    this.APPRECIATION_MONTH = 0.0075; // el capital se revaloriza ~9%/año mientras renta
-    this.APPRECIATION_MAX = 0.45;     // tope de revalorización acumulada
     this.TRANSFER_COST_PCT = 0.04;    // notaría/gestión de un traspaso (lo paga el comprador)
 
     // --- Bienestar: Felicidad y Energía (0-100) ---
@@ -644,8 +661,8 @@ export class EconomyEngine {
   /*
    * Los impuestos son la mitad del juego de las finanzas, así que aquí no hay
    * un porcentaje mágico: hay una escalera de estructuras reales (persona
-   * física → SL → holding → SOCIMI), base imponible con amortizaciones
-   * deducibles, y un asesor que dice cuándo compensa dar el salto.
+   * física → SL → holding → SOCIMI), dos bases imponibles como en el IRPF
+   * real, y un asesor que dice cuándo compensa dar el salto.
    */
 
   /** Inyecta el catálogo fiscal (tax.json). Sin él se usa un IRPF simplificado. */
@@ -665,22 +682,9 @@ export class EconomyEngine {
   }
 
   /**
-   * Amortización mensual deducible: solo la construcción (~70% del precio) se
-   * amortiza, al 3% anual. Es gasto sin salida de caja — la razón fiscal de que
-   * el ladrillo sea tan eficiente.
-   */
-  monthlyAmortization() {
-    const cfg = (this.taxData && this.taxData.amortization) || { building_share: 0.7, annual_rate: 0.03 };
-    return this.ownedAssets
-      .filter(a => a.category === 'real_estate')
-      .reduce((s, a) => s + a.financials.total_price * cfg.building_share * cfg.annual_rate / 12, 0);
-  }
-
-  /**
    * Base imponible mensual partida en dos, como en el IRPF real:
    *  - general: alquileres y negocios (escala hasta el 47%)
    *  - ahorro: dividendos y plusvalías (escala 19-30%)
-   * Las amortizaciones descuentan de la general, que es donde están los pisos.
    */
   taxableBaseSplit() {
     const savingsCats = (this.taxData && this.taxData.savings_categories) || ['financial'];
@@ -690,7 +694,7 @@ export class EconomyEngine {
       if (savingsCats.includes(a.category)) savings += net; else general += net;
     });
     return {
-      general: Math.max(0, general - this.monthlyAmortization()),
+      general: Math.max(0, general),
       savings: Math.max(0, savings),
     };
   }
@@ -1250,18 +1254,63 @@ export class EconomyEngine {
       : a.financials.total_price;
   }
 
+  /** Ritmo de revalorización de la categoría de un activo. */
+  appreciationOf(a) {
+    return this.APPRECIATION[a.category] || this.APPRECIATION_DEFAULT;
+  }
+
   /**
-   * Valor de traspaso: el capital revalorizado por los meses que lleva rentando
-   * Y reajustado al precio de HOY. Comprar en recesión y vender en pico da una
-   * plusvalía real; al revés, te comes la minusvalía.
+   * Cuánto se ha revalorizado un activo desde que lo compraste, en factor.
+   * Se mide contra el coste de vida: el ladrillo le gana al IPC, un negocio
+   * digital se queda por detrás. `apprCarry` es lo que ya traía puesto un
+   * activo que llegó por traspaso.
    */
-  assetTransferValue(a) {
-    const held = Math.max(0, this.month - (a.purchasedMonth ?? this.month));
-    const appr = 1 + Math.min(this.APPRECIATION_MAX, this.APPRECIATION_MONTH * held);
-    const cycle = this.cyclePriceMult() / (a.purchasePriceMult ?? this.cyclePriceMult());
+  appreciationFactor(a) {
+    const cfg = this.appreciationOf(a);
+    const ipc = this.inflationSince(a);
+    const ceiling = ipc * (1 + cfg.maxReal);   // el tope es real, no nominal
+    return (a.apprCarry || 1) * Math.min(Math.pow(ipc, cfg.ipcExp), ceiling);
+  }
+
+  /**
+   * Cuánto vale hoy respecto a lo que costó, en % — ciclo incluido, que es la
+   * cifra que el jugador puede comprobar mirando el precio de hoy.
+   */
+  appreciationPct(a) {
+    const paid = a.financials.total_price;
+    return paid > 0 ? Math.round((this.assetMarketValue(a) / paid - 1) * 100) : 0;
+  }
+
+  /**
+   * Deuda viva del activo: la hipoteca no se mueve. Por eso todo lo que suba
+   * el inmueble por encima de ella es tuyo — y todo lo que baje, también.
+   */
+  assetDebt(a) {
+    if (a.financing !== 'leverage') return 0;
+    return Math.max(0, a.financials.total_price - a.financials.down_payment_required);
+  }
+
+  /**
+   * Precio de mercado de HOY del activo entero: lo que pagaste, revalorizado
+   * contra el coste de vida y reajustado a la fase del ciclo (cada categoría
+   * la aguanta a su manera).
+   */
+  assetMarketValue(a) {
+    const cfg = this.appreciationOf(a);
+    const ratio = this.cyclePriceMult() / (a.purchasePriceMult ?? this.cyclePriceMult());
+    const cycle = 1 + (ratio - 1) * cfg.beta;
     // un activo arruinado ya no vale lo que costó: solo queda el residuo
     const state = a.ruined ? 0.25 : Math.pow(1.35, a.boomed || 0);
-    return this.assetEquity(a) * appr * cycle * state;
+    return a.financials.total_price * this.appreciationFactor(a) * cycle * state;
+  }
+
+  /**
+   * Valor de traspaso: lo que vale el activo hoy MENOS la hipoteca que sigue
+   * viva. Con apalancamiento, una subida pequeña del piso es una subida grande
+   * de tu capital; una caída se come la entrada por el mismo motivo.
+   */
+  assetTransferValue(a) {
+    return Math.max(0, this.assetMarketValue(a) - this.assetDebt(a));
   }
 
   /** Plusvalía latente (%) de un activo si lo vendieras hoy. */
@@ -1285,11 +1334,15 @@ export class EconomyEngine {
   /** Incorpora al portfolio un activo adquirido fuera del Marketplace (traspaso P2P). */
   acquireAsset(asset, financing, tag = 'p2p') {
     this.spendAction();
+    // en el precio del traspaso ya pagaste la revalorización acumulada: se
+    // hereda, o el activo perdería valor al cambiar de manos
+    const carry = this.appreciationFactor(asset);
     const instance = {
       ...asset,
       financing,
       instanceId: `${asset.id}#${tag}${++this._seq}`,
       purchasedMonth: this.month,
+      apprCarry: carry,
     };
     delete instance.cell; delete instance.citySprite;
     instance.purchasePriceMult = this.cyclePriceMult();
@@ -1919,7 +1972,6 @@ export class EconomyEngine {
       taxLabel: (this.taxStructure() || {}).label || 'Persona física',
       taxEmoji: (this.taxStructure() || {}).emoji || '👤',
       taxRate: Math.round(this.effectiveTaxRate() * 10) / 10,
-      amortization: Math.round(this.monthlyAmortization()),
       taxableBase: Math.round(this.taxableBase()),
       fixedExpenses: this.fixedExpenses(),
       greenDebt: Math.round(this.totalGreenDebtPayment()),

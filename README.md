@@ -151,7 +151,7 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 - [x] **Inversiones buenas y malas:** 44 activos entre sólidos, especulativos (pueden
       despegar o irse a cero) y chiringuitos. Con **due diligence** para destaparlos.
 - [x] **Fiscalidad real:** escalera 👤 → 🏢 → 🏛️ → 🏗️ con IRPF por tramos, dos bases
-      imponibles, amortizaciones deducibles y asesor que dice cuándo NO subir.
+      imponibles y asesor que dice cuándo NO subir.
 - [x] **Gestión del riesgo:** seguros, sinergias de distrito y liquidez por tipo de activo.
 - [x] **Audio y háptica:** efectos sintetizados con WebAudio (cero ficheros que descargar).
 - [ ] Fase 2: **multijugador en tiempo real** (próxima sesión) — conectar la liga a un
@@ -162,15 +162,20 @@ Sprites isométricos por **[Kenney](https://kenney.nl)** — packs *Isometric Ti
 ## 🎯 Estrategia (mecánicas avanzadas)
 
 - **Apalancamiento:** paga solo la entrada; las subidas de tipos encarecen tu cuota.
+- **Revalorización (la ventaja del ladrillo):** lo que sube de precio es el **activo entero**,
+  no tu capital, y la hipoteca se queda clavada — así que con un 20% de entrada la subida del
+  inmueble multiplica tu equity, y una caída se come la entrada por el mismo motivo. Cada
+  categoría se mide contra el IPC del juego: 🏠 el ladrillo le gana (y oscila poco con el
+  ciclo), 📈 el financiero le gana más pero se mueve con cada fase, 💻 el negocio digital se
+  queda por detrás — su valor es la caja que reparte, no el precio.
 - **Refinanciar:** comisión del 3% de la hipoteca → cuota −25% y tipo fijo (inmune a subidas).
 - **Escalera fiscal (todo legal):** 👤 persona física → 🏢 sociedad → 🏛️ holding → 🏗️ SOCIMI.
   El IRPF es real: alquileres y negocios van a la **base general** (19→47%) y dividendos y
-  plusvalías a la **del ahorro** (19→30%), con mínimo personal exento. Los inmuebles
-  **amortizan** (3% anual sobre el 70% del precio): deducen sin salida de caja. Cada peldaño
+  plusvalías a la **del ahorro** (19→30%), con mínimo personal exento. Cada peldaño
   tiene coste de constitución y de mantenimiento, así que subir antes de tiempo te hace
   **perder** dinero: el asesor te dice el ahorro, el payback y qué te falta para el siguiente.
 - **Mercado P2P (traspasos):** compras el **capital** de un rival y **te subrogas en su hipoteca**
   — por eso el precio es bajo: el inmueble sigue costando lo que costaba. El precio parte del
-  valor de traspaso (capital revalorizado ~9%/año) y solo hay descuento real (−8% a −16%) si el
+  valor de traspaso (lo que vale hoy el activo menos la hipoteca viva) y solo hay descuento real (−8% a −16%) si el
   rival está ahogado de liquidez; si solo reequilibra, te pide **prima**. Súmale un 4% de gastos
   y necesitas límite de crédito para asumir la deuda.

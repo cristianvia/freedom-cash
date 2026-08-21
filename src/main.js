@@ -34,13 +34,13 @@ const TUTORIAL_STEPS = [
   { sel: '#panel-lifestyle', title: 'Estilo de vida',
     text: 'Cenas, viajes, deporte o formación: cuestan dinero pero recargan tu bienestar (y la formación sube tu sueldo). Equilibrar dinero y vida es la clave del juego.' },
   { sel: '#panel-market', title: 'Marketplace de activos',
-    text: 'Aquí compras activos que generan renta. <b>Al contado</b> pagas el precio completo; con <b>Hipoteca</b> solo pagas la entrada y asumes una cuota mensual (apalancamiento).' },
+    text: 'Aquí compras activos que generan renta. <b>Al contado</b> pagas el precio completo; con <b>Hipoteca</b> solo pagas la entrada y asumes una cuota mensual (apalancamiento). Y quien se revaloriza es el <b>activo entero</b>: esa subida se la queda quien puso solo la entrada.' },
   { sel: '#city', title: 'Tu ciudad crece contigo',
     text: 'Cada activo que compras aparece construido aquí, organizado por distritos: 🏠 inmuebles, 💻 negocios y 📈 financiero.' },
   { sel: '#panel-debt', title: 'Deuda verde vs roja',
     text: 'La <b style="color:#2ee6a0">deuda verde</b> (hipotecas de activos) se autopaga: es buena. La <b style="color:#ff5d6c">deuda roja</b> (préstamos de consumo) resta liquidez y penaliza tu IE.' },
   { sel: '#panel-tax', title: 'Estrategia: fiscalidad',
-    text: 'Los impuestos son media partida. Hay una <b>escalera</b> de estructuras legales — persona física → sociedad → holding → SOCIMI — y tu asesor te dice cuándo compensa subir… y cuándo subir te haría perder dinero. Los inmuebles además <b>amortizan</b>: deducen sin que salga dinero de tu bolsillo.' },
+    text: 'Los impuestos son media partida. Hay una <b>escalera</b> de estructuras legales — persona física → sociedad → holding → SOCIMI — y tu asesor te dice cuándo compensa subir… y cuándo subir te haría perder dinero. Ojo: los alquileres van a la base general, que sube hasta el 47%.' },
   { sel: '#panel-rank', title: 'La carrera por la libertad',
     text: 'No juegas solo: compites contra bots rivales. Quien alcance la libertad financiera <b>primero</b>, gana la partida.' },
   { sel: '#btn-endturn', title: 'Pasa de mes y cobra',
@@ -657,7 +657,7 @@ function doBuy(assetId, financing, rateType = 'variable') {
   if (engine.ownedAssets.length === 1) showTip('first_asset');
   if (financing === 'leverage') showTip('leverage');
   if (engine.ownedAssets.length === 2) showTip('yield_band');
-  if (asset.category === 'real_estate') showTip('amortization');
+  if (asset.category === 'real_estate' && financing === 'leverage') showTip('appreciation');
   renderMarket();
   render();
 }
@@ -1024,6 +1024,9 @@ function renderPfItem(wrap, a, nested = false) {
   const band = engine.incomeBand(a);
   const delta = engine.assetYieldDelta(a);
   const gain = engine.assetGainPct(a);   // plusvalía latente si vendieras hoy
+  const value = engine.assetMarketValue(a);          // lo que vale el activo entero hoy
+  const debt = engine.assetDebt(a);                  // hipoteca que sigue viva
+  const appr = engine.appreciationPct(a);            // cuánto se ha revalorizado
   const wait = engine.liquidityMonths(a);            // lo que tarda en venderse
   const selling = engine.pendingSales.find(x => x.instanceId === a.instanceId);
   // flecha del mes: cómo ha salido este activo dentro de su horquilla
@@ -1063,7 +1066,7 @@ function renderPfItem(wrap, a, nested = false) {
              title="Retirar del mercado y quedártelo">En venta · ${selling.months}m ✕</button>`
         : `<button class="btn-ghost btn-sm sell ${gain > 4 ? 'gain' : gain < -4 ? 'loss' : ''}"
         data-sell="${a.instanceId}"
-        title="Recuperarías ${euro(engine.assetTransferValue(a) * 0.95)} (${gain >= 0 ? '+' : ''}${gain}% sobre tu capital, con 5% de costes de venta).${
+        title="Vale hoy ${euro(value)} (${appr >= 0 ? '+' : ''}${appr}% desde que lo compraste)${debt ? ` y le quedan ${euro(debt)} de hipoteca` : ''}. Recuperarías ${euro(engine.assetTransferValue(a) * 0.95)} (${gain >= 0 ? '+' : ''}${gain}% sobre tu capital, con 5% de costes de venta).${
           wait ? ` Tarda ${wait} ${wait === 1 ? 'mes' : 'meses'} en cerrarse: sigue rentando mientras tanto.` : ' Se liquida al instante.'}">
         Vender${wait ? ` <em>${wait}m</em>` : ''}${gain ? ` <em>${gain > 0 ? '+' : ''}${gain}%</em>` : ''}</button>`}
     </div>`;
@@ -1460,6 +1463,7 @@ function renderP2P() {
       ? `<b style="color:var(--green)">${o.deltaPct}% sobre mercado</b>`
       : o.deltaPct > 0 ? `<b style="color:var(--amber)">+${o.deltaPct}% de prima</b>`
       : 'a precio de mercado';
+    const value = engine.assetMarketValue(o.asset);   // lo que vale hoy, ya revalorizado
     const blocked = !o.credit.ok || engine.cash < o.price;
     return `
     <div class="p2p-offer ${o.urgent ? 'urgent' : ''}">
@@ -1471,8 +1475,8 @@ function renderP2P() {
         <div class="p2p-nums">Pagas <b>${euro(o.price)}</b> por el capital · ${tag}
           <small>(incl. ${euro(o.fees)} de gastos)</small></div>
         <div class="p2p-sub">${lev
-          ? `⚠️ Asumes su hipoteca de <b>${euro(f.mortgage_available)}</b> (${euro(engine.mortgageCostOf(o.asset))}/mes)`
-          : `Activo libre de deuda · valor ${euro(f.total_price)}`}</div>
+          ? `Valorado hoy en <b>${euro(value)}</b> · ⚠️ asumes su hipoteca de <b>${euro(f.mortgage_available)}</b> (${euro(engine.mortgageCostOf(o.asset))}/mes)`
+          : `Activo libre de deuda · valorado hoy en <b>${euro(value)}</b>`}</div>
         <div class="p2p-sub">Renta neta entre <b class="green">${euro(band.min)}</b> y
           <b class="green">${euro(band.max)}</b>/mes</div>
         ${o.credit.ok ? '' : `<div class="p2p-sub red">🚫 ${o.credit.reason}</div>`}
@@ -1568,8 +1572,8 @@ function checkEnd() {
 }
 
 function computeEndStats() {
-  const equity = engine.ownedAssets.reduce((s, a) =>
-    s + (a.financing === 'leverage' ? a.financials.down_payment_required : a.financials.total_price), 0);
+  // patrimonio a precio de HOY: el ladrillo se revaloriza y eso cuenta
+  const equity = engine.ownedAssets.reduce((s, a) => s + engine.assetTransferValue(a), 0);
   // ranking consciente de la victoria: quien ha ganado va primero, luego por IE
   const players = [{ won: engine.hasWon(), ie: engine.emancipationIndex(), me: true },
     ...bots.map(b => ({ won: b.engine.hasWon(), ie: b.engine.emancipationIndex() }))]
@@ -1937,15 +1941,14 @@ function renderDistricts() {
 /* --------------------------- FISCALIDAD --------------------------- */
 /*
  * Los impuestos son la mitad del juego de las finanzas personales, así que
- * aquí se ven: base imponible, amortizaciones deducibles, tipo efectivo, y un
- * asesor que dice cuándo compensa subir de estructura — y cuándo NO, que es la
- * lección que más se salta la gente.
+ * aquí se ven: base imponible, tipo efectivo, y un asesor que dice cuándo
+ * compensa subir de estructura — y cuándo NO, que es la lección que más se
+ * salta la gente.
  */
 function renderTax(s) {
   const adv = engine.taxAdvice();
   $('tax-vehicle').textContent = `${s.taxEmoji} ${s.taxLabel}`;
   $('tax-gross').textContent = euro(s.passiveIncome);
-  $('tax-amort').textContent = '−' + euro(s.amortization);
   $('tax-base').textContent = euro(s.taxableBase);
   $('tax-cost').textContent = '−' + euro(s.taxCost);
   $('tax-rate').textContent = s.taxRate;
@@ -2093,6 +2096,10 @@ function achDerived() {
     red_loans: ach.run.red_loans || 0,
     policies_active: engine.insurance.size,
     financial_count: byCat.financial || 0,
+    // plusvalía latente del ladrillo: lo que ganarías hoy por revalorización
+    re_unrealized_gain: Math.round(owned
+      .filter(a => a.category === 'real_estate')
+      .reduce((s, a) => s + (engine.assetTransferValue(a) - engine.assetEquity(a)), 0)),
   };
 }
 
@@ -2557,8 +2564,8 @@ const TIPS = {
   red_debt: { t: '⚠️ Deuda roja (deuda mala)', d: 'Un préstamo de consumo resta liquidez cada mes y no te da nada a cambio. Penaliza tu IE. Úsalo solo si es imprescindible.' },
   car_finance: { t: '⚠️ Un coche es un pasivo', d: 'Financiar un coche crea deuda roja y su coste mensual sube tu listón de libertad. Un coche saca dinero de tu bolsillo: es un pasivo, no un activo.' },
   incorporate: { t: '💡 Optimización fiscal', d: 'Con rentas altas, una sociedad paga impuestos fijos en vez de un recargo. Estructurar bien tus inversiones protege tu flujo de caja.' },
+  appreciation: { t: '💡 Se revaloriza el piso entero, no tu entrada', d: 'Tú pusiste la entrada, pero quien sube de precio es el inmueble completo — y la hipoteca se queda clavada en la misma cifra de siempre. Por eso una subida pequeña del ladrillo es una subida grande de TU capital. Y funciona igual al revés: si el mercado cae, quien se come la caída es tu entrada.' },
   tax_ladder: { t: '💡 La escalera fiscal', d: 'Cada estructura tiene costes fijos, así que subir antes de tiempo te hace PERDER dinero. La regla es siempre la misma: solo compensa cuando el ahorro mensual supera el coste de mantenerla, y la constitución se recupera en un plazo razonable.' },
-  amortization: { t: '💡 Amortizar sin pagar', d: 'Un inmueble te deja deducir cada año un 3% del valor de la construcción. Es un gasto que resta impuestos pero NO sale de tu bolsillo: por eso el ladrillo es tan eficiente fiscalmente.' },
   p2p_assume: { t: '💡 Traspaso: compras capital, no el inmueble', d: 'En un traspaso pagas solo el capital que el vendedor había puesto y te subrogas en su hipoteca: la deuda pasa a ser tuya. Por eso el precio parece bajo — el inmueble sigue costando lo que costaba.' },
   insurance: { t: '💡 El seguro no es una inversión', d: 'Un seguro nunca te hace ganar dinero: te quita la posibilidad de perderlo todo de golpe. Y como su cuota es un gasto fijo más, sube tu listón de libertad. Ese es el trato: pagas tranquilidad con tiempo.' },
   liquidity: { t: '💡 Liquidez: no todo se vende hoy', d: 'Un fondo se liquida en el acto; un local tarda meses en colocarse. Por eso una cartera solo de ladrillo puede ser rentable y aun así dejarte sin poder pagar un imprevisto. Tener algo líquido no es ser conservador: es poder aguantar.' },
