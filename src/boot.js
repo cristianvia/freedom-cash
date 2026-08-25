@@ -31,6 +31,7 @@ import { Incidents, NO_EVENT } from './game/Incidents.js';
 import { Guide } from './ui/Guide.js';
 import { School } from './ui/School.js';
 import { Achievements } from './engine/Achievements.js';
+import { Sfx } from './engine/Sfx.js';
 import { makePanels } from './ui/Panels.js';
 
 const SAVE_KEY = 'freedomcash.city.v1';
@@ -38,7 +39,17 @@ const $ = (s) => document.querySelector(s);
 
 const DATA = {};
 let engine, city, clock, scene, game, ui, models, school, guide, incidents, panels, ach;
+/* Todo se sintetiza con WebAudio: ni un fichero de audio que descargar.
+ * El sonido es de lo que mas cambia como se SIENTE un builder. */
+const sfx = new Sfx();
 let wonThisEra = false;
+/*
+ * Una partida y solo una. Sin esto, un doble toque en el boton de
+ * dificultad -trivial en un movil- arrancaba DOS juegos de Phaser a la
+ * vez, con dos lienzos, dos guiados y dos bucles compitiendo.
+ */
+let started = false;
+let lastFeed = 0;
 
 /* ============================== CARGA ============================== */
 
@@ -89,7 +100,14 @@ async function main() {
  * dificultad—, pero se eligen mirando, no leyendo.
  */
 
-function obStep(html) { $('.ob-steps').innerHTML = html; }
+function obStep(html) {
+  const box = $('.ob-steps');
+  box.innerHTML = html;
+  box.classList.remove('busy');
+}
+
+/** Marca el paso como resuelto: los botones dejan de responder. */
+function obLock() { $('.ob-steps').classList.add('busy'); }
 
 function showResume(save) {
   obStep(`
@@ -106,6 +124,7 @@ function showResume(save) {
   $('.ob-steps').onclick = (e) => {
     const b = e.target.closest('[data-go]');
     if (!b) return;
+    obLock();
     if (b.dataset.go === 'resume') resumeGame(save);
     else { stopSaving = false; localStorage.removeItem(SAVE_KEY); showProfiles(); }
   };
@@ -114,31 +133,48 @@ function showResume(save) {
 function showProfiles() {
   $('.ob-card h1').textContent = 'Tu punto de partida';
   $('.ob-lead').textContent = 'De cuánto dispones y cuánto te cuesta vivir.';
-  obStep(DATA.profiles.profiles.map(p => `
-    <button class="ob-opt" data-id="${p.id}">
+  obStep(DATA.profiles.profiles.map(p => {
+    // El margen es LA cifra: es con lo que empiezas a invertir cada mes.
+    // Sin el, tres perfiles se leen como tres montones de numeros iguales.
+    const margen = p.salary_base - p.fixed_expenses;
+    return `<button class="ob-opt" data-id="${p.id}">
       <span class="em">${p.emoji}</span>
-      <span><span class="tt">${p.name}</span>
-      <span class="dd">${money(p.salary_base)}/mes · gastos ${money(p.fixed_expenses)} · caja ${money(p.starting_cash)}</span></span>
-    </button>`).join(''));
+      <span class="ob-tx">
+        <span class="tt">${p.name}
+          <i class="ob-pill ${margen > 800 ? 'good' : margen > 400 ? '' : 'tight'}">
+            margen ${money(margen)}/mes</i></span>
+        <span class="dd">${p.description}</span>
+        <span class="ob-nums">
+          <b>${money(p.salary_base)}</b> sueldo ·
+          <b>${money(p.fixed_expenses)}</b> gastos ·
+          <b>${money(p.starting_cash)}</b> en caja</span>
+      </span>
+    </button>`;
+  }).join(''));
   $('.ob-steps').onclick = (e) => {
     const b = e.target.closest('[data-id]');
-    if (b) showProfessions(DATA.profiles.profiles.find(p => p.id === b.dataset.id));
+    if (b) { obLock(); showProfessions(DATA.profiles.profiles.find(p => p.id === b.dataset.id)); }
   };
 }
 
 function showProfessions(profile) {
   $('.ob-card h1').textContent = 'Tu oficio';
   $('.ob-lead').textContent = 'Abre proyectos que los demás no pueden tocar.';
-  const list = [{ id: 'none', emoji: '🎲', name: 'Sin especializar', desc: 'Acceso al catálogo general.' }]
-    .concat(DATA.professions.professions);
-  obStep(list.map(p => `
+  // professions.json ya trae el generalista con id 'none': anadirlo aqui
+  // salia duplicado. Y el nombre esta en `label`, no en `name`, que era de
+  // donde venia el "undefined" en cada fila.
+  obStep(DATA.professions.professions.map(p => `
     <button class="ob-opt" data-id="${p.id}">
       <span class="em">${p.emoji || '🧰'}</span>
-      <span><span class="tt">${p.name}</span><span class="dd">${p.desc || ''}</span></span>
+      <span class="ob-tx">
+        <span class="tt">${p.label}</span>
+        <span class="dd">${p.desc || ''}</span>
+        ${p.projects ? `<span class="ob-nums">Te abre: <b>${p.projects.join('</b> · <b>')}</b></span>` : ''}
+      </span>
     </button>`).join(''));
   $('.ob-steps').onclick = (e) => {
     const b = e.target.closest('[data-id]');
-    if (b) showDifficulty(profile, b.dataset.id);
+    if (b) { obLock(); showDifficulty(profile, b.dataset.id); }
   };
 }
 
@@ -148,11 +184,14 @@ function showDifficulty(profile, professionId) {
   obStep(DATA.difficulty.modes.map(m => `
     <button class="ob-opt" data-id="${m.id}">
       <span class="em">${m.emoji}</span>
-      <span><span class="tt">${m.label}</span><span class="dd">${m.desc}</span></span>
+      <span class="ob-tx">
+        <span class="tt">${m.label}</span>
+        <span class="dd">${m.desc}</span>
+      </span>
     </button>`).join(''));
   $('.ob-steps').onclick = (e) => {
     const b = e.target.closest('[data-id]');
-    if (b) startGame(profile, DATA.difficulty.modes.find(m => m.id === b.dataset.id), professionId);
+    if (b) { obLock(); startGame(profile, DATA.difficulty.modes.find(m => m.id === b.dataset.id), professionId); }
   };
 }
 
@@ -168,6 +207,8 @@ function buildEngine(profile, mode, professionId) {
 }
 
 function startGame(profile, mode, professionId) {
+  if (started) return;
+  started = true;
   engine = buildEngine(profile, mode, professionId);
   // Cada partida, su isla. La semilla se guarda y no vuelve a tocarse:
   // el contorno tiene que ser el mismo mañana o un edificio ya construido
@@ -184,6 +225,8 @@ function startGame(profile, mode, professionId) {
 }
 
 function resumeGame(save) {
+  if (started) return;
+  started = true;
   const profile = DATA.profiles.profiles.find(p => p.id === save.engine.profileId)
     || DATA.profiles.profiles[0];
   engine = EconomyEngine.fromJSON(save.engine, profile, DATA.events.events);
@@ -194,6 +237,7 @@ function resumeGame(save) {
   city.load(save.city);
   incidents = new Incidents(engine, city, bus);
   incidents.load(save.incidents);
+  lastFeed = incidents.feed.length;
   clock = new Clock(runPeriod);
   clock.load(save.clock);
   wonThisEra = !!save.wonThisEra;
@@ -231,7 +275,7 @@ function launch(resumed = false) {
   // consola sin tener que jugar media hora para llegar a la situación.
   panels = makePanels({
     engine, city, ui, incidents,
-    lifestyle: DATA.lifestyle.actions,
+    lifestyle: DATA.lifestyle.actions, sfx,
     assetById: (id) => DATA.assets_database.assets.find(a => a.id === id),
     spriteOf, tierOf, tierRules,
     onCityChange: () => { scene.syncViews(); scene.refreshTerrain(); },
@@ -318,6 +362,15 @@ function tick() {
     bus.emit('level:up', { level: city.level });
     ui.toast(`Nivel ${city.level}. Se abre una manzana nueva.`, 'good');
   }
+  // Un suceso que te ha costado dinero suena distinto de uno que te lo ha
+  // dado: es la forma mas barata de que el jugador mire el parte.
+  const nuevas = incidents.feed.length;
+  if (nuevas > lastFeed) {
+    const n = incidents.feed[0];
+    if (n && n.tone === 'bad') sfx.playSoft('bad');
+    else if (n && n.tone === 'good') sfx.playSoft('good');
+    lastFeed = nuevas;
+  }
   checkSchool();
   checkAchievements();
   checkVictory();
@@ -326,6 +379,7 @@ function tick() {
   // Un dilema se ensena en cuanto hay hueco. Esperando a que el jugador
   // abra un menu, se quedaria ahi para siempre y la decision se perderia.
   if (incidents.waiting && !ui.isOpen && !scene.placing && !guide) {
+    sfx.play('alert');
     panels.showDilemma();
   }
   renderHud();
@@ -386,6 +440,7 @@ function checkVictory() {
 }
 
 function showVictory() {
+  sfx.play('win');
   const ie = Math.round(engine.emancipationIndex());
   const meses = engine.cashCushionMonths();
   const anios = Math.floor(engine.month / 12);
@@ -458,6 +513,7 @@ function checkAchievements() {
 
 /** Un logro merece pararse un segundo. Si no, no es un premio. */
 function celebrate(def) {
+  sfx.play('achievement');
   const t = (DATA.achievements.tiers || {})[def.tier] || {};
   const el = $('#trophy');
   if (!el) return;
@@ -518,9 +574,34 @@ function renderHud() {
   $('#ie .ie-txt').innerHTML = `<b>${Math.round(ie)}%</b> de ${Math.round(target)}%`;
 
   // Insignias del dock: cuánto hay que cobrar y cuántas obras hay en marcha
-  const ready = city.list().filter(p => city.pending(p).ready).length;
+  /*
+   * El boton de cobrar dice CUANTO espera, no cuantos edificios. Un "3" no
+   * mueve a nadie; un "1.240 EUR" si. Y si algun almacen se ha llenado, el
+   * edificio ha dejado de producir: eso hay que gritarlo, porque es el
+   * unico momento en que el jugador esta perdiendo dinero por no volver.
+   */
+  let ready = 0, esperando = 0, mats = 0, llenos = 0;
+  for (const p of city.plots.values()) {
+    const got = city.pending(p);
+    if (!got.ready) continue;
+    ready++;
+    esperando += got.cash;
+    mats += got.materials;
+    if (city.fillOf(p) >= 0.999) llenos++;
+  }
+  const dkc = $('#dk-collect');
+  dkc.querySelector('.dk-l').textContent = ready
+    ? (esperando > 0 ? short(esperando) + ' €' : mats + ' 🧱')
+    : 'Cobrar';
   badge('#dk-collect', ready);
-  $('#dk-collect').classList.toggle('hot', ready > 0);
+  dkc.classList.toggle('hot', ready > 0);
+  dkc.classList.toggle('full', llenos > 0);
+  $('#dk-full').hidden = llenos === 0;
+  if (llenos > 0) {
+    $('#dk-full').textContent = llenos === 1
+      ? '1 edificio lleno: ha dejado de producir'
+      : llenos + ' edificios llenos: han dejado de producir';
+  }
   badge('#dk-builders', city.building().length);
   badge('#dk-menu', (school ? school.unread : 0) + (incidents ? incidents.waiting : 0));
   if (panels) panels.renderQuest();
@@ -535,6 +616,10 @@ function badge(sel, n) {
 /* ============================== DOCK =============================== */
 
 function wireDock() {
+  // Un clic seco en cada boton del dock: es lo que separa una interfaz que
+  // responde de una que parece que se ha colgado.
+  document.querySelectorAll('.dk, #quest, #ie').forEach(b =>
+    b.addEventListener('pointerdown', () => sfx.play('click')));
   $('#dk-shop').onclick = showShop;
   $('#dk-collect').onclick = collectAll;
   $('#dk-builders').onclick = showBuilders;
@@ -548,6 +633,7 @@ function collectAll() {
   if (!got.count) return ui.toast('Nada que cobrar todavía');
   if (got.cash) ui.toast(`+${money(got.cash)}`, 'good');
   else if (got.materials) ui.toast(`+${got.materials} 🧱`, 'good');
+  sfx.play('month');
   renderHud();
   bus.emit('collect', { plot: null, ...got });
 }
@@ -608,7 +694,7 @@ function assetCard(a) {
             <span class="${band.expected >= 0 ? 'g' : 'r'}">${band.expected >= 0 ? '+' : ''}${money(band.expected)}/mes</span>
             <span>🧱${r.materials}</span>
             <span>⏱ ${fmtDuration(r.buildMs)}</span>`,
-    action: ok ? 'Construir' : !canBuild ? 'Sin obreros' : !canMat ? 'Faltan 🧱' : 'Sin caja',
+    action: ok ? 'Invertir' : !canBuild ? 'Sin obreros' : !canMat ? 'Faltan 🧱' : 'Sin caja',
     disabled: !ok, data: { asset: a.id },
   });
 }
@@ -681,6 +767,7 @@ function beginAsset(asset, financing) {
     scene.syncViews();
     renderHud();
     bus.emit('build:placed', { plot });
+    sfx.play('buy');
     ach.bumpRun('buys');
     if (financing === 'leverage') ach.bumpLife('bought_leverage');
     save();
@@ -702,6 +789,7 @@ function beginPlant(plantId) {
     scene.syncViews();
     renderHud();
     bus.emit('build:placed', { plot });
+    sfx.play('buy');
     save();
   }, null, { category: 'digital_business' });
 }
@@ -774,6 +862,7 @@ function showPlot(plot) {
     const g = city.collect(plot);
     if (g.cash) scene.popCollect(plot, '+' + money(g.cash));
     if (g.materials) scene.popCollect(plot, '+' + g.materials + ' 🧱', 'mat');
+    sfx.play('month');
     renderHud();
     bus.emit('collect', { plot, ...g });
     return;
@@ -846,6 +935,7 @@ function showPlot(plot) {
         city._occupy(plot);
       }
     }
+    sfx.play('buy');
     plot.state = 'building';
     plot.doneAt = Date.now() + r.cost.buildMs;
     scene.refresh(plot.uid);
@@ -1015,6 +1105,7 @@ function showMenu() {
   ui.open('Más', `<div class="detail"><div class="acts">
     <button class="btn" data-act="school">🎓 La Escuela${
   school.unread ? ` · ${school.unread} sin leer` : ''}</button>
+    <button class="btn ghost" data-act="sound">${sfx.enabled ? '🔊 Sonido activado' : '🔇 Sonido apagado'}</button>
     <button class="btn ghost" data-act="trophies">🏅 Logros</button>
     <button class="btn ghost" data-act="news">📰 Qué ha pasado en tu ciudad</button>
     <button class="btn ghost" data-act="collect">Cobrar todo</button>
@@ -1025,6 +1116,11 @@ function showMenu() {
   onClick(ui.body, '[data-act]', (b) => {
     if (b.dataset.act === 'school') return showSchool();
     if (b.dataset.act === 'news') return panels.showNews();
+    if (b.dataset.act === 'sound') {
+      sfx.toggle();
+      b.textContent = sfx.enabled ? '🔊 Sonido activado' : '🔇 Sonido apagado';
+      return;
+    }
     if (b.dataset.act === 'trophies') return showTrophies();
     if (b.dataset.act === 'collect') { ui.close(); collectAll(); }
     if (b.dataset.act === 'arrange') {

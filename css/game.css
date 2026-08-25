@@ -50,10 +50,14 @@ html, body {
 #hud {
   position: fixed; z-index: 20;
   top: calc(var(--safe-t) + 8px); left: 8px; right: 8px;
-  display: flex; gap: 8px;
+  display: flex; gap: 6px;
 }
 
 .res {
+  /* Elastica: las cifras crecen -la caja llega a millones, el almacen a
+     tres digitos partidos- y con anchos fijos el HUD se desbordaba justo
+     en las pantallas mas estrechas, que es donde peor se ve. */
+  flex: 0 1 auto; min-width: 0;
   display: flex; align-items: center; gap: 6px;
   padding: 7px 12px 7px 9px; min-height: 40px;
   background: rgba(16, 21, 30, .86);
@@ -271,9 +275,23 @@ html, body {
   font: inherit; text-align: left; transition: border-color .15s, transform .1s;
 }
 .ob-opt:active { transform: scale(.985); }
-.ob-opt .em { font-size: 27px; }
-.ob-opt .tt { font-weight: 700; font-size: 15px; }
-.ob-opt .dd { font-size: 12px; color: var(--dim); margin-top: 2px; }
+.ob-opt .em { font-size: 27px; flex: 0 0 auto; }
+/* Nombre, descripcion y cifras en tres lineas. En linea seguida el nombre
+   y los numeros se pegaban y la segunda opcion partia por la mitad. */
+.ob-tx { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ob-opt .tt { display: block; font-weight: 700; font-size: 15px; }
+.ob-opt .dd { display: block; font-size: 12px; color: var(--dim); line-height: 1.4; }
+.ob-opt .ob-nums { display: block; font-size: 11px; color: var(--dim); }
+.ob-opt .ob-nums b { color: var(--txt); font-weight: 600; }
+/* El margen es la cifra que decide la partida, asi que va destacada. */
+.ob-pill {
+  display: inline-block; margin-left: 6px; padding: 1px 8px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 999px; font-style: normal; font-size: 11px;
+  font-weight: 600; color: var(--dim); vertical-align: middle;
+}
+.ob-pill.good { color: var(--green); border-color: #24503a; }
+.ob-pill.tight { color: var(--gold); border-color: #5a4520; }
 
 /* ========================== PANTALLA GRANDE ======================= */
 /* En escritorio no se reparte en columnas: se centra y se limita el
@@ -519,3 +537,41 @@ html, body {
 .acts .btn.ghost .io-e .r, .acts .btn.danger .io-e .r { color: var(--red); }
 .acts .btn:disabled .io-e .g { color: var(--green); }
 .acts .btn:disabled .io-e .r { color: var(--red); }
+
+/* Paso de arranque ya resuelto: no admite mas toques mientras carga. */
+.ob-steps.busy { pointer-events: none; opacity: .55; }
+
+/* ====================== PANTALLAS MUY ESTRECHAS =================== */
+/* Por debajo de 420 px el HUD llevaba las cuatro fichas al limite. Se
+   aprieta el relleno antes que dejar que se desborde o se parta. */
+
+@media (max-width: 420px) {
+  #hud { gap: 4px; }
+  .res { padding: 6px 9px 6px 7px; gap: 4px; }
+  .res .ic { font-size: 15px; }
+  .res b { font-size: 13px; }
+  .res .cap { font-size: 11px; }
+  .res.wb .ic { font-size: 13px; }
+  .res.wb b { font-size: 12px; }
+  .dk-l { font-size: 10px; }
+  .dk-i { font-size: 19px; }
+  #dock { gap: 6px; }
+}
+
+/* ===================== AVISO DE ALMACEN LLENO ===================== */
+/* Un edificio lleno ha dejado de producir. Es el unico momento en que no
+   volver cuesta dinero, y hasta ahora solo se veia mirando cada burbuja. */
+
+#dk-full {
+  position: fixed; z-index: 21;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--safe-b) + 74px);
+  padding: 6px 14px; white-space: nowrap;
+  background: rgba(120, 82, 20, .95);
+  border: 1px solid var(--gold); border-radius: 999px;
+  font-size: 12px; font-weight: 600; color: #fde68a;
+  animation: rise2 .25s ease-out;
+}
+/* El boton de cobrar deja de ser un icono y pasa a decir la cifra. */
+.dk.full { border-color: var(--gold); }
+.dk.hot .dk-l { color: var(--gold); font-weight: 700; }

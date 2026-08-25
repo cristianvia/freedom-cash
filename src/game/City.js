@@ -505,6 +505,16 @@ export class City {
     const job = this.add({ kind: 'job', sprite: JOB_BUILDING.sprite,
       category: 'digital_business', tier: 5 });
 
+    /*
+     * El trabajo arranca con una nomina dentro.
+     *
+     * Sin esto, el guiado te decia "toca tu trabajo" y el edificio tenia
+     * dos euros: tocabas, no pasaba nada, y el tutorial se quedaba
+     * atascado doce minutos esperando. La primera interaccion del juego
+     * tiene que funcionar y tiene que pagar.
+     */
+    if (job) job.collectedAt = Date.now() - JOB_BUILDING.cycleMs;
+
     // Si alguno se queda fuera, el jugador pierde el acceso a esa mecanica
     // entera sin que nada se lo diga. Mejor enterarse aqui.
     if (puestos.length < CIVIC.length || !job) {

@@ -15,7 +15,7 @@
   <!-- El ?v= se sube a mano al desplegar. Sin el, el navegador sirve la
        hoja vieja de cache y la interfaz nueva sale sin estilos: paso una
        tarde persiguiendo un tutorial que estaba ahi pero invisible. -->
-  <link rel="stylesheet" href="css/game.css?v=7" />
+  <link rel="stylesheet" href="css/game.css?v=10" />
 </head>
 <body>
 
@@ -57,6 +57,10 @@
     <button class="dk" id="dk-builders"><span class="dk-i">👷</span><span class="dk-l">Obras</span><i class="badge" hidden></i></button>
     <button class="dk" id="dk-menu"><span class="dk-i">☰</span><span class="dk-l">Más</span><i class="badge" hidden></i></button>
   </nav>
+
+  <!-- Un almacen lleno ha dejado de producir: es el unico momento en que
+       el jugador pierde dinero por no volver, asi que se avisa fuerte. -->
+  <div id="dk-full" hidden></div>
 
   <!-- ===== Cajón inferior: tienda, fichas, asesores ===== -->
   <div id="sheet" hidden>

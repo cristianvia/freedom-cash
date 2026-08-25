@@ -28,7 +28,7 @@ const ASSETS = VERSION + '-assets';
 /* Lo mínimo para que el juego abra estando sin red. */
 const PRECACHE = [
   'game.html',
-  'css/game.css?v=7',
+  'css/game.css?v=10',
   'manifest.json',
   'vendor/phaser.min.js',
   'assets/atlas/sprites.json',

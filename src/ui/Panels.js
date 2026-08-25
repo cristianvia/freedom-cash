@@ -64,6 +64,7 @@ export function makePanels(ctx) {
 
     if (c && engine.contractDone()) {
       const r = engine.claimContract();
+      if (r.ok && ctx.sfx) ctx.sfx.play('good');
       if (r.ok && ctx.onContractDone) ctx.onContractDone();
       ui.toast(r.ok ? 'Encargo cumplido · +' + money(r.cash) : r.reason, 'good');
       refresh(); save();
@@ -147,7 +148,8 @@ export function makePanels(ctx) {
       + '</div></div>');
 
     onClick(body, '[data-choice]', (b) => {
-      incidents.resolve(item.uid, Number(b.dataset.choice));
+      const adj = incidents.resolve(item.uid, Number(b.dataset.choice));
+      if (ctx.sfx) ctx.sfx.play((adj && adj.cashDelta < 0) ? 'bad' : 'good');
       ui.close(); refresh(); save();
     });
     return true;
@@ -228,6 +230,7 @@ export function makePanels(ctx) {
     const r = engine.mergeAssets(c.picks, target);
     if (!r.ok) { ui.toast(r.reason, 'bad'); return; }
 
+    if (ctx.sfx) ctx.sfx.play('buy');
     if (ctx.onMerge) ctx.onMerge(c.need);
     plots.forEach(p => city.remove(p.uid));
     const tier = ctx.tierOf(target);
