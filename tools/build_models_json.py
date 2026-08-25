@@ -134,9 +134,16 @@ def main():
         models[a["id"]] = {"sprite": pick, "tier": tier}
         dist["%s/%d" % (cat, tier)] = dist.get("%s/%d" % (cat, tier), 0) + 1
 
+    # La escalera tambien se publica: el juego la necesita para que un
+    # edificio CREZCA al mejorarlo en el sitio, eligiendo el modelo del
+    # escalon siguiente sin tener que traerse este script al navegador.
+    ladder = {cat: [[c for c in rung if c in have] or rung for rung in rungs]
+              for cat, rungs in LADDER.items()}
+
     out = {
-        "_nota": ("Modelo 3D de cada activo. Generado por tools/build_models_json.py; "
-                  "no editar a mano, se regenera al tocar la escalera de modelos."),
+        "_nota": ("Modelo 3D de cada activo y escalera de modelos por categoria. "
+                  "Generado por tools/build_models_json.py; no editar a mano."),
+        "ladder": ladder,
         "models": models,
     }
     with open(OUT, "w", encoding="utf-8") as f:

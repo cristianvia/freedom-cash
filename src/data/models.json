@@ -1,5 +1,87 @@
 {
- "_nota": "Modelo 3D de cada activo. Generado por tools/build_models_json.py; no editar a mano, se regenera al tocar la escalera de modelos.",
+ "_nota": "Modelo 3D de cada activo y escalera de modelos por categoria. Generado por tools/build_models_json.py; no editar a mano.",
+ "ladder": {
+  "real_estate": [
+   [
+    "house_02",
+    "house_03",
+    "house_06",
+    "house_09"
+   ],
+   [
+    "house_01",
+    "house_04",
+    "house_05",
+    "house_07",
+    "house_08"
+   ],
+   [
+    "house_10",
+    "house_15",
+    "highlivingbuilding_b",
+    "hotel_b"
+   ],
+   [
+    "highlivingbuilding_a",
+    "highlivingbuilding_c"
+   ],
+   [
+    "skyscraper_a",
+    "skyscraper_c"
+   ]
+  ],
+  "digital_business": [
+   [
+    "fruitshop",
+    "cheesemarket",
+    "musicshop"
+   ],
+   [
+    "boutique",
+    "restaurant",
+    "travel agency",
+    "sport"
+   ],
+   [
+    "supermarket_a",
+    "supermarket_b",
+    "gasstation_a",
+    "gasstation_b"
+   ],
+   [
+    "factorybuilding_a",
+    "factorybuilding_b",
+    "factorybuilding_c",
+    "businesscenter"
+   ],
+   [
+    "skyscraper_b",
+    "skyscraper_a"
+   ]
+  ],
+  "financial": [
+   [
+    "postoffice",
+    "policestation"
+   ],
+   [
+    "bank",
+    "school_a"
+   ],
+   [
+    "government_a",
+    "hospital_a"
+   ],
+   [
+    "businesscenter",
+    "skyscraper_c"
+   ],
+   [
+    "skyscraper_b",
+    "skyscraper_c"
+   ]
+  ]
+ },
  "models": {
   "re_apt_01": {
    "sprite": "highlivingbuilding_b",

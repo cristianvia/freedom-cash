@@ -495,3 +495,27 @@ html, body {
 .tr-i-em { font-size: 20px; flex: 0 0 auto; }
 .tr-i-tx { font-size: 13px; line-height: 1.3; }
 .tr-i-tx small { color: var(--dim); }
+
+/* ======================== MEJORA EN EL SITIO ====================== */
+/* La isla tiene techo: unos 150 solares. Cuando se llena, lo unico que
+   puede seguir creciendo es el valor POR solar. */
+
+.lvl-tag {
+  display: inline-block; margin-left: 7px; padding: 2px 8px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 999px; font-size: 11px; font-weight: 600;
+  color: var(--gold); vertical-align: middle;
+}
+/* El boton de mejorar lleva sus cifras dentro, como los dilemas: hay que
+   poder comparar lo que pagas con lo que ganas sin abrir otra pantalla. */
+.acts .btn .io-l { display: block; font-weight: 600; }
+.acts .btn .io-e {
+  display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 5px;
+  font-size: 12px; font-weight: 400; opacity: .85;
+}
+.acts .btn .io-e .g { color: #14532d; font-weight: 600; }
+.acts .btn .io-e .r { color: #7f1d1d; font-weight: 600; }
+.acts .btn.ghost .io-e .g, .acts .btn.danger .io-e .g { color: var(--green); }
+.acts .btn.ghost .io-e .r, .acts .btn.danger .io-e .r { color: var(--red); }
+.acts .btn:disabled .io-e .g { color: var(--green); }
+.acts .btn:disabled .io-e .r { color: var(--red); }

@@ -25,6 +25,7 @@ import { Ui, money, short, onClick } from './ui/Ui.js';
 import { tierRules, MATERIAL_PLANTS, CIVIC, buildersAt } from './game/rules.js';
 import { URBANIZE_COST, URBANIZE_MATERIALS } from './game/City.js';
 import { OFFLINE_WELLBEING_FLOOR } from './game/rules.js';
+import { levelOf, canLevelUp, upgradeCost, incomeAfter, levelUp, spriteForLevel } from './game/Upgrades.js';
 import { bus } from './game/Bus.js';
 import { Incidents, NO_EVENT } from './game/Incidents.js';
 import { Guide } from './ui/Guide.js';
@@ -794,20 +795,65 @@ function showPlot(plot) {
 
   const asset = city.assetOf(plot);
   const cyc = city.cycleOf(plot);
+  const nivel = asset ? levelOf(asset) : 1;
+  const puede = asset && canLevelUp(asset);
+  const coste = puede ? upgradeCost(asset, plot.tier) : null;
+  const rentaAhora = asset ? engine.assetNetIncome(asset) : 0;
+  const rentaLuego = puede ? incomeAfter(engine, asset) : 0;
+  const alcanza = coste && engine.cash >= coste.cash && city.materials >= coste.materials;
+
   ui.open(asset ? asset.title : 'Edificio', `<div class="detail">
     <div class="hero">${ui.thumb(plot.sprite, 96)}
-      <div><h3>${asset ? asset.title : 'Edificio'}</h3>
+      <div><h3>${asset ? asset.title : 'Edificio'}
+        ${asset ? `<span class="lvl-tag">nivel ${nivel}</span>` : ''}</h3>
       <p>Siguiente cobro en ${fmtDuration(cyc.ms - ((Date.now() - plot.collectedAt) % cyc.ms))}</p></div></div>
     <div class="stats">
-      ${ui.stat('Renta neta', asset ? money(engine.assetNetIncome(asset)) + '/mes' : '—', 'g')}
+      ${ui.stat('Renta neta', asset ? money(rentaAhora) + '/mes' : '—', 'g')}
       ${ui.stat('Cobro cada', fmtDuration(cyc.ms))}
       ${asset ? ui.stat('Valor hoy', money(engine.assetMarketValue(asset))) : ''}
       ${asset ? ui.stat('Revalorización', engine.appreciationPct(asset) + '%',
     engine.appreciationPct(asset) >= 0 ? 'g' : 'r') : ''}
     </div>
     ${asset ? `<div class="acts">
-      <button class="btn danger" data-sell="${plot.uid}">Vender</button></div>` : ''}
+      ${puede ? `<button class="btn" data-up="${plot.uid}" ${alcanza ? '' : 'disabled'}>
+        <span class="io-l">Mejorar a nivel ${coste.level}</span>
+        <span class="io-e">
+          <span class="${engine.cash >= coste.cash ? '' : 'r'}">${money(coste.cash)}</span>
+          <span class="${city.materials >= coste.materials ? '' : 'r'}">${coste.materials} 🧱</span>
+          <span>⏱ ${fmtDuration(coste.buildMs)}</span>
+          <span class="g">${money(rentaAhora)} → ${money(rentaLuego)}/mes</span>
+        </span></button>`
+    : '<button class="btn" disabled>Ya está al máximo</button>'}
+      <button class="btn danger" data-sell="${plot.uid}">Vender · libera el solar</button>
+    </div>
+    <p style="margin:0;font-size:12px;color:var(--dim)">Mejorar no ocupa suelo nuevo: sube lo
+       que rinde este solar. Renta menos por euro que comprar otro activo, pero cuando la isla
+       se llena es la única forma de que el dinero siga trabajando.</p>` : ''}
   </div>`);
+
+  onClick(ui.body, '[data-up]', () => {
+    const r = levelUp(engine, city, asset, plot.tier);
+    if (!r.ok) return ui.toast(r.reason, 'bad');
+
+    // El edificio CRECE: se busca el modelo del escalon siguiente y la obra
+    // arranca. Si la mejora no se viera, seria una fila de una tabla.
+    const nuevo = spriteForLevel(DATA.models, asset, plot.tier, r.cost.level);
+    if (nuevo && DATA.atlas.sprites[nuevo]) {
+      const [fw, fh] = city.footprintOf(nuevo);
+      if (city.isFree(plot.col, plot.row, fw, fh, plot.uid)) {
+        city._release(plot);
+        plot.sprite = nuevo; plot.fw = fw; plot.fh = fh;
+        city._occupy(plot);
+      }
+    }
+    plot.state = 'building';
+    plot.doneAt = Date.now() + r.cost.buildMs;
+    scene.refresh(plot.uid);
+    scene.syncViews();
+    ach.bumpRun('upgrades');
+    ui.close(); renderHud(); save();
+    ui.toast('Mejorando a nivel ' + r.cost.level, 'good');
+  });
 
   onClick(ui.body, '[data-sell]', () => {
     if (asset) engine.sellAsset(asset.instanceId);
@@ -816,6 +862,7 @@ function showPlot(plot) {
     ui.close(); renderHud(); save();
   });
 }
+
 
 /**
  * Ficha de la naturaleza. Antes un toque sobre un arbol no hacia nada, asi
