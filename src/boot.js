@@ -37,6 +37,7 @@ const $ = (s) => document.querySelector(s);
 
 const DATA = {};
 let engine, city, clock, scene, game, ui, models, school, guide, incidents, panels, ach;
+let wonThisEra = false;
 
 /* ============================== CARGA ============================== */
 
@@ -172,6 +173,7 @@ function startGame(profile, mode, professionId) {
   // podría amanecer en el agua.
   ach.newRun();
   ach.bumpLife('games');
+  wonThisEra = false;
   const seed = (Math.random() * 0xffffffff) >>> 0 || 1;
   city = new City(engine, DATA.models, DATA.atlas, seed);
   city.sprinkleScenery(24);
@@ -193,6 +195,7 @@ function resumeGame(save) {
   incidents.load(save.incidents);
   clock = new Clock(runPeriod);
   clock.load(save.clock);
+  wonThisEra = !!save.wonThisEra;
   launch(true);
 }
 
@@ -316,6 +319,7 @@ function tick() {
   }
   checkSchool();
   checkAchievements();
+  checkVictory();
   if (incidents.tickMarks()) scene.syncViews();
 
   // Un dilema se ensena en cuanto hay hueco. Esperando a que el jugador
@@ -356,6 +360,64 @@ function openCard(id) {
   const body = school.card(id);
   if (body) onClick(body, '[data-back]', () => showSchool());
   renderHud();
+}
+
+/* ============================= VICTORIA ============================ */
+
+/**
+ * El premio del juego entero, que hasta ahora no existia.
+ *
+ * hasWon() llevaba desde el principio en el motor y no lo llamaba nadie:
+ * podias alcanzar el 120% de IE con seis meses de colchon y no pasaba
+ * absolutamente nada. En un juego que va exactamente de eso, esa era la
+ * pieza que faltaba.
+ *
+ * Se comprueba en cada tic y solo salta una vez por era, porque el estado
+ * de victoria se mantiene mientras las rentas aguanten.
+ */
+function checkVictory() {
+  if (!engine.hasWon() || wonThisEra) return;
+  wonThisEra = true;
+  ach.bumpLife('wins');
+  ach.addLifeSet('profiles_won', engine.profile.id);
+  ach.setRun('won', 1);
+  showVictory();
+}
+
+function showVictory() {
+  const ie = Math.round(engine.emancipationIndex());
+  const meses = engine.cashCushionMonths();
+  const anios = Math.floor(engine.month / 12);
+
+  ui.open('🎉 Eres libre', '<div class="detail">'
+    + '<div class="inc-hero good"><span class="inc-em">🕊️</span><div>'
+    + '<h3 style="margin:0 0 3px;font-size:17px">Ya no dependes del sueldo</h3>'
+    + '<p style="margin:0;font-size:13px;color:var(--dim)">Tus rentas pasivas cubren el '
+    + ie + ' % de lo que te cuesta vivir, y tienes ' + meses.toFixed(1)
+    + ' meses de colchón. Podrías dejar de trabajar mañana.</p></div></div>'
+    + '<div class="stats">'
+    + ui.stat('Rentas pasivas', money(engine.netPassiveIncome()) + '/mes', 'g')
+    + ui.stat('Gastos fijos', money(engine.fixedExpenses()) + '/mes')
+    + ui.stat('Patrimonio', money(engine.ownedAssets.reduce(
+      (s, a) => s + engine.assetEquity(a), 0) + engine.cash))
+    + ui.stat('Has tardado', anios + (anios === 1 ? ' año' : ' años'))
+    + '</div>'
+    + '<p style="margin:0;font-size:13px;color:var(--dim)">Puedes quedarte aquí y disfrutar '
+    + 'la ciudad, o subir el listón: la vida se encarece, pero se abren activos mayores y '
+    + 'más crédito. Es lo que pasa de verdad cuando ganas más.</p>'
+    + '<div class="acts">'
+    + '<button class="btn" data-era="1">Subir el listón</button>'
+    + '<button class="btn ghost" data-stay="1">Quedarme como estoy</button>'
+    + '</div></div>');
+
+  onClick(ui.body, '[data-era]', () => {
+    const r = engine.startNewEra();
+    wonThisEra = false;
+    ui.close(); renderHud(); save();
+    ui.toast('Era ' + engine.era + ': el listón sube al '
+      + Math.round(engine.winTargetIE()) + ' %', 'good');
+  });
+  onClick(ui.body, '[data-stay]', () => ui.close());
 }
 
 /* ============================= LOGROS ============================== */
@@ -953,6 +1015,7 @@ function save() {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       v: 1, engine: engine.toJSON(), city: city.toJSON(), clock: clock.toJSON(),
       incidents: incidents.toJSON(),
+      wonThisEra,
     }));
   } catch (e) { /* cuota llena: no es motivo para tumbar la partida */ }
 }
