@@ -1,0 +1,617 @@
+{
+ "_nota": "Que renderizar y como. `strip_base` quita el suelo del modelo (ver strip_ground en render_isometric.py); `compose` fabrica una baldosa de 15x15 repitiendo una pieza que no teselaba.",
+ "defaults": {
+  "kind": "building",
+  "strip_base": false
+ },
+ "entries": [
+  {
+   "name": "house_01",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_02",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_03",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_04",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_05",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_06",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_07",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_08",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_09",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_10",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "house_15",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "highlivingbuilding_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "highlivingbuilding_b",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "highlivingbuilding_c",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "highlivingbuilding_d",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "hotel_b",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "skyscraper_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "skyscraper_b",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "skyscraper_c",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "businesscenter",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "bank",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "government_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "policestation",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "postoffice",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "hospital_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "school_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "nationalstadium",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "supermarket_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "supermarket_b",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "restaurant",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "boutique",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "fruitshop",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "cheesemarket",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "musicshop",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "travel agency",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "sport",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "gasstation_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "gasstation_b",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "factorybuilding_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "factorybuilding_b",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "factorybuilding_c",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "factorystructure_a",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "factorystructure_b",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "factoryenterence",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "farmbuilding_05",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "farmbuilding_08",
+   "kind": "building",
+   "strip_base": true
+  },
+  {
+   "name": "park_a",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "park_b",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "park_c",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "park_d",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "park_e",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "park_f",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "park_g",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "green_a",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "green_b",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "green_c",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "basketballcourt_a",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "basketballcourt_b",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "tree",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "plant",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "plants",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "flowers",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "rock_a001",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "rock_c001",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "stone02",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "stone04",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "caffeeshop",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "ice-cream",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "milk",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "watches",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "antiques",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "vegetables",
+   "kind": "decor",
+   "strip_base": false
+  },
+  {
+   "name": "car_a",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "car_b",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "car_c",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "car_d",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "car_e",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "car_f",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "jeep_a",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "jeep_b",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "truck",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "tractor_a",
+   "kind": "vehicle",
+   "strip_base": false
+  },
+  {
+   "name": "road_ns",
+   "src": "road_a_01",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 0,
+   "compose": {
+    "repeat": [
+     1,
+     3
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_ew",
+   "src": "road_a_01",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 90,
+   "compose": {
+    "repeat": [
+     1,
+     3
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_corner_ne",
+   "src": "road_a_07",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 0,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_corner_se",
+   "src": "road_a_07",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 90,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_corner_sw",
+   "src": "road_a_07",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 180,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_corner_nw",
+   "src": "road_a_07",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 270,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_t_n",
+   "src": "road_a_11",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 0,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_t_e",
+   "src": "road_a_11",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 90,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_t_s",
+   "src": "road_a_11",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 180,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_t_w",
+   "src": "road_a_11",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 270,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  },
+  {
+   "name": "road_cross",
+   "src": "road_a_13",
+   "kind": "tile",
+   "strip_base": false,
+   "footprint": [
+    1,
+    1
+   ],
+   "rotate": 0,
+   "compose": {
+    "repeat": [
+     1,
+     1
+    ],
+    "fit": 15.0
+   }
+  }
+ ]
+}

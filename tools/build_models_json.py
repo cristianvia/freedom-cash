@@ -33,8 +33,10 @@ LADDER = {
         ["house_02", "house_03", "house_06", "house_09"],                 # 1 caseta
         ["house_01", "house_04", "house_05", "house_07", "house_08"],     # 2 vivienda
         ["house_10", "house_15", "highlivingbuilding_b", "hotel_b"],      # 3 bloque
-        ["highlivingbuilding_a", "highlivingbuilding_c",
-         "highlivingbuilding_d"],                                          # 4 gran altura
+        # highlivingbuilding_d se descarta: trae las UV rotas y casi todas
+        # sus caras apuntan a una zona negra del atlas, asi que sale como
+        # una silueta negra en medio de la ciudad.
+        ["highlivingbuilding_a", "highlivingbuilding_c"],                  # 4 gran altura
         ["skyscraper_a", "skyscraper_c"],                                  # 5 torre
     ],
     "digital_business": [

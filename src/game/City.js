@@ -27,17 +27,29 @@ import {
   tierRules, buildersAt, materialCap, MATERIAL_PLANTS, CIVIC, JOB_BUILDING,
   SCENERY, PERIOD_MS, xpForLevel,
 } from './rules.js';
+import { Layout, BLOCK_H } from './Layout.js';
 
 /** Cuadrantes temáticos, como en la ciudad antigua: cada categoría, su barrio. */
 const DISTRICTS = ['real_estate', 'digital_business', 'financial'];
+
+/** Lo que cuesta convertir una casilla de césped en solar edificable. */
+export const URBANIZE_COST = 2500;
+export const URBANIZE_MATERIALS = 6;
+
+/* Que terreno admite cada cosa. Los edificios solo van en solar; la
+ * decoracion vive en el cesped de fuera de las manzanas, y asi deja de
+ * robar sitio construible como hacia antes. */
+const LOT_ONLY = new Set(['lot']);
+const GRASS_ONLY = new Set(['grass']);
 
 export class City {
   /**
    * @param {EconomyEngine} engine
    * @param {object} models  contenido de models.json
    * @param {object} atlas   contenido de sprites.json
+   * @param {number} seed    semilla de la isla
    */
-  constructor(engine, models, atlas) {
+  constructor(engine, models, atlas, seed = 1) {
     this.engine = engine;
     this.models = models.models || models;
     this.atlas = atlas.sprites || atlas;
@@ -51,8 +63,9 @@ export class City {
     engine.ACTIONS_BASE = 9999;
     engine.ACTIONS_MAX = 9999;
 
-    this.cols = 10;
-    this.rows = 10;
+    this.layout = new Layout(seed);
+    this.cols = this.layout.cols;
+    this.rows = this.layout.rows;
     this.plots = new Map();     // uid -> parcela
     this.occupied = new Map();  // "col,row" -> uid
     this._uid = 0;
@@ -60,6 +73,8 @@ export class City {
     this.materials = 20;
     this.level = 1;
     this.xp = 0;
+    this.urbanized = new Set();   // césped comprado y convertido en solar
+    this.refreshTerrain();
 
     this.seedCivic();
   }
@@ -68,14 +83,38 @@ export class City {
 
   key(col, row) { return col + ',' + row; }
 
+  /**
+   * Recalcula el mapa de terreno. Se llama al subir de nivel (se abren
+   * manzanas) y al urbanizar césped. La ISLA no se toca nunca: lo que
+   * cambia es qué está urbanizado, no dónde está la tierra. Si el
+   * contorno se recalculase, un edificio ya puesto podría acabar en el mar.
+   */
+  refreshTerrain() {
+    this.terrain = this.layout.terrainAt(this.level);
+    for (const k of this.urbanized) {
+      if (this.terrain.get(k) === 'grass') this.terrain.set(k, 'lot');
+    }
+  }
+
+  terrainAt(col, row) { return this.terrain.get(this.key(col, row)) || 'water'; }
+
   inBounds(col, row, fw = 1, fh = 1) {
     return col >= 0 && row >= 0 && col + fw <= this.cols && row + fh <= this.rows;
   }
 
-  isFree(col, row, fw = 1, fh = 1, ignoreUid = null) {
+  /**
+   * ¿Cabe aquí un edificio de fw×fh?
+   *
+   * `ignoreUid` existe para poder MOVER una pieza: al comprobar su nuevo
+   * sitio hay que ignorar las casillas que ella misma ocupa todavía, o
+   * cualquier movimiento que se solape con su posición actual se
+   * rechazaría por chocar consigo misma.
+   */
+  isFree(col, row, fw = 1, fh = 1, ignoreUid = null, allowed = LOT_ONLY) {
     if (!this.inBounds(col, row, fw, fh)) return false;
     for (let c = col; c < col + fw; c++) {
       for (let r = row; r < row + fh; r++) {
+        if (!allowed.has(this.terrainAt(c, r))) return false;
         const uid = this.occupied.get(this.key(c, r));
         if (uid != null && uid !== ignoreUid) return false;
       }
@@ -83,48 +122,66 @@ export class City {
     return true;
   }
 
-  /** Amplía la parcela cuando queda poco sitio: la ciudad nunca se atasca. */
-  ensureRoom() {
-    const free = this.cols * this.rows - this.occupied.size;
-    if (free > 12) return false;
-    this.cols += 3;
-    this.rows += 3;
+  /** Césped que se puede comprar para convertirlo en solar. */
+  canUrbanize(col, row) {
+    return this.terrainAt(col, row) === 'grass';
+  }
+
+  urbanize(col, row) {
+    if (!this.canUrbanize(col, row)) return false;
+    this.urbanized.add(this.key(col, row));
+    this.terrain.set(this.key(col, row), 'lot');
     return true;
   }
 
-  /** Cuadrante que le toca a una categoría. */
-  districtOrigin(category) {
-    const i = Math.max(0, DISTRICTS.indexOf(category));
-    const hc = Math.floor(this.cols / 2);
-    const hr = Math.floor(this.rows / 2);
-    return [{ c: 0, r: 0 }, { c: hc, r: 0 }, { c: 0, r: hr }, { c: hc, r: hr }][i];
+  /* ------------------------ REPARTO POR ESCALÓN -------------------- */
+
+  /**
+   * Fila que le toca a un escalón dentro de su manzana: los altos al
+   * fondo, los bajos al frente. Es lo que produce el skyline legible;
+   * rellenando por orden de llegada, la ciudad queda como un reguero de
+   * cajas sueltas donde no se distingue una torre de un trastero.
+   */
+  _wantedRowInBlock(tier) {
+    const t = Math.max(1, Math.min(5, tier || 1));
+    return Math.round((5 - t) / 4 * (BLOCK_H - 1));
   }
 
   /**
-   * Busca sitio para un edificio: primero en su barrio, luego donde quepa.
-   * Recorre en espiral desde el origen del cuadrante para que los barrios
-   * crezcan compactos en vez de dejar calvas.
+   * Busca el mejor solar libre. Se puntúa cada candidato en vez de
+   * recorrer en espiral: así entran a la vez el escalón, el barrio
+   * temático y la cercanía al centro, que es como se decide de verdad.
    */
-  findSpot(fw, fh, category) {
-    const o = this.districtOrigin(category);
-    const tryFrom = (sc, sr) => {
-      for (let d = 0; d < Math.max(this.cols, this.rows); d++) {
-        for (let c = sc; c <= sc + d && c < this.cols; c++) {
-          for (let r = sr; r <= sr + d && r < this.rows; r++) {
-            if ((c === sc + d || r === sr + d) && this.isFree(c, r, fw, fh)) {
-              return { col: c, row: r };
-            }
-          }
-        }
+  findSpot(fw, fh, category, tier = 1) {
+    const wanted = this._wantedRowInBlock(tier);
+    const catIndex = Math.max(0, DISTRICTS.indexOf(category));
+    let best = null, bestScore = -Infinity;
+
+    for (const b of this.layout.openBlocks(this.level)) {
+      const rows = b.cells.map(p => p.row);
+      const top = Math.min(...rows);
+      // cada categoría tira hacia una zona distinta de la isla
+      const affinity = (Math.abs(b.id.split(':')[0] - catIndex) % 3) === 0 ? 2 : 0;
+
+      for (const p of b.cells) {
+        if (!this.isFree(p.col, p.row, fw, fh)) continue;
+        const score = affinity
+          - Math.abs((p.row - top) - wanted) * 4   // el escalón manda
+          - b.d * 0.5                              // luego, hacia el centro
+          - p.col * 0.01;                          // desempate estable
+        if (score > bestScore) { bestScore = score; best = { col: p.col, row: p.row }; }
       }
-      return null;
-    };
-    let spot = tryFrom(o.c, o.r);
-    if (spot) return spot;
-    spot = tryFrom(0, 0);
-    if (spot) return spot;
-    this.ensureRoom();
-    return tryFrom(0, 0);
+    }
+    return best;
+  }
+
+  /** ¿Queda algún solar libre? Sirve para avisar antes de abrir la tienda. */
+  freeLots() {
+    let n = 0;
+    for (const b of this.layout.openBlocks(this.level)) {
+      for (const p of b.cells) if (this.isFree(p.col, p.row)) n++;
+    }
+    return n;
   }
 
   footprintOf(sprite) {
@@ -158,9 +215,12 @@ export class City {
    */
   add(spec, col = null, row = null) {
     const [fw, fh] = this.footprintOf(spec.sprite);
-    let spot = (col != null && this.isFree(col, row, fw, fh))
+    const allowed = spec.kind === 'scenery' ? GRASS_ONLY : LOT_ONLY;
+    const spot = (col != null && this.isFree(col, row, fw, fh, null, allowed))
       ? { col, row }
-      : this.findSpot(fw, fh, spec.category);
+      : (allowed === LOT_ONLY
+        ? this.findSpot(fw, fh, spec.category, spec.tier)
+        : null);
     if (!spot) return null;
 
     const now = Date.now();
@@ -168,6 +228,7 @@ export class City {
       uid: ++this._uid,
       kind: spec.kind || 'asset',
       sprite: spec.sprite,
+      category: spec.category || 'real_estate',   // lo necesita arrange()
       col: spot.col, row: spot.row, fw, fh,
       tier: spec.tier || 1,
       instanceId: spec.instanceId || null,
@@ -187,6 +248,48 @@ export class City {
     if (!plot) return;
     this._release(plot);
     this.plots.delete(uid);
+  }
+
+  /**
+   * Muda un edificio a otro solar. Ni la obra en curso ni el reloj de
+   * cobro se tocan: mudarse no debe castigarte, o nadie reordenaria nunca
+   * su ciudad y la funcion no serviria de nada.
+   * @returns {boolean} si cupo
+   */
+  move(uid, col, row) {
+    const plot = this.plots.get(uid);
+    if (!plot) return false;
+    if (!this.isFree(col, row, plot.fw, plot.fh, uid)) return false;
+    this._release(plot);
+    plot.col = col;
+    plot.row = row;
+    this._occupy(plot);
+    return true;
+  }
+
+  /**
+   * Realinea la ciudad entera: cada edificio a la fila que le toca por
+   * escalon dentro de su manzana. Ademas de arreglar el desorden de una
+   * racha de compras, es la forma de ensenar al jugador como DEBERIA
+   * verse su ciudad.
+   * @returns {number} cuantos se movieron
+   */
+  arrange() {
+    const movable = this.list()
+      .filter(p => p.kind !== 'scenery')
+      .sort((a, b) => (b.tier || 1) - (a.tier || 1) || b.fw * b.fh - a.fw * a.fh);
+
+    movable.forEach(p => this._release(p));
+    let moved = 0;
+    for (const p of movable) {
+      const spot = this.findSpot(p.fw, p.fh, p.category || 'real_estate', p.tier);
+      const to = spot || { col: p.col, row: p.row };
+      if (to.col !== p.col || to.row !== p.row) moved++;
+      p.col = to.col;
+      p.row = to.row;
+      this._occupy(p);
+    }
+    return moved;
   }
 
   list() { return [...this.plots.values()]; }
@@ -354,6 +457,9 @@ export class City {
       this.level++;
       up++;
     }
+    // subir de nivel urbaniza una manzana mas: crecer se VE, y se ve en
+    // direccion a la costa, que es la recompensa
+    if (up) this.refreshTerrain();
     return up;
   }
 
@@ -372,31 +478,34 @@ export class City {
     // el ayuntamiento ocupa dos y el hospital tres, así que con paso fijo
     // el banco no encontraba sitio y acababa desterrado al otro extremo
     // de la ciudad, lejos de los otros dos servicios.
-    let col = 1;
-    const row = this.rows - 3;
+    // Sin coordenadas fijas: la isla cambia con la semilla y unas casillas
+    // codificadas a mano acabarian en el agua. findSpot() ya sabe elegir.
     CIVIC.forEach(c => {
-      const [fw] = this.footprintOf(c.sprite);
-      const p = this.add({ kind: 'civic', civicId: c.id, sprite: c.sprite,
-        category: 'financial' }, col, row);
-      col += (p ? p.fw : fw);
+      this.add({ kind: 'civic', civicId: c.id, sprite: c.sprite,
+        category: 'financial', tier: 3 });
     });
-    // El trabajo, pegado a los servicios: la ciudad de partida tiene que
-    // caber de un vistazo en un movil, no repartirse por la parcela.
-    this.add({ kind: 'job', sprite: JOB_BUILDING.sprite, category: 'digital_business' },
-      1, this.rows - 5);
+    this.add({ kind: 'job', sprite: JOB_BUILDING.sprite,
+      category: 'digital_business', tier: 3 });
   }
 
   /** Siembra decoración en huecos, para que la ciudad no tenga calvas. */
   sprinkleScenery(n = 6) {
-    let placed = 0, guard = 200;
-    while (placed < n && guard-- > 0) {
-      const c = Math.floor(Math.random() * this.cols);
-      const r = Math.floor(Math.random() * this.rows);
-      if (!this.isFree(c, r, 1, 1)) continue;
+    const free = [];
+    for (const [k, t] of this.terrain) {
+      if (t !== 'grass') continue;
+      const [c, r] = k.split(',').map(Number);
+      if (this.occupied.has(k)) continue;
+      free.push({ col: c, row: r });
+    }
+    let placed = 0;
+    while (placed < n && free.length) {
+      const i = Math.floor(Math.random() * free.length);
+      const { col, row } = free.splice(i, 1)[0];
       const sprite = SCENERY[Math.floor(Math.random() * SCENERY.length)];
       if (!this.atlas[sprite]) continue;
-      this.add({ kind: 'scenery', sprite, category: 'real_estate' }, c, r);
-      placed++;
+      if (this.add({ kind: 'scenery', sprite, category: 'real_estate' }, col, row)) {
+        placed++;
+      }
     }
     return placed;
   }
@@ -405,20 +514,21 @@ export class City {
 
   toJSON() {
     return {
-      cols: this.cols, rows: this.rows, uid: this._uid,
+      seed: this.layout.seed, uid: this._uid,
       materials: this.materials, level: this.level, xp: this.xp,
+      urbanized: [...this.urbanized],
       plots: this.list(),
     };
   }
 
   load(data) {
     if (!data) return;
-    this.cols = data.cols ?? this.cols;
-    this.rows = data.rows ?? this.rows;
     this._uid = data.uid ?? 0;
     this.materials = data.materials ?? 20;
     this.level = data.level ?? 1;
     this.xp = data.xp ?? 0;
+    this.urbanized = new Set(data.urbanized || []);
+    this.refreshTerrain();
     this.plots.clear();
     this.occupied.clear();
     (data.plots || []).forEach(p => {

@@ -25,6 +25,7 @@
 
 import Phaser from '../../vendor/phaser.js';
 import { CameraControl } from './CameraControl.js';
+import { TerrainLayer } from './TerrainLayer.js';
 import { fmtDuration } from '../game/Clock.js';
 import { MATERIAL_PLANTS, CIVIC } from '../game/rules.js';
 
@@ -33,9 +34,8 @@ import { MATERIAL_PLANTS, CIVIC } from '../game/rules.js';
  *  cuatro veces por segundo va sobrado, y ahorra batería. */
 const OVERLAY_MS = 250;
 
-const GRASS = 0x7fa86e;
-const GRASS_DARK = 0x6d9760;
-const GRID_LINE = 0x000000;
+/** Cuanto hay que mantener pulsado un edificio para levantarlo. */
+const HOLD_MS = 420;
 
 export class CityScene extends Phaser.Scene {
   constructor() {
@@ -48,6 +48,7 @@ export class CityScene extends Phaser.Scene {
     this.onTapPlot = data.onTapPlot || (() => {});
     this.onTapEmpty = data.onTapEmpty || (() => {});
     this.onReady = data.onReady || (() => {});
+    this.onHoldPlot = data.onHoldPlot || (() => {});
   }
 
   /* ============================= CARGA ============================= */
@@ -70,14 +71,14 @@ export class CityScene extends Phaser.Scene {
     this.registerFrames();
     this.makeBubbleTexture();
 
-    this.cameras.main.setBackgroundColor('#6f9a63');
-    this.ground = this.add.graphics().setDepth(-1000);
-    this.drawGround();
+    // El azul de fuera del mapa: el mar sigue mas alla de la isla.
+    this.cameras.main.setBackgroundColor('#1a4f6b');
+    this.terrain = new TerrainLayer(this, this.city);
 
     this.cam = new CameraControl(this);
     this.events.on('city-tap', this.handleTap, this);
 
-    this.scale.on('resize', () => this.drawGround());
+    this.scale.on('resize', () => this.terrain.redraw());
     this.syncViews();
     this.lookAtCity();
     this.onReady(this);
@@ -151,23 +152,6 @@ export class CityScene extends Phaser.Scene {
     return { col: Math.round((a + b) / 2), row: Math.round((b - a) / 2) };
   }
 
-  drawGround() {
-    const g = this.ground;
-    g.clear();
-    for (let r = 0; r < this.city.rows; r++) {
-      for (let c = 0; c < this.city.cols; c++) {
-        const { x, y } = this.isoXY(c, r);
-        const hw = this.TW / 2, hh = this.TH / 2;
-        g.fillStyle((c + r) % 2 ? GRASS : GRASS_DARK, 1);
-        g.beginPath();
-        g.moveTo(x, y - hh); g.lineTo(x + hw, y);
-        g.lineTo(x, y + hh); g.lineTo(x - hw, y);
-        g.closePath(); g.fillPath();
-        g.lineStyle(1, GRID_LINE, 0.05); g.strokePath();
-      }
-    }
-  }
-
   /* ============================ PARCELAS =========================== */
 
   /** Punto del mundo donde se posa una parcela, y su profundidad. */
@@ -189,7 +173,20 @@ export class CityScene extends Phaser.Scene {
     img.setOrigin(s.anchor[0] / w, s.anchor[1] / h);
     img.setDepth(depth);
     img.setInteractive({ pixelPerfect: true });
-    img.on('pointerdown', () => { this._hitUid = plot.uid; });
+    img.on('pointerdown', (pointer) => {
+      this._hitUid = plot.uid;
+      // Mantener pulsado levanta el edificio. El toque corto ya esta
+      // cogido por cobrar, que es el gesto mil veces mas frecuente.
+      clearTimeout(this._holdT);
+      this._holdT = setTimeout(() => {
+        if (!pointer.isDown || this.placing || this.cam.busy) return;
+        if (plot.kind === 'civic' || plot.kind === 'job') return;
+        this._hitUid = null;
+        this.onHoldPlot(plot);
+      }, HOLD_MS);
+    });
+    img.on('pointerup', () => clearTimeout(this._holdT));
+    img.on('pointerout', () => clearTimeout(this._holdT));
 
     const view = { img, bubble: null, bar: null, label: null };
     this.views.set(plot.uid, view);
@@ -207,6 +204,13 @@ export class CityScene extends Phaser.Scene {
         this.views.delete(uid);
       }
     }
+    // El suelo distingue el solar libre del ocupado, asi que cualquier
+    // alta o baja obliga a repintarlo.
+    const stamp = this.city.occupied.size + ':' + this.city.plots.size;
+    if (stamp !== this._occStamp) {
+      this._occStamp = stamp;
+      this.terrain.redraw();
+    }
   }
 
   destroyView(v) {
@@ -215,6 +219,9 @@ export class CityScene extends Phaser.Scene {
     if (v.bar) v.bar.destroy();
     if (v.label) v.label.destroy();
   }
+
+  /** Repinta el suelo: se abrio una manzana o se urbanizo cesped. */
+  refreshTerrain() { this.terrain.redraw(); }
 
   /** Fuerza a redibujar una parcela (tras mejorarla, por ejemplo). */
   refresh(uid) {
@@ -304,7 +311,7 @@ export class CityScene extends Phaser.Scene {
    * o de rojo. Es el único momento en que la rejilla se hace visible, que
    * es justo cuando importa.
    */
-  beginPlacement(sprite, onConfirm, onCancel) {
+  beginPlacement(sprite, onConfirm, onCancel, opts = {}) {
     this.cancelPlacement();
     const s = this.atlas.sprites[sprite];
     if (!s) return false;
@@ -315,7 +322,9 @@ export class CityScene extends Phaser.Scene {
     img.setAlpha(0.75).setDepth(99000);
     const mark = this.add.graphics().setDepth(98999);
 
-    this.placing = { sprite, img, mark, onConfirm, onCancel, fw: s.footprint[0], fh: s.footprint[1], cell: null };
+    this.placing = { sprite, img, mark, onConfirm, onCancel,
+      fw: s.footprint[0], fh: s.footprint[1], cell: null,
+      ignoreUid: opts.ignoreUid ?? null };
     this.input.on('pointermove', this.moveGhost, this);
     // Se coloca de entrada en el centro de la vista, para que en un móvil
     // se vea el fantasma aunque el dedo aún no haya tocado la pantalla.
@@ -337,7 +346,7 @@ export class CityScene extends Phaser.Scene {
     const col = Phaser.Math.Clamp(cell.col, 0, this.city.cols - p.fw);
     const row = Phaser.Math.Clamp(cell.row, 0, this.city.rows - p.fh);
     p.cell = { col, row };
-    p.ok = this.city.isFree(col, row, p.fw, p.fh);
+    p.ok = this.city.isFree(col, row, p.fw, p.fh, p.ignoreUid);
 
     const cc = col + (p.fw - 1) / 2, cr = row + (p.fh - 1) / 2;
     const { x, y } = this.isoXY(cc, cr);
@@ -431,6 +440,7 @@ export class CityScene extends Phaser.Scene {
 
   update(time) {
     this.cam.update();
+    this.terrain.update(time);
     if (time - this._overlayAt > OVERLAY_MS) {
       this._overlayAt = time;
       this.syncViews();

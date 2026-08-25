@@ -6,7 +6,7 @@
    "tier": 3
   },
   "re_flat_02": {
-   "sprite": "highlivingbuilding_d",
+   "sprite": "highlivingbuilding_c",
    "tier": 4
   },
   "re_local_03": {
@@ -82,7 +82,7 @@
    "tier": 4
   },
   "med_clinica_21": {
-   "sprite": "highlivingbuilding_a",
+   "sprite": "highlivingbuilding_c",
    "tier": 4
   },
   "tech_saas_22": {

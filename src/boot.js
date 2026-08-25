@@ -23,6 +23,7 @@ import { Clock, fmtDuration } from './game/Clock.js';
 import { CityScene } from './scenes/CityScene.js';
 import { Ui, money, short, onClick } from './ui/Ui.js';
 import { tierRules, MATERIAL_PLANTS, CIVIC, buildersAt } from './game/rules.js';
+import { URBANIZE_COST, URBANIZE_MATERIALS } from './game/City.js';
 
 const SAVE_KEY = 'freedomcash.city.v1';
 const $ = (s) => document.querySelector(s);
@@ -157,8 +158,12 @@ function buildEngine(profile, mode, professionId) {
 
 function startGame(profile, mode, professionId) {
   engine = buildEngine(profile, mode, professionId);
-  city = new City(engine, DATA.models, DATA.atlas);
-  city.sprinkleScenery(10);
+  // Cada partida, su isla. La semilla se guarda y no vuelve a tocarse:
+  // el contorno tiene que ser el mismo mañana o un edificio ya construido
+  // podría amanecer en el agua.
+  const seed = (Math.random() * 0xffffffff) >>> 0 || 1;
+  city = new City(engine, DATA.models, DATA.atlas, seed);
+  city.sprinkleScenery(24);
   clock = new Clock(runPeriod);
   launch();
 }
@@ -170,7 +175,7 @@ function resumeGame(save) {
   engine.setTaxData(DATA.tax);
   engine.setInsuranceData(DATA.insurance);
   engine.setContractData(DATA.contracts);
-  city = new City(engine, DATA.models, DATA.atlas);
+  city = new City(engine, DATA.models, DATA.atlas, save.city.seed || 1);
   city.load(save.city);
   clock = new Clock(runPeriod);
   clock.load(save.clock);
@@ -199,7 +204,8 @@ function launch(resumed = false) {
   game.scene.add('city', CityScene, true, {
     city, atlas: DATA.atlas,
     onTapPlot: showPlot,
-    onTapEmpty: () => ui.close(),
+    onTapEmpty: tapEmpty,
+    onHoldPlot: startMove,
     onReady: (s) => { scene = s; window.FC.scene = s; sceneReady(resumed); },
   });
 
@@ -445,11 +451,60 @@ function beginPlant(plantId) {
   });
 }
 
+/* ========================= MOVER Y DESPEJAR ======================== */
+
+/**
+ * Levantar un edificio y volver a posarlo. Se apoya en el `ignoreUid` de
+ * City.isFree(), que existia sin usarse: sin el, mover una pieza a un
+ * sitio que se solape con donde ya esta se rechaza por chocar consigo
+ * misma, y moverla una casilla al lado seria imposible.
+ */
+function startMove(plot) {
+  ui.close();
+  ui.toast('Elige el nuevo solar');
+  scene.beginPlacement(plot.sprite, (col, row) => {
+    if (city.move(plot.uid, col, row)) {
+      scene.refresh(plot.uid);
+      scene.syncViews();
+      save();
+    }
+  }, null, { ignoreUid: plot.uid });
+}
+
+/** Toque en el suelo: si es cesped, se puede comprar para urbanizarlo. */
+function tapEmpty(cell) {
+  ui.close();
+  if (!city.canUrbanize(cell.col, cell.row)) return;
+  const puede = engine.cash >= URBANIZE_COST && city.materials >= URBANIZE_MATERIALS;
+  const body = ui.open('Urbanizar', `<div class="detail">
+    <div class="stats">
+      ${ui.stat('Coste', money(URBANIZE_COST), engine.cash >= URBANIZE_COST ? '' : 'r')}
+      ${ui.stat('Materiales', URBANIZE_MATERIALS + ' &#129521;',
+    city.materials >= URBANIZE_MATERIALS ? '' : 'r')}
+    </div>
+    <p style="color:var(--dim);font-size:13px;margin:0">
+      Convierte esta parcela de campo en solar edificable. El suelo tambien
+      es una inversion: cuesta dinero hoy y solo renta si construyes encima.</p>
+    <div class="acts">
+      <button class="btn" data-urb="1" ${puede ? '' : 'disabled'}>
+        ${puede ? 'Urbanizar' : 'No te llega'}</button>
+    </div></div>`);
+  onClick(body, '[data-urb]', () => {
+    if (!puede) return;
+    engine.cash -= URBANIZE_COST;
+    city.spendMaterials(URBANIZE_MATERIALS);
+    city.urbanize(cell.col, cell.row);
+    scene.refreshTerrain();
+    ui.close(); renderHud(); save();
+    ui.toast('Solar listo para construir', 'good');
+  });
+}
+
 /* ============================== FICHA ============================== */
 
 function showPlot(plot) {
   if (plot.kind === 'civic') return showCivic(plot.civicId);
-  if (plot.kind === 'scenery') return;
+  if (plot.kind === 'scenery') return showScenery(plot);
 
   const got = city.pending(plot);
   // Un toque sobre algo que ya tiene dinero dentro lo cobra directamente:
@@ -499,6 +554,26 @@ function showPlot(plot) {
     city.remove(plot.uid);
     scene.syncViews();
     ui.close(); renderHud(); save();
+  });
+}
+
+/**
+ * Ficha de la naturaleza. Antes un toque sobre un arbol no hacia nada, asi
+ * que no habia forma de recuperar el sitio que ocupaba.
+ */
+function showScenery(plot) {
+  const body = ui.open('Naturaleza', `<div class="detail">
+    <div class="hero">${ui.thumb(plot.sprite, 88)}
+      <div><h3>Zona verde</h3>
+      <p>Despejarla libera la casilla. Podras urbanizarla despues.</p></div></div>
+    <div class="acts">
+      <button class="btn ghost" data-clear="${plot.uid}">Despejar</button>
+    </div></div>`);
+  onClick(body, '[data-clear]', () => {
+    city.remove(plot.uid);
+    scene.syncViews();
+    ui.close(); save();
+    ui.toast('Zona despejada', 'good');
   });
 }
 
@@ -629,11 +704,19 @@ function showFreedom() {
 function showMenu() {
   ui.open('Más', `<div class="detail"><div class="acts">
     <button class="btn ghost" data-act="collect">Cobrar todo</button>
+    <button class="btn ghost" data-act="arrange">Ordenar la ciudad</button>
     <button class="btn ghost" data-act="scenery">Sembrar verde</button>
     <button class="btn danger" data-act="reset">Empezar otra ciudad</button>
   </div></div>`);
   onClick(ui.body, '[data-act]', (b) => {
     if (b.dataset.act === 'collect') { ui.close(); collectAll(); }
+    if (b.dataset.act === 'arrange') {
+      const n = city.arrange();
+      scene.syncViews();
+      [...city.plots.keys()].forEach(uid => scene.refresh(uid));
+      ui.close(); save();
+      ui.toast(n ? `${n} edificios realineados` : 'Ya estaba ordenada', 'good');
+    }
     if (b.dataset.act === 'scenery') { city.sprinkleScenery(6); scene.syncViews(); ui.close(); }
     if (b.dataset.act === 'reset') resetGame();
   });
