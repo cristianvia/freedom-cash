@@ -1,0 +1,113 @@
+{
+  "$schema_note": "Fichas de la Escuela. `when` es la clave de una condición evaluada en src/ui/School.js contra el estado real de la partida. El orden es el de lectura recomendada.",
+  "cards": [
+    {
+      "id": "activo_pasivo",
+      "icon": "⚖️",
+      "title": "Activo y pasivo",
+      "when": "always",
+      "lead": "Un activo mete dinero en tu bolsillo. Un pasivo lo saca.",
+      "body": [
+        "No lo decide lo que es la cosa, sino hacia dónde va el dinero cada mes. Un piso alquilado con la hipoteca cubierta es un activo. Ese mismo piso vacío, pagando hipoteca y comunidad, es un pasivo.",
+        "Por eso el coche del juego no es una inversión: es un pasivo con ruedas que te sube los gastos fijos todos los meses.",
+        "La pregunta útil ante cualquier compra no es «¿cuánto vale?» sino «¿esto me va a pagar a mí o voy a pagarle yo?»."
+      ]
+    },
+    {
+      "id": "deuda_verde_roja",
+      "icon": "🚦",
+      "title": "Deuda verde y deuda roja",
+      "when": "hasMortgage",
+      "lead": "Hay deuda que se paga sola y deuda que te ahoga.",
+      "body": [
+        "La deuda VERDE compra algo que genera renta, y esa renta paga la cuota. La hipoteca de un local alquilado es verde: el inquilino la paga.",
+        "La deuda ROJA compra algo que no produce nada. Un préstamo al consumo es rojo: la cuota sale íntegra de tu bolsillo, mes tras mes, y no hay nada al otro lado que la compense.",
+        "En el Banco tienes las dos separadas a propósito. Mira siempre la roja antes de pedir nada más: es la que decide si un mal mes te hunde."
+      ]
+    },
+    {
+      "id": "apalancamiento",
+      "icon": "🏗️",
+      "title": "Apalancamiento",
+      "when": "hasLeveraged",
+      "lead": "Con la entrada compras el activo entero. Y la subida entera es tuya.",
+      "body": [
+        "Si pones 30.000 € de entrada en un piso de 120.000 € y el piso sube un 10 %, ganas 12.000 €: un 40 % sobre lo que pusiste. El banco puso el resto y solo cobra sus intereses.",
+        "Esa es toda la magia, y funciona igual de bien al revés. Si el piso baja un 10 %, pierdes 12.000 € sobre 30.000 puestos. El apalancamiento no crea rentabilidad: multiplica la que haya, en los dos sentidos.",
+        "Por eso importa el ciclo económico. Firmar en recesión y vender en euforia es apalancamiento a tu favor; al revés es cómo se arruina la gente."
+      ]
+    },
+    {
+      "id": "colchon",
+      "icon": "🛟",
+      "title": "El colchón",
+      "when": "thinCushion",
+      "lead": "Seis meses de gastos en caja. No es ahorro: es lo que te deja decidir.",
+      "body": [
+        "Sin colchón, cualquier imprevisto —una derrama, un inquilino que se va, un mes de baja— te obliga a vender algo con prisa. Y vender con prisa siempre es vender barato.",
+        "El colchón no renta nada, y eso lo hace difícil de mantener: siempre parece que ese dinero estaría mejor invertido. Lo que compra no es rentabilidad, es que nunca tengas que aceptar un mal precio.",
+        "El juego te pide seis meses porque es lo que aguanta un año malo sin desmontar la cartera."
+      ]
+    },
+    {
+      "id": "inflacion",
+      "icon": "📈",
+      "title": "Inflación",
+      "when": "inflationBiting",
+      "lead": "Quedarte quieto es perder terreno.",
+      "body": [
+        "Tus gastos suben solos, mes a mes, sin que hagas nada. Si tus rentas no suben al menos igual, cada año eres un poco menos libre aunque el número de tu cuenta no baje.",
+        "Por eso los activos indexados al IPC —alquileres, sobre todo— valen más de lo que parece: su renta sube con la vida. Un negocio con precio cerrado no lo hace.",
+        "Y por eso el dinero parado en caja pierde valor todos los meses. El colchón es necesario; el exceso de colchón, caro."
+      ]
+    },
+    {
+      "id": "vacantes",
+      "icon": "🚪",
+      "title": "Vacantes y riesgo",
+      "when": "hasVacancy",
+      "lead": "La renta que te prometen es una media, no una promesa.",
+      "body": [
+        "Un activo puede quedarse vacío, un negocio puede tener un mal mes, un inquilino puede no pagar. Cuando compras miras una horquilla de resultados, no un número.",
+        "Lo importante no es evitar las vacantes —no se puede— sino que una vacante no te descoloque el mes. Eso se consigue con colchón y con varios activos, no con suerte.",
+        "Los seguros hacen justo esto: no te dan rentabilidad, te recortan la cola de pérdidas. Y como su cuota entra en tus gastos fijos, protegerte SUBE tu listón de libertad. Ese es el dilema de verdad."
+      ]
+    },
+    {
+      "id": "diversificar",
+      "icon": "🧺",
+      "title": "Diversificar",
+      "when": "concentrated",
+      "lead": "Si casi toda tu renta viene de un sitio, no tienes cartera: tienes una apuesta.",
+      "body": [
+        "Los inmuebles, los negocios y lo financiero no se mueven a la vez. Cuando el ladrillo se para, la bolsa puede tirar; cuando la bolsa cae, el alquiler sigue entrando.",
+        "Concentrarse renta más cuando aciertas. El problema es que un solo golpe en la categoría equivocada te lleva por delante la mitad del cashflow, y con él la posibilidad de aguantar.",
+        "En la ciudad se ve a simple vista: si un barrio está lleno y los otros dos vacíos, ya sabes por dónde te va a llegar el susto."
+      ]
+    },
+    {
+      "id": "estructura",
+      "icon": "🏛️",
+      "title": "Cuándo compensa una sociedad",
+      "when": "richPassive",
+      "lead": "No es un truco: cambias una escala que llega al 47 % por un tipo fijo del 25 %.",
+      "body": [
+        "Como persona física tributas por IRPF, y los alquileres y los negocios van a la base general, que sube por tramos hasta el 47 %. Una sociedad tributa al 25 % fijo.",
+        "A cambio, la sociedad tiene costes que no desaparecen: gestoría, asesor, cuentas. Con renta baja esos costes se comen el ahorro y sales perdiendo.",
+        "Por eso la pregunta no es «¿monto una SL?» sino «¿mi renta pasiva ya es lo bastante alta y estable como para que el 25 % fijo compense la gestoría?». El Ayuntamiento te enseña las dos cifras juntas."
+      ]
+    },
+    {
+      "id": "libertad",
+      "icon": "🎯",
+      "title": "Qué es exactamente ser libre",
+      "when": "always",
+      "lead": "Que tus rentas cubran el 120 % de tus gastos, con seis meses en caja.",
+      "body": [
+        "El 100 % sería justo empatar, y empatar es frágil: cualquier subida de precios te devuelve a depender del sueldo. El 20 % de más es el margen que convierte el empate en decisión.",
+        "Fíjate en que la meta tiene dos partes. Las rentas dicen que puedes vivir sin trabajar; el colchón dice que puedes seguir haciéndolo cuando algo salga mal.",
+        "Y que el listón sube con el nivel de la ciudad, igual que en la vida: cuanto más ganas, más gastas si no lo vigilas."
+      ]
+    }
+  ]
+}

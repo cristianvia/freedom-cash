@@ -285,3 +285,76 @@ html, body {
   #sheet { left: 50%; transform: translateX(-50%); width: min(720px, 100vw); border-radius: 20px 20px 0 0; }
   .cards { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
 }
+
+/* ============================= GUIADO ============================= */
+/* El recorrido del principio. Un paso con condición NO lleva botón de
+   siguiente: si lo llevara, se pulsaría sin hacer nada y el tutorial
+   volvería a ser un folleto. */
+
+#guide { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+
+/* El agujero se hace con una sombra enorme alrededor, no con cuatro
+   divs: así el borde del foco es uno solo y se anima sin costuras. */
+.gd-spot {
+  position: fixed; border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgba(6, 9, 15, .74);
+  border: 2px solid var(--gold);
+  transition: left .25s, top .25s, width .25s, height .25s, opacity .2s;
+  opacity: 0;
+}
+/* Sin objetivo, la pantalla se oscurece entera igual. */
+#guide:has(.gd-spot[style*="opacity: 0"]) .gd-card { box-shadow: 0 0 0 9999px rgba(6, 9, 15, .74); }
+
+.gd-card {
+  position: fixed; z-index: 61; pointer-events: auto;
+  left: 12px; right: 12px; top: calc(var(--safe-t) + 96px);
+  max-width: 520px; margin: 0 auto;
+  padding: 16px 18px 14px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .5);
+}
+.gd-card.bottom { top: auto; bottom: calc(var(--safe-b) + 86px); }
+.gd-step { font-size: 11px; color: var(--gold); letter-spacing: .04em; text-transform: uppercase; }
+.gd-card h3 { margin: 6px 0 6px; font-size: 17px; }
+.gd-card p { margin: 0; font-size: 14px; color: var(--dim); line-height: 1.5; }
+.gd-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.gd-skip {
+  min-height: 38px; padding: 8px 14px;
+  background: transparent; color: var(--dim);
+  border: 1px solid var(--line); border-radius: 10px;
+  font: inherit; font-size: 13px; cursor: pointer;
+}
+.gd-next {
+  min-height: 38px; padding: 8px 20px;
+  background: var(--blue); color: #05202e; border: 0; border-radius: 10px;
+  font: 600 13px/1 system-ui, sans-serif; cursor: pointer;
+}
+/* Cuando el paso espera una acción, se avisa con un latido en el foco. */
+#guide.gated .gd-spot { animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse {
+  0%, 100% { border-color: var(--gold); }
+  50% { border-color: rgba(251, 191, 36, .35); }
+}
+
+/* ============================= ESCUELA ============================ */
+
+.sc-item {
+  display: flex; align-items: center; gap: 12px;
+  text-align: left; padding: 12px 14px; position: relative;
+}
+.sc-item .sc-ic { font-size: 22px; flex: 0 0 auto; }
+.sc-item .sc-tx { flex: 1; line-height: 1.35; }
+.sc-item .sc-tx small { color: var(--dim); font-weight: 400; }
+.sc-item.locked { opacity: .45; }
+.sc-dot {
+  position: absolute; top: 12px; right: 12px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--gold);
+}
+.sc-read p { font-size: 14px; line-height: 1.6; color: var(--dim); margin: 0 0 4px; }
+.sc-read .sc-lead {
+  color: var(--txt); font-size: 15px; font-weight: 600;
+  padding-bottom: 10px; margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}

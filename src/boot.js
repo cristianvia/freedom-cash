@@ -24,12 +24,15 @@ import { CityScene } from './scenes/CityScene.js';
 import { Ui, money, short, onClick } from './ui/Ui.js';
 import { tierRules, MATERIAL_PLANTS, CIVIC, buildersAt } from './game/rules.js';
 import { URBANIZE_COST, URBANIZE_MATERIALS } from './game/City.js';
+import { bus } from './game/Bus.js';
+import { Guide } from './ui/Guide.js';
+import { School } from './ui/School.js';
 
 const SAVE_KEY = 'freedomcash.city.v1';
 const $ = (s) => document.querySelector(s);
 
 const DATA = {};
-let engine, city, clock, scene, game, ui, models;
+let engine, city, clock, scene, game, ui, models, school, guide;
 
 /* ============================== CARGA ============================== */
 
@@ -37,7 +40,7 @@ const loadJSON = (p) => fetch(p, { cache: 'no-cache' }).then(r => r.json());
 
 async function loadAll() {
   const files = ['assets_database', 'profiles', 'events', 'difficulty',
-    'professions', 'tax', 'insurance', 'contracts', 'models'];
+    'professions', 'tax', 'insurance', 'contracts', 'models', 'school'];
   const [atlas, ...rest] = await Promise.all([
     loadJSON('assets/atlas/sprites.json'),
     ...files.map(f => loadJSON(`src/data/${f}.json`)),
@@ -64,6 +67,7 @@ function tierOf(asset) { return modelOf(asset.baseId || asset.id).tier; }
 async function main() {
   await loadAll();
   ui = new Ui(DATA.atlas);
+  school = new School(DATA.school, ui);
   wireDock();
 
   const save = loadSave();
@@ -220,6 +224,11 @@ function sceneReady(resumed) {
   const missed = clock.catchUp();
   if (resumed && missed.length) reportOffline(missed);
 
+  checkSchool();
+  if (!resumed && !Guide.done) {
+    guide = new Guide({ bus, city, scene, ui }, () => { guide = null; });
+  }
+
   setInterval(tick, 1000);
   setInterval(save, 15000);
   window.addEventListener('beforeunload', save);
@@ -242,12 +251,22 @@ function runPeriod() {
 function tick() {
   clock.catchUp();
   const done = city.tickBuilds();
+  const before = city.level;
   done.forEach(p => {
     scene.refresh(p.uid);
     scene.popBuilt(p);
     city.addXp(4 * p.tier);
+    bus.emit('build:done', { plot: p });
   });
-  if (done.length) ui.toast(done.length === 1 ? 'Obra terminada' : `${done.length} obras terminadas`, 'good');
+  if (done.length) {
+    ui.toast(done.length === 1 ? 'Obra terminada' : `${done.length} obras terminadas`, 'good');
+  }
+  if (city.level > before) {
+    scene.refreshTerrain();
+    bus.emit('level:up', { level: city.level });
+    ui.toast(`Nivel ${city.level}. Se abre una manzana nueva.`, 'good');
+  }
+  checkSchool();
   renderHud();
 }
 
@@ -255,6 +274,32 @@ function reportOffline(snaps) {
   const got = city.list().reduce((s, p) => s + city.pending(p).cash, 0);
   ui.toast(`Han pasado ${snaps.length} ${snaps.length === 1 ? 'mes' : 'meses'}` +
     (got > 0 ? ` · ${money(got)} esperándote` : ''), 'good');
+}
+
+/* ============================= ESCUELA ============================= */
+
+/**
+ * Una ficha se abre cuando el concepto acaba de pasarte por encima: la
+ * del colchon cuando el tuyo baja de tres meses, la del apalancamiento
+ * cuando tu primer activo hipotecado se revaloriza. En ese momento se
+ * lee; la misma ficha en un menu de ayuda, no.
+ */
+function checkSchool() {
+  const fresh = school.check({ engine, city });
+  if (fresh.length && !ui.isOpen) {
+    ui.toast(`Nueva ficha en la Escuela: ${fresh[0].title}`, 'good');
+  }
+}
+
+function showSchool() {
+  const body = school.list();
+  onClick(body, '[data-card]', (b) => openCard(b.dataset.card));
+}
+
+function openCard(id) {
+  const body = school.card(id);
+  if (body) onClick(body, '[data-back]', () => showSchool());
+  renderHud();
 }
 
 /* =============================== HUD =============================== */
@@ -279,6 +324,7 @@ function renderHud() {
   badge('#dk-collect', ready);
   $('#dk-collect').classList.toggle('hot', ready > 0);
   badge('#dk-builders', city.building().length);
+  badge('#dk-menu', school ? school.unread : 0);
 }
 
 function badge(sel, n) {
@@ -303,6 +349,7 @@ function collectAll() {
   if (got.cash) ui.toast(`+${money(got.cash)}`, 'good');
   else if (got.materials) ui.toast(`+${got.materials} 🧱`, 'good');
   renderHud();
+  bus.emit('collect', { plot: null, ...got });
 }
 
 /* ============================== TIENDA ============================= */
@@ -320,6 +367,7 @@ function catalogFor() {
 }
 
 function showShop() {
+  bus.emit('shop:open');
   const plants = MATERIAL_PLANTS.filter(p => p.minLevel <= city.level);
   const body = ui.open('Construir', `
     <div class="cards" id="shop-plants">${plants.map(plantCard).join('')}</div>
@@ -429,6 +477,7 @@ function beginAsset(asset, financing) {
     if (plot) res.instance.cell = { col: plot.col, row: plot.row };
     scene.syncViews();
     renderHud();
+    bus.emit('build:placed', { plot });
     save();
   });
 }
@@ -443,10 +492,11 @@ function beginPlant(plantId) {
   ui.toast('Elige dónde va y toca para confirmar');
   scene.beginPlacement(p.sprite, (col, row) => {
     engine.cash -= p.cost;
-    city.add({ kind: 'plant', plantId: p.id, sprite: p.sprite,
+    const plot = city.add({ kind: 'plant', plantId: p.id, sprite: p.sprite,
       category: 'digital_business', buildMs: p.buildMs }, col, row);
     scene.syncViews();
     renderHud();
+    bus.emit('build:placed', { plot });
     save();
   });
 }
@@ -515,6 +565,7 @@ function showPlot(plot) {
     if (g.cash) scene.popCollect(plot, '+' + money(g.cash));
     if (g.materials) scene.popCollect(plot, '+' + g.materials + ' 🧱', 'mat');
     renderHud();
+    bus.emit('collect', { plot, ...g });
     return;
   }
 
@@ -587,6 +638,7 @@ function showScenery(plot) {
 function showCivic(id) {
   const def = CIVIC.find(c => c.id === id);
   if (!def) return;
+  bus.emit('advisor:open', { id });
   if (id === 'bank') return showBank(def);
   if (id === 'insurer') return showInsurance(def);
   return showTax(def);
@@ -685,6 +737,7 @@ function showBuilders() {
 }
 
 function showFreedom() {
+  bus.emit('ie:open');
   const ie = engine.emancipationIndex();
   ui.open('Camino a la libertad', `<div class="detail">
     <div class="stats">
@@ -703,12 +756,15 @@ function showFreedom() {
 
 function showMenu() {
   ui.open('Más', `<div class="detail"><div class="acts">
+    <button class="btn" data-act="school">🎓 La Escuela${
+  school.unread ? ` · ${school.unread} sin leer` : ''}</button>
     <button class="btn ghost" data-act="collect">Cobrar todo</button>
     <button class="btn ghost" data-act="arrange">Ordenar la ciudad</button>
     <button class="btn ghost" data-act="scenery">Sembrar verde</button>
     <button class="btn danger" data-act="reset">Empezar otra ciudad</button>
   </div></div>`);
   onClick(ui.body, '[data-act]', (b) => {
+    if (b.dataset.act === 'school') return showSchool();
     if (b.dataset.act === 'collect') { ui.close(); collectAll(); }
     if (b.dataset.act === 'arrange') {
       const n = city.arrange();
@@ -735,6 +791,7 @@ let stopSaving = false;
 function resetGame() {
   stopSaving = true;
   localStorage.removeItem(SAVE_KEY);
+  Guide.reset();
   location.reload();
 }
 
