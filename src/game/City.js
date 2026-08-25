@@ -480,12 +480,24 @@ export class City {
     // de la ciudad, lejos de los otros dos servicios.
     // Sin coordenadas fijas: la isla cambia con la semilla y unas casillas
     // codificadas a mano acabarian en el agua. findSpot() ya sabe elegir.
+    // Escalon 5 para que vayan a la fila del FONDO. Con escalon 3 caian en
+    // la fila central, que es justo la que necesita cualquier edificio de
+    // dos casillas de fondo: ninguno cabia en la manzana de partida.
+    const puestos = [];
     CIVIC.forEach(c => {
-      this.add({ kind: 'civic', civicId: c.id, sprite: c.sprite,
-        category: 'financial', tier: 3 });
+      const p = this.add({ kind: 'civic', civicId: c.id, sprite: c.sprite,
+        category: 'financial', tier: 5 });
+      if (p) puestos.push(c.id);
     });
-    this.add({ kind: 'job', sprite: JOB_BUILDING.sprite,
-      category: 'digital_business', tier: 3 });
+    const job = this.add({ kind: 'job', sprite: JOB_BUILDING.sprite,
+      category: 'digital_business', tier: 5 });
+
+    // Si alguno se queda fuera, el jugador pierde el acceso a esa mecanica
+    // entera sin que nada se lo diga. Mejor enterarse aqui.
+    if (puestos.length < CIVIC.length || !job) {
+      console.warn('[city] no caben todos los edificios de servicio:',
+        puestos, 'trabajo:', !!job);
+    }
   }
 
   /** Siembra decoración en huecos, para que la ciudad no tenga calvas. */

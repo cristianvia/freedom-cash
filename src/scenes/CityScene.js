@@ -326,11 +326,26 @@ export class CityScene extends Phaser.Scene {
       fw: s.footprint[0], fh: s.footprint[1], cell: null,
       ignoreUid: opts.ignoreUid ?? null };
     this.input.on('pointermove', this.moveGhost, this);
-    // Se coloca de entrada en el centro de la vista, para que en un móvil
-    // se vea el fantasma aunque el dedo aún no haya tocado la pantalla.
+
+    /*
+     * Arranca sobre un solar VALIDO, no sobre el centro de la vista.
+     * Poniendolo en el centro a secas, lo normal es que caiga en cesped o
+     * en el mar: el fantasma sale en rojo y quien toque confirmar sin
+     * moverlo no construye nada y no entiende por que.
+     */
     const cam = this.cameras.main;
     const c = cam.getWorldPoint(cam.width / 2, cam.height / 2);
-    this.placeGhostAt(this.xyToCell(c.x, c.y));
+    const here = this.xyToCell(c.x, c.y);
+    const start = this.city.isFree(here.col, here.row, this.placing.fw,
+      this.placing.fh, opts.ignoreUid)
+      ? here
+      : (this.city.findSpot(this.placing.fw, this.placing.fh,
+        opts.category || 'real_estate') || here);
+    this.placeGhostAt(start);
+
+    // y si ese solar queda fuera de pantalla, se lleva la camara
+    const p = this.isoXY(start.col, start.row);
+    if (!cam.worldView.contains(p.x, p.y)) this.cam.centerOn(p.x, p.y);
     return true;
   }
 

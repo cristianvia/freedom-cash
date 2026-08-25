@@ -90,7 +90,11 @@ export const MATERIAL_PLANTS = [
   {
     id: 'brickworks',
     name: 'Ladrillera',
-    sprite: 'factorybuilding_a',
+    // 1x1 a proposito. Con un modelo de 2x2 la ladrillera no cabia en la
+    // manzana de partida —tres filas de fondo, y los edificios de servicio
+    // ocupando la del medio— y el primer encargo del tutorial era
+    // imposible de cumplir.
+    sprite: 'factorystructure_a',
     cost: 3000,
     buildMs: 2 * MINUTE,
     perCycle: 4,
@@ -101,7 +105,7 @@ export const MATERIAL_PLANTS = [
   {
     id: 'steelmill',
     name: 'Acería',
-    sprite: 'factorybuilding_c',
+    sprite: 'factoryenterence',
     cost: 18000,
     buildMs: 20 * MINUTE,
     perCycle: 14,
@@ -112,7 +116,7 @@ export const MATERIAL_PLANTS = [
   {
     id: 'permits',
     name: 'Oficina de Permisos',
-    sprite: 'government_a',
+    sprite: 'postoffice',
     cost: 60000,
     buildMs: 1 * HOUR,
     perCycle: 40,
@@ -136,7 +140,9 @@ export function materialCap(level) {
 export const CIVIC = [
   { id: 'hall', name: 'Ayuntamiento', sprite: 'government_a', panel: 'tax', icon: '🏛️' },
   { id: 'bank', name: 'Banco', sprite: 'bank', panel: 'debt', icon: '🏦' },
-  { id: 'insurer', name: 'Aseguradora', sprite: 'hospital_a', panel: 'insurance', icon: '🛡️' },
+  // La aseguradora era hospital_a, de 3x2: no cabia en la manzana inicial y
+  // se quedaba SIN COLOCAR, con lo que los seguros eran inalcanzables.
+  { id: 'insurer', name: 'Aseguradora', sprite: 'policestation', panel: 'insurance', icon: '🛡️' },
 ];
 
 /** El trabajo también es un edificio: el sueldo deja de ser una fila de tabla. */

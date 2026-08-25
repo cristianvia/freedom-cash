@@ -479,7 +479,7 @@ function beginAsset(asset, financing) {
     renderHud();
     bus.emit('build:placed', { plot });
     save();
-  });
+  }, null, { category: asset.category });
 }
 
 function beginPlant(plantId) {
@@ -498,7 +498,7 @@ function beginPlant(plantId) {
     renderHud();
     bus.emit('build:placed', { plot });
     save();
-  });
+  }, null, { category: 'digital_business' });
 }
 
 /* ========================= MOVER Y DESPEJAR ======================== */
