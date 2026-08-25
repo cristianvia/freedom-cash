@@ -1,17 +1,20 @@
-# OS / editor
-.DS_Store
-Thumbs.db
-*.swp
 
-# Node (para futuras fases con Capacitor/Phaser)
-node_modules/
-dist/
-.env
 
 # Claude Code local
-.claude/settings.local.json
-
+# El repo solo guarda los sprites RENDERIZADOS, que son obra derivada.
+# Node (para futuras fases con Capacitor/Phaser)
+# OS / editor
+# Pack de assets 3D (435 MB, licencia de neonmesh: no redistribuible).
 # Perfiles de Chrome y capturas de verificación (headless)
+*.swp
+.DS_Store
 .chrome-profile/
 .chrome-save/
+.claude/settings.local.json
+.env
+Thumbs.db
 _*.png
+assets/low-poly-city-builder/
+dist/
+node_modules/
+tools/render_out/

@@ -1,0 +1,132 @@
+# Catalogo de modelos a renderizar.
+# Una linea por objeto del pack (nombre del .obj, sin extension).
+# Se descartan a proposito los duplicados .001/.002 del pack, que son
+# instancias de la escena original, y los Plane.NNN sin nombre.
+
+# ---------------------------------------------------------------- vivienda
+house_01
+house_02
+house_03
+house_04
+house_05
+house_06
+house_07
+house_08
+house_09
+house_10
+house_15
+highlivingbuilding_a
+highlivingbuilding_b
+highlivingbuilding_c
+highlivingbuilding_d
+hotel_b
+
+# ------------------------------------------------------------- gran altura
+skyscraper_a
+skyscraper_b
+skyscraper_c
+businesscenter
+
+# ------------------------------------------------------------------ civico
+bank
+government_a
+policestation
+postoffice
+hospital_a
+school_a
+nationalstadium
+
+# --------------------------------------------------------------- comercial
+supermarket_a
+supermarket_b
+restaurant
+boutique
+fruitshop
+cheesemarket
+musicshop
+travel agency
+sport
+gasstation_a
+gasstation_b
+
+# --------------------------------------------------------------- industria
+factorybuilding_a
+factorybuilding_b
+factorybuilding_c
+factorystructure_a
+factorystructure_b
+factoryenterence
+farmbuilding_05
+farmbuilding_08
+
+# ------------------------------------------------------------ zonas verdes
+park_a
+park_b
+park_c
+park_d
+park_e
+park_f
+park_g
+green_a
+green_b
+green_c
+basketballcourt_a
+basketballcourt_b
+
+# ------------------------------------------------------------------ viales
+road_a_01
+road_a_02
+road_a_03
+road_a_04
+road_a_05
+road_a_06
+road_a_07
+road_a_08
+road_a_09
+road_a_10
+road_a_11
+road_a_12
+road_a_13
+road_c_01
+road_c_02
+road_c_03
+road_c_04
+parking_area_a
+parking_area_b
+parking_area_c
+parking_area_d
+parking_area_e
+parking_area_f
+
+# ----------------------------------------------------------------- terreno
+land
+
+# --------------------------------------------------------------- decoracion
+tree
+plant
+plants
+flowers
+rock_a001
+rock_c001
+stone02
+stone04
+
+# ------------------------------------------ props de escala pequena (iconos)
+caffeeshop
+ice-cream
+milk
+watches
+antiques
+vegetables
+
+# --------------------------------------------------------------- vehiculos
+car_a
+car_b
+car_c
+car_d
+car_e
+car_f
+jeep_a
+jeep_b
+truck
+tractor_a
