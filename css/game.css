@@ -358,3 +358,79 @@ html, body {
   padding-bottom: 10px; margin-bottom: 6px;
   border-bottom: 1px solid var(--line);
 }
+
+/* ============================= ENCARGO ============================ */
+/* Una tira fina bajo el indicador. Sin ella el juego no contestaba a
+   «¿y ahora qué hago?», que en un builder es la pregunta que hay que
+   tener siempre respondida. */
+
+#quest {
+  position: fixed; z-index: 20;
+  top: calc(var(--safe-t) + 96px); left: 8px; right: 8px;
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 12px; min-height: 40px;
+  background: rgba(16, 21, 30, .86);
+  border: 1px solid var(--line); border-left: 3px solid var(--gold);
+  border-radius: 12px; backdrop-filter: blur(8px);
+  color: var(--txt); font: inherit; text-align: left; cursor: pointer;
+}
+#quest.done { border-left-color: var(--green); }
+.q-em { font-size: 17px; }
+.q-tx { flex: 1; min-width: 0; line-height: 1.25; }
+.q-tx b { display: block; font-size: 13px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.q-tx i { font-style: normal; font-size: 11px; color: var(--dim); }
+.q-bar {
+  flex: 0 0 54px; height: 6px; background: #0b1220;
+  border-radius: 3px; overflow: hidden;
+}
+.q-bar u { display: block; height: 100%; width: 0; background: var(--gold); transition: width .4s; }
+#quest.done .q-bar u { background: var(--green); }
+
+/* ============================ INCIDENCIAS ========================= */
+
+.inc-hero { display: flex; gap: 12px; align-items: center; margin-bottom: 4px; }
+.inc-em {
+  width: 52px; height: 52px; flex: 0 0 auto;
+  display: grid; place-items: center; font-size: 26px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px;
+}
+.inc-hero.bad .inc-em { border-color: #4a2530; }
+.inc-hero.good .inc-em { border-color: #24503a; }
+
+/* Cada opción de un dilema enseña lo que cuesta ANTES de elegirla: sin las
+   cifras a la vista, elegir es adivinar y no se aprende nada. */
+.inc-opt { text-align: left; padding: 13px 15px; }
+.inc-opt .io-l { display: block; font-weight: 600; font-size: 14px; }
+.inc-opt .io-e { display: flex; gap: 12px; margin-top: 5px; font-size: 12px; color: var(--dim); }
+.inc-opt .io-e .g { color: var(--green); }
+.inc-opt .io-e .r { color: var(--red); }
+
+.news { display: flex; flex-direction: column; gap: 8px; }
+.news-i {
+  display: flex; gap: 10px; padding: 10px 12px;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-left: 3px solid var(--line); border-radius: 11px;
+}
+.news-i.good { border-left-color: var(--green); }
+.news-i.bad { border-left-color: var(--red); }
+.news-i .n-t { font-size: 13px; font-weight: 600; }
+.news-i .n-d { font-size: 12px; color: var(--dim); margin-top: 2px; }
+.news-i .n-c { margin-left: auto; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.news-i .n-c.g { color: var(--green); }
+.news-i .n-c.r { color: var(--red); }
+
+/* ========================= CICLO ECONÓMICO ======================== */
+/* Comprar barato en recesión y caro en euforia es de las lecciones más
+   caras de la vida real. Aquí tiene que verse antes de comprar. */
+
+.cyc {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px; margin-bottom: 10px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+}
+.cyc .c-em { font-size: 22px; }
+.cyc .c-t { font-size: 13px; font-weight: 600; }
+.cyc .c-d { font-size: 12px; color: var(--dim); margin-top: 1px; }
+.cyc.cheap { border-color: #24503a; }
+.cyc.dear { border-color: #4a2530; }

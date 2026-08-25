@@ -14,7 +14,7 @@
   <!-- El ?v= se sube a mano al desplegar. Sin el, el navegador sirve la
        hoja vieja de cache y la interfaz nueva sale sin estilos: paso una
        tarde persiguiendo un tutorial que estaba ahi pero invisible. -->
-  <link rel="stylesheet" href="css/game.css?v=2" />
+  <link rel="stylesheet" href="css/game.css?v=3" />
 </head>
 <body>
 
@@ -35,6 +35,14 @@
   <button id="ie" aria-label="Indicador de emancipación">
     <span class="ie-bar"><i></i><u></u></span>
     <span class="ie-txt"><b>0%</b> hacia la libertad</span>
+  </button>
+
+  <!-- El encargo activo, siempre a la vista. Es lo que contesta a «¿y ahora
+       qué hago?», que era la pregunta que el juego dejaba sin responder. -->
+  <button id="quest" hidden>
+    <span class="q-em">🎯</span>
+    <span class="q-tx"><b></b><i></i></span>
+    <span class="q-bar"><u></u></span>
   </button>
 
   <!-- ===== Acciones: abajo, al alcance del pulgar ===== -->

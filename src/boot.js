@@ -25,14 +25,16 @@ import { Ui, money, short, onClick } from './ui/Ui.js';
 import { tierRules, MATERIAL_PLANTS, CIVIC, buildersAt } from './game/rules.js';
 import { URBANIZE_COST, URBANIZE_MATERIALS } from './game/City.js';
 import { bus } from './game/Bus.js';
+import { Incidents, NO_EVENT } from './game/Incidents.js';
 import { Guide } from './ui/Guide.js';
 import { School } from './ui/School.js';
+import { makePanels } from './ui/Panels.js';
 
 const SAVE_KEY = 'freedomcash.city.v1';
 const $ = (s) => document.querySelector(s);
 
 const DATA = {};
-let engine, city, clock, scene, game, ui, models, school, guide;
+let engine, city, clock, scene, game, ui, models, school, guide, incidents, panels;
 
 /* ============================== CARGA ============================== */
 
@@ -168,6 +170,7 @@ function startGame(profile, mode, professionId) {
   const seed = (Math.random() * 0xffffffff) >>> 0 || 1;
   city = new City(engine, DATA.models, DATA.atlas, seed);
   city.sprinkleScenery(24);
+  incidents = new Incidents(engine, city, bus);
   clock = new Clock(runPeriod);
   launch();
 }
@@ -181,6 +184,8 @@ function resumeGame(save) {
   engine.setContractData(DATA.contracts);
   city = new City(engine, DATA.models, DATA.atlas, save.city.seed || 1);
   city.load(save.city);
+  incidents = new Incidents(engine, city, bus);
+  incidents.load(save.incidents);
   clock = new Clock(runPeriod);
   clock.load(save.clock);
   launch(true);
@@ -215,7 +220,10 @@ function launch(resumed = false) {
 
   // Enganche de depuración: permite inspeccionar y forzar estados desde la
   // consola sin tener que jugar media hora para llegar a la situación.
-  window.FC = { engine, city, clock, scene: null, ui, game, DATA };
+  panels = makePanels({ engine, city, ui, incidents,
+    refresh: renderHud, save });
+
+  window.FC = { engine, city, clock, scene: null, ui, game, DATA, incidents, panels };
 }
 
 function sceneReady(resumed) {
@@ -241,10 +249,20 @@ function sceneReady(resumed) {
 
 /* ============================== BUCLE ============================== */
 
-/** Un mes del motor. No lo dispara el jugador: lo dispara el reloj. */
-function runPeriod() {
-  const snap = engine.endTurn();
+/**
+ * Un mes del motor. No lo dispara el jugador: lo dispara el reloj.
+ *
+ * Se le pasa un evento VACÍO a propósito. endTurn() sorteaba y resolvía
+ * uno él solo, y con el mes convertido en dos horas de reloj eso
+ * significaba que cada dos horas pasaba algo que el jugador no llegaba a
+ * ver nunca. Ahora los eventos los reparte Incidents: los dilemas esperan
+ * a que decidas y el resto deja rastro.
+ */
+function runPeriod(i, total) {
+  const snap = engine.endTurn(NO_EVENT);
   engine.actionsUsed = 0;         // aquí el freno son los constructores
+  // al recuperar muchos meses de golpe, los sucesos se aplican en silencio
+  incidents.roll(total > 1);
   return snap;
 }
 
@@ -267,6 +285,13 @@ function tick() {
     ui.toast(`Nivel ${city.level}. Se abre una manzana nueva.`, 'good');
   }
   checkSchool();
+  if (incidents.tickMarks()) scene.syncViews();
+
+  // Un dilema se ensena en cuanto hay hueco. Esperando a que el jugador
+  // abra un menu, se quedaria ahi para siempre y la decision se perderia.
+  if (incidents.waiting && !ui.isOpen && !scene.placing && !guide) {
+    panels.showDilemma();
+  }
   renderHud();
 }
 
@@ -324,7 +349,8 @@ function renderHud() {
   badge('#dk-collect', ready);
   $('#dk-collect').classList.toggle('hot', ready > 0);
   badge('#dk-builders', city.building().length);
-  badge('#dk-menu', school ? school.unread : 0);
+  badge('#dk-menu', (school ? school.unread : 0) + (incidents ? incidents.waiting : 0));
+  if (panels) panels.renderQuest();
 }
 
 function badge(sel, n) {
@@ -341,6 +367,7 @@ function wireDock() {
   $('#dk-builders').onclick = showBuilders;
   $('#dk-menu').onclick = showMenu;
   $('#ie').onclick = showFreedom;
+  $('#quest').onclick = () => panels.showQuests();
 }
 
 function collectAll() {
@@ -370,6 +397,7 @@ function showShop() {
   bus.emit('shop:open');
   const plants = MATERIAL_PLANTS.filter(p => p.minLevel <= city.level);
   const body = ui.open('Construir', `
+    ${panels.cycleBanner()}
     <div class="cards" id="shop-plants">${plants.map(plantCard).join('')}</div>
     <div style="height:14px"></div>
     <div class="cards" id="shop-assets">${catalogFor().map(assetCard).join('')}</div>`);
@@ -758,6 +786,7 @@ function showMenu() {
   ui.open('Más', `<div class="detail"><div class="acts">
     <button class="btn" data-act="school">🎓 La Escuela${
   school.unread ? ` · ${school.unread} sin leer` : ''}</button>
+    <button class="btn ghost" data-act="news">📰 Qué ha pasado en tu ciudad</button>
     <button class="btn ghost" data-act="collect">Cobrar todo</button>
     <button class="btn ghost" data-act="arrange">Ordenar la ciudad</button>
     <button class="btn ghost" data-act="scenery">Sembrar verde</button>
@@ -765,6 +794,7 @@ function showMenu() {
   </div></div>`);
   onClick(ui.body, '[data-act]', (b) => {
     if (b.dataset.act === 'school') return showSchool();
+    if (b.dataset.act === 'news') return panels.showNews();
     if (b.dataset.act === 'collect') { ui.close(); collectAll(); }
     if (b.dataset.act === 'arrange') {
       const n = city.arrange();
@@ -800,6 +830,7 @@ function save() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       v: 1, engine: engine.toJSON(), city: city.toJSON(), clock: clock.toJSON(),
+      incidents: incidents.toJSON(),
     }));
   } catch (e) { /* cuota llena: no es motivo para tumbar la partida */ }
 }

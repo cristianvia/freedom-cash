@@ -271,8 +271,23 @@ export class CityScene extends Phaser.Scene {
       v.img.setAlpha(1);
       if (plot.kind === 'scenery' || plot.kind === 'civic') continue;
 
+      /*
+       * Lo que le ha pasado a este edificio tiene que VERSE encima de el.
+       * Una derrama o un inquilino que se va solo se notaban en que se
+       * ganaba menos, sin saber por que ni donde: la cartera parecia
+       * averiada en vez de viva.
+       */
+      const asset = this.city.assetOf(plot);
+      const vacant = asset && this.city.engine.isVacant(asset);
+      if (plot.mark || vacant) {
+        v.bubble = this.markerAt(x, top - 22, depth,
+          vacant ? '🚪' : plot.mark.icon, vacant ? 0xfca5a5 : 0xfde68a);
+        if (vacant) continue;    // vacio no produce: no hay burbuja de cobro
+      }
+
       const got = this.city.pending(plot, now);
       if (!got.ready) continue;
+      if (v.bubble) continue;    // ya hay un aviso ahi; no se apilan dos
 
       const full = this.city.fillOf(plot, now) >= 0.999;
       const icon = got.materials ? '🧱' : '💶';
@@ -288,6 +303,21 @@ export class CityScene extends Phaser.Scene {
         yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
       });
     }
+  }
+
+  /** Una burbuja con un icono encima de un edificio, latiendo despacio. */
+  markerAt(x, y, depth, icon, tint) {
+    const c = this.add.container(x, y).setDepth(depth + 70);
+    const back = this.add.image(0, 0, 'bubble').setScale(0.72);
+    if (tint) back.setTint(tint);
+    const txt = this.add.text(0, -2, icon, { fontSize: '19px' }).setOrigin(0.5);
+    c.add([back, txt]);
+    c.setSize(44, 44);
+    this.tweens.add({
+      targets: c, y: y - 6, duration: 900,
+      yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+    return c;
   }
 
   /* ============================= TOQUE ============================= */
