@@ -1,0 +1,18 @@
+{
+  "name": "Freedom Cash · Construye tu libertad",
+  "short_name": "Freedom Cash",
+  "description": "Un city builder sobre libertad financiera. Construye una ciudad que te pague por vivir.",
+  "lang": "es",
+  "start_url": "game.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d1017",
+  "theme_color": "#0d1017",
+  "categories": ["games", "education", "finance"],
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
