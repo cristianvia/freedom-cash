@@ -14,7 +14,7 @@
   <!-- El ?v= se sube a mano al desplegar. Sin el, el navegador sirve la
        hoja vieja de cache y la interfaz nueva sale sin estilos: paso una
        tarde persiguiendo un tutorial que estaba ahi pero invisible. -->
-  <link rel="stylesheet" href="css/game.css?v=4" />
+  <link rel="stylesheet" href="css/game.css?v=6" />
 </head>
 <body>
 
@@ -64,6 +64,12 @@
     <div class="sh-body"></div>
   </div>
   <div id="scrim" hidden></div>
+
+  <!-- Un logro merece pararse un segundo: si no, no es un premio. -->
+  <div id="trophy" hidden>
+    <span class="tr-em"></span>
+    <span class="tr-tx"><i class="tr-tier"></i><b class="tr-t"></b><span class="tr-d"></span></span>
+  </div>
 
   <!-- ===== Avisos flotantes ===== -->
   <div id="toast" hidden></div>

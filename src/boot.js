@@ -29,13 +29,14 @@ import { bus } from './game/Bus.js';
 import { Incidents, NO_EVENT } from './game/Incidents.js';
 import { Guide } from './ui/Guide.js';
 import { School } from './ui/School.js';
+import { Achievements } from './engine/Achievements.js';
 import { makePanels } from './ui/Panels.js';
 
 const SAVE_KEY = 'freedomcash.city.v1';
 const $ = (s) => document.querySelector(s);
 
 const DATA = {};
-let engine, city, clock, scene, game, ui, models, school, guide, incidents, panels;
+let engine, city, clock, scene, game, ui, models, school, guide, incidents, panels, ach;
 
 /* ============================== CARGA ============================== */
 
@@ -43,7 +44,7 @@ const loadJSON = (p) => fetch(p, { cache: 'no-cache' }).then(r => r.json());
 
 async function loadAll() {
   const files = ['assets_database', 'profiles', 'events', 'difficulty',
-    'professions', 'tax', 'insurance', 'contracts', 'models', 'school', 'lifestyle'];
+    'professions', 'tax', 'insurance', 'contracts', 'models', 'school', 'lifestyle', 'achievements'];
   const [atlas, ...rest] = await Promise.all([
     loadJSON('assets/atlas/sprites.json'),
     ...files.map(f => loadJSON(`src/data/${f}.json`)),
@@ -71,6 +72,7 @@ async function main() {
   await loadAll();
   ui = new Ui(DATA.atlas);
   school = new School(DATA.school, ui);
+  ach = new Achievements(DATA.achievements);
   wireDock();
 
   const save = loadSave();
@@ -168,6 +170,8 @@ function startGame(profile, mode, professionId) {
   // Cada partida, su isla. La semilla se guarda y no vuelve a tocarse:
   // el contorno tiene que ser el mismo mañana o un edificio ya construido
   // podría amanecer en el agua.
+  ach.newRun();
+  ach.bumpLife('games');
   const seed = (Math.random() * 0xffffffff) >>> 0 || 1;
   city = new City(engine, DATA.models, DATA.atlas, seed);
   city.sprinkleScenery(24);
@@ -221,9 +225,17 @@ function launch(resumed = false) {
 
   // Enganche de depuración: permite inspeccionar y forzar estados desde la
   // consola sin tener que jugar media hora para llegar a la situación.
-  panels = makePanels({ engine, city, ui, incidents,
+  panels = makePanels({
+    engine, city, ui, incidents,
     lifestyle: DATA.lifestyle.actions,
-    refresh: renderHud, save });
+    assetById: (id) => DATA.assets_database.assets.find(a => a.id === id),
+    spriteOf, tierOf, tierRules,
+    onCityChange: () => { scene.syncViews(); scene.refreshTerrain(); },
+    onMerge: () => { ach.bumpRun('merges'); ach.bumpLife('merges'); },
+    onContractDone: () => { ach.bumpRun('contracts'); ach.bumpLife('contracts'); },
+    onLifestyle: () => ach.bumpLife('lifestyle_actions'),
+    refresh: renderHud, save,
+  });
 
   window.FC = { engine, city, clock, scene: null, ui, game, DATA, incidents, panels };
 }
@@ -303,6 +315,7 @@ function tick() {
     ui.toast(`Nivel ${city.level}. Se abre una manzana nueva.`, 'good');
   }
   checkSchool();
+  checkAchievements();
   if (incidents.tickMarks()) scene.syncViews();
 
   // Un dilema se ensena en cuanto hay hueco. Esperando a que el jugador
@@ -343,6 +356,79 @@ function openCard(id) {
   const body = school.card(id);
   if (body) onClick(body, '[data-back]', () => showSchool());
   renderHud();
+}
+
+/* ============================= LOGROS ============================== */
+
+/**
+ * Valores de ESTA partida que los logros consultan y que no salen de
+ * status(): cosas sobre la FORMA de la cartera, no sobre sus cifras.
+ */
+function achDerived() {
+  const owned = engine.ownedAssets.filter(a => !a.ruined);
+  const porCat = {};
+  owned.forEach(a => { porCat[a.category] = (porCat[a.category] || 0) + 1; });
+  const counts = Object.values(porCat);
+
+  return {
+    ...ach.run,
+    categories_owned: Object.keys(porCat).length,
+    max_category_count: counts.length ? Math.max(...counts) : 0,
+    leveraged_count: owned.filter(a => a.financing === 'leverage').length,
+    financial_count: owned.filter(a => a.category === 'financial').length,
+    policies_active: engine.insurance.size,
+    red_loans: engine.redDebts.length,
+    ruins: engine.ownedAssets.filter(a => a.ruined).length,
+    booms: owned.reduce((n, a) => n + (a.boomed || 0), 0),
+  };
+}
+
+function checkAchievements() {
+  if (!ach) return;
+  if (engine.cash < 0) ach.setRun('was_negative', 1);
+  if (engine.isBurnout()) ach.setRun('burnouts', 1);
+
+  const fresh = ach.evaluate(engine.status(), achDerived());
+  // se encadenan: si caen tres de golpe, uno tapaba al siguiente
+  fresh.forEach((def, i) => setTimeout(() => celebrate(def), i * 2200));
+}
+
+/** Un logro merece pararse un segundo. Si no, no es un premio. */
+function celebrate(def) {
+  const t = (DATA.achievements.tiers || {})[def.tier] || {};
+  const el = $('#trophy');
+  if (!el) return;
+  el.querySelector('.tr-em').textContent = def.emoji;
+  el.querySelector('.tr-t').textContent = def.title;
+  el.querySelector('.tr-d').textContent = def.desc;
+  const tier = el.querySelector('.tr-tier');
+  tier.textContent = t.label || '';
+  tier.style.color = t.color || 'var(--gold)';
+  el.hidden = false;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.hidden = true; }, 4200);
+}
+
+function showTrophies() {
+  const p = ach.progress();
+  const grupos = ach.byCategory().map(g =>
+    '<div class="tg-h">' + (g.emoji || '\u2022') + ' ' + (g.label || g.id)
+    + ' <i>' + g.done + '/' + g.list.length + '</i></div>'
+    + '<div class="tg">' + g.list.map(d => {
+      const on = ach.isUnlocked(d.id);
+      const t = (DATA.achievements.tiers || {})[d.tier] || {};
+      return '<div class="tr-i' + (on ? '' : ' off') + '"'
+        + (on ? ' style="border-color:' + (t.color || '#555') + '66"' : '') + '>'
+        + '<span class="tr-i-em">' + (on ? d.emoji : '\u{1F512}') + '</span>'
+        + '<span class="tr-i-tx"><b>' + d.title + '</b><br><small>' + d.desc + '</small></span>'
+        + '</div>';
+    }).join('') + '</div>').join('');
+
+  ui.open('\u{1F3C5} Logros', '<div class="detail">'
+    + '<div class="stats">'
+    + ui.stat('Conseguidos', p.unlocked + ' de ' + p.total)
+    + ui.stat('Puntos', p.points + ' de ' + p.maxPoints)
+    + '</div>' + grupos + '</div>');
 }
 
 /* =============================== HUD =============================== */
@@ -422,10 +508,12 @@ function showShop() {
   const plants = MATERIAL_PLANTS.filter(p => p.minLevel <= city.level);
   const body = ui.open('Construir', `
     ${panels.cycleBanner()}
+    ${panels.upgradeCards()}
     <div class="cards" id="shop-plants">${plants.map(plantCard).join('')}</div>
     <div style="height:14px"></div>
     <div class="cards" id="shop-assets">${catalogFor().map(assetCard).join('')}</div>`);
 
+  onClick(body, '[data-up]', (b) => panels.doUpgrade(b.dataset.up));
   onClick(body, '#shop-plants .go', (b) => beginPlant(b.dataset.plant));
   onClick(body, '#shop-assets .go', (b) => chooseFinancing(b.dataset.asset));
 }
@@ -530,6 +618,8 @@ function beginAsset(asset, financing) {
     scene.syncViews();
     renderHud();
     bus.emit('build:placed', { plot });
+    ach.bumpRun('buys');
+    if (financing === 'leverage') ach.bumpLife('bought_leverage');
     save();
   }, null, { category: asset.category });
 }
@@ -749,6 +839,7 @@ function showBank(def) {
   </div>`);
   onClick(body, '[data-loan]', (b) => {
     engine.takeConsumerLoan(+b.dataset.loan);
+    ach.bumpRun('red_loans_taken');
     ui.toast('Préstamo concedido. Ojo a la cuota.', 'bad');
     renderHud(); ui.close();
   });
@@ -815,6 +906,7 @@ function showMenu() {
   ui.open('Más', `<div class="detail"><div class="acts">
     <button class="btn" data-act="school">🎓 La Escuela${
   school.unread ? ` · ${school.unread} sin leer` : ''}</button>
+    <button class="btn ghost" data-act="trophies">🏅 Logros</button>
     <button class="btn ghost" data-act="news">📰 Qué ha pasado en tu ciudad</button>
     <button class="btn ghost" data-act="collect">Cobrar todo</button>
     <button class="btn ghost" data-act="arrange">Ordenar la ciudad</button>
@@ -824,6 +916,7 @@ function showMenu() {
   onClick(ui.body, '[data-act]', (b) => {
     if (b.dataset.act === 'school') return showSchool();
     if (b.dataset.act === 'news') return panels.showNews();
+    if (b.dataset.act === 'trophies') return showTrophies();
     if (b.dataset.act === 'collect') { ui.close(); collectAll(); }
     if (b.dataset.act === 'arrange') {
       const n = city.arrange();

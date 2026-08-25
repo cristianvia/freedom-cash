@@ -19,7 +19,7 @@
 import { money, onClick } from './Ui.js';
 
 export function makePanels(ctx) {
-  const { engine, ui, incidents, refresh, save } = ctx;
+  const { engine, city, ui, incidents, refresh, save } = ctx;
   const $ = (s) => document.querySelector(s);
 
   /* ============================ ENCARGOS =========================== */
@@ -64,6 +64,7 @@ export function makePanels(ctx) {
 
     if (c && engine.contractDone()) {
       const r = engine.claimContract();
+      if (r.ok && ctx.onContractDone) ctx.onContractDone();
       ui.toast(r.ok ? 'Encargo cumplido · +' + money(r.cash) : r.reason, 'good');
       refresh(); save();
       return;
@@ -169,6 +170,79 @@ export function makePanels(ctx) {
       : '<div class="empty">Todo tranquilo por ahora.</div>');
   }
 
+  /* ============================ MEJORAS ============================ */
+
+  /**
+   * Tres iguales se funden en uno del escalón siguiente.
+   *
+   * Es la otra mitad del bucle de un builder —crecer hacia arriba y no
+   * solo a lo ancho— y llevaba desde el principio implementada en el motor
+   * sin que nadie pudiera llegar a ella. También es una lección: los
+   * ejemplares viejos no se tiran, aportan su valor de traspaso a la
+   * entrada del grande, así que consolidar sale mucho más barato que
+   * comprar el grande de cero.
+   */
+  function upgradeCards() {
+    const cands = engine.mergeCandidates();
+    if (!cands.length) return '';
+
+    return '<div class="up-head">⬆️ Puedes mejorar</div><div class="cards">'
+      + cands.map(c => {
+        const target = ctx.assetById(c.upgradeId);
+        if (!target) return '';
+        const chk = engine.canMerge(c.picks, target);
+        const f = engine.pricedFinancials(target);
+        // Si lo que aportan los viejos supera la entrada del grande, te
+        // devuelven la diferencia. Enseñarlo como «pones 0 €» escondía
+        // justo lo que hace que consolidar merezca la pena.
+        const pago = chk.extra >= 0
+          ? '<span><b>pones ' + money(chk.extra) + '</b></span>'
+          : '<span class="g"><b>te devuelven ' + money(-chk.extra) + '</b></span>';
+        return ui.card({
+          sprite: ctx.spriteOf(target),
+          title: target.title,
+          facts: '<span>' + c.need + ' × ' + c.title + '</span>'
+            + '<span class="g">aportan ' + money(chk.contribution) + '</span>'
+            + pago
+            + '<span class="g">+' + money(engine.incomeBand({ ...target, financials: f }).expected)
+            + '/mes</span>',
+          action: chk.ok ? 'Mejorar' : 'Te falta caja',
+          disabled: !chk.ok,
+          data: { up: c.baseId },
+        });
+      }).join('') + '</div><div style="height:14px"></div>';
+  }
+
+  function doUpgrade(baseId) {
+    const c = engine.mergeCandidates().find(x => x.baseId === baseId);
+    if (!c) return;
+    const target = ctx.assetById(c.upgradeId);
+    const ids = new Set(c.picks.map(a => a.instanceId));
+
+    // Se apunta dónde estaban ANTES de fusionar: el motor se lleva por
+    // delante los activos y luego ya no hay forma de saber qué parcelas
+    // hay que retirar de la ciudad.
+    const plots = city.list().filter(p => p.instanceId && ids.has(p.instanceId));
+    const donde = plots[0] ? { col: plots[0].col, row: plots[0].row } : null;
+
+    const r = engine.mergeAssets(c.picks, target);
+    if (!r.ok) { ui.toast(r.reason, 'bad'); return; }
+
+    if (ctx.onMerge) ctx.onMerge(c.need);
+    plots.forEach(p => city.remove(p.uid));
+    const tier = ctx.tierOf(target);
+    city.add({
+      kind: 'asset', sprite: ctx.spriteOf(target), tier,
+      instanceId: r.instance.instanceId, category: target.category,
+      buildMs: ctx.tierRules(tier).buildMs,
+    }, donde ? donde.col : null, donde ? donde.row : null);
+
+    ui.close();
+    ctx.onCityChange();
+    refresh(); save();
+    ui.toast(c.need + ' se han convertido en ' + target.title, 'good');
+  }
+
   /* ============================ TU VIDA ============================ */
 
   /**
@@ -228,6 +302,7 @@ export function makePanels(ctx) {
     onClick(body, '[data-life]', (b) => {
       const a = (ctx.lifestyle || []).find(x => x.id === b.dataset.life);
       const r = engine.doLifestyle(a);
+      if (r.ok && ctx.onLifestyle) ctx.onLifestyle();
       ui.toast(r.ok ? a.label : r.reason, r.ok ? 'good' : 'bad');
       ui.close(); refresh(); save();
     });
@@ -257,5 +332,6 @@ export function makePanels(ctx) {
       + '<div class="c-d">' + consejo + '</div></div></div>';
   }
 
-  return { renderQuest, showQuests, showDilemma, showNews, cycleBanner, showLife };
+  return { renderQuest, showQuests, showDilemma, showNews, cycleBanner, showLife,
+    upgradeCards, doUpgrade };
 }
