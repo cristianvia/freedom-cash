@@ -524,14 +524,21 @@ function showTax(def) {
       ${ui.stat('Renta pasiva', money(engine.totalPassiveIncome()) + '/mes', 'g')}
       ${ui.stat('Impuestos', money(engine.taxCost()) + '/mes', 'r')}
       ${ui.stat('Tipo efectivo', Math.round(engine.effectiveTaxRate()) + '%')}
-      ${ui.stat('Estructura', (engine.taxStructure() || {}).name || 'Persona física')}
+      ${ui.stat('Estructura', (engine.taxStructure() || {}).label || 'Persona física')}
     </div>
     <div class="acts">${s.map(st => {
     const met = engine.taxRequirementsMet(st.id);
     const now = engine.taxVehicle === st.id;
     const cost = engine.taxCostFor(st.id);
+    const tag = now ? ' · actual' : met ? '' : ' · bloqueada';
+    // La leccion va debajo de cada opcion, no en un panel aparte: es el
+    // motivo por el que existe la eleccion, y sin ella el jugador solo ve
+    // cuatro botones con cifras que no sabe comparar.
     return `<button class="btn ghost" data-tax="${st.id}" ${now || !met ? 'disabled' : ''}>
-        ${st.name} · ${money(cost)}/mes ${now ? '· actual' : met ? '' : '· bloqueada'}</button>`;
+        ${st.emoji} ${st.label} · pagarías ${money(cost)}/mes${tag}
+        <br><small style="opacity:.65;font-weight:400">
+        ${st.setup ? 'Constituirla cuesta ' + money(st.setup) + '. ' : ''}${st.lesson}</small>
+      </button>`;
   }).join('')}</div>
   </div>`);
   onClick(body, '[data-tax]', (b) => {
@@ -573,9 +580,14 @@ function showInsurance(def) {
       ${ui.stat('Coste', money(engine.insuranceMonthlyCost()) + '/mes', 'r')}
       ${ui.stat('Cobertura', Math.round(engine.insuranceCoverage() * 100) + '%', 'g')}
     </div>
-    <div class="acts">${engine.insurancePolicies().map(p => `
-      <button class="btn ${engine.hasInsurance(p.id) ? '' : 'ghost'}" data-ins="${p.id}">
-        ${engine.hasInsurance(p.id) ? '✓ ' : ''}${p.name} · ${money(p.monthly_cost || p.cost || 0)}/mes</button>`).join('')}
+    <div class="acts">${engine.insurancePolicies().map(p => {
+    const on = engine.hasInsurance(p.id);
+    return `<button class="btn ${on ? '' : 'ghost'}" data-ins="${p.id}">
+        ${on ? '✓ ' : ''}${p.emoji} ${p.label} · ${money(p.monthly)}/mes
+        <br><small style="opacity:.65;font-weight:400">
+        Cubre un ${Math.round(p.coverage * 100)}% del golpe. ${p.desc}</small>
+      </button>`;
+  }).join('')}
     </div>
   </div>`);
   onClick(body, '[data-ins]', (b) => { engine.toggleInsurance(b.dataset.ins); renderHud(); ui.close(); });

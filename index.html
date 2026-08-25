@@ -284,15 +284,49 @@
   </footer>
 
   <script type="module">
-    // Los edificios del escaparate salen del mismo motor que la ciudad del
-    // juego: si el arte cambia, la portada cambia con él y no se queda vieja.
-    import { buildingThumb } from './src/engine/CityArt.js';
+    /*
+     * Los edificios del escaparate salen del MISMO atlas que dibuja la
+     * ciudad del juego, así que la portada nunca enseña un arte que ya no
+     * existe. Antes se generaban con el motor de dibujo procedural; al
+     * sustituirlo por sprites renderizados, la portada se habría quedado
+     * enseñando unas cajas de colores que el juego ya no tiene.
+     *
+     * Se recorta cada sprite del atlas a un <canvas> y se vuelca como
+     * data URL, porque estos huecos son <img> y no admiten
+     * background-position.
+     */
     try {
-      const db = await fetch('src/data/assets_database.json').then(r => r.json());
-      document.querySelectorAll('img[data-mock]').forEach(img => {
-        const a = db.assets.find(x => x.id === img.dataset.mock);
-        if (a) img.src = buildingThumb(a, parseInt(img.dataset.tier, 10) || 1, 96);
-      });
+      const [atlas, models] = await Promise.all([
+        fetch('assets/atlas/sprites.json').then(r => r.json()),
+        fetch('src/data/models.json').then(r => r.json()),
+      ]);
+
+      const paginas = new Map();
+      const cargar = (key) => {
+        if (!paginas.has(key)) {
+          paginas.set(key, new Promise((ok, ko) => {
+            const im = new Image();
+            im.onload = () => ok(im);
+            im.onerror = ko;
+            im.src = 'assets/atlas/' + key + '.' + atlas.format;
+          }));
+        }
+        return paginas.get(key);
+      };
+
+      for (const img of document.querySelectorAll('img[data-mock]')) {
+        const m = models.models[img.dataset.mock];
+        const s = m && atlas.sprites[m.sprite];
+        if (!s) continue;
+        const page = await cargar(s.page);
+        const [fx, fy, fw, fh] = s.frame;
+        const k = Math.min(180 / fw, 180 / fh);
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(fw * k);
+        cv.height = Math.round(fh * k);
+        cv.getContext('2d').drawImage(page, fx, fy, fw, fh, 0, 0, cv.width, cv.height);
+        img.src = cv.toDataURL('image/png');
+      }
     } catch (e) { /* sin JS o sin red: la maqueta se queda sin iconos, nada más */ }
   </script>
 
