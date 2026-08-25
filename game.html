@@ -14,7 +14,7 @@
   <!-- El ?v= se sube a mano al desplegar. Sin el, el navegador sirve la
        hoja vieja de cache y la interfaz nueva sale sin estilos: paso una
        tarde persiguiendo un tutorial que estaba ahi pero invisible. -->
-  <link rel="stylesheet" href="css/game.css?v=3" />
+  <link rel="stylesheet" href="css/game.css?v=4" />
 </head>
 <body>
 
@@ -25,6 +25,10 @@
   <header id="hud">
     <div class="res" id="res-cash"><span class="ic">💶</span><b>0</b></div>
     <div class="res" id="res-mat"><span class="ic">🧱</span><b>0</b><i class="cap">/50</i></div>
+    <!-- Energia y felicidad. Estaban corriendo por debajo sin verse: si te
+         quemabas, el sueldo caia un 35% y no habia forma de saberlo. -->
+    <div class="res wb" id="res-wb"><span class="ic">😊</span><b class="wb-h">70</b>
+      <span class="ic">⚡</span><b class="wb-e">80</b></div>
     <div class="res lvl" id="res-lvl">
       <span class="ic">⭐</span><b>1</b>
       <span class="xp"><i></i></span>
@@ -47,7 +51,7 @@
 
   <!-- ===== Acciones: abajo, al alcance del pulgar ===== -->
   <nav id="dock">
-    <button class="dk" id="dk-shop"><span class="dk-i">🏗️</span><span class="dk-l">Construir</span></button>
+    <button class="dk" id="dk-shop"><span class="dk-i">🏗️</span><span class="dk-l">Invertir</span></button>
     <button class="dk" id="dk-collect"><span class="dk-i">💰</span><span class="dk-l">Cobrar</span><i class="badge" hidden></i></button>
     <button class="dk" id="dk-builders"><span class="dk-i">👷</span><span class="dk-l">Obras</span><i class="badge" hidden></i></button>
     <button class="dk" id="dk-menu"><span class="dk-i">☰</span><span class="dk-l">Más</span><i class="badge" hidden></i></button>

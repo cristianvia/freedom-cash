@@ -169,6 +169,70 @@ export function makePanels(ctx) {
       : '<div class="empty">Todo tranquilo por ahora.</div>');
   }
 
+  /* ============================ TU VIDA ============================ */
+
+  /**
+   * El bienestar, atado al edificio del trabajo.
+   *
+   * Energía y felicidad llevaban corriendo por debajo sin que se vieran: si
+   * te quemabas, el sueldo caía un 35 % y no había forma de saber por qué.
+   * Aquí se ve, y se ve junto a la cifra que importa —lo que cobras hoy
+   * frente a lo que cobrarías descansado— porque ese contraste ES la
+   * lección: el ingreso activo depende de cómo estés, y el pasivo no.
+   */
+  function showLife() {
+    const quemado = engine.isBurnout();
+    const hoy = engine.effectiveSalaryBase();
+    const pleno = engine.profile.salary_base * engine.mode.salaryMult * engine.salaryBoost;
+    const pasivas = engine.netPassiveIncome();
+
+    const acciones = (ctx.lifestyle || []).map(a => {
+      const usada = engine.lifestyleUsed.has(a.id);
+      const puede = !usada && engine.cash >= a.cost;
+      const ef = [];
+      if (a.energy) ef.push('<span class="' + (a.energy > 0 ? 'g' : 'r') + '">⚡ '
+        + (a.energy > 0 ? '+' : '') + a.energy + '</span>');
+      if (a.happiness) ef.push('<span class="' + (a.happiness > 0 ? 'g' : 'r') + '">😊 '
+        + (a.happiness > 0 ? '+' : '') + a.happiness + '</span>');
+      if (a.salaryBoost) ef.push('<span class="g">Sueldo +'
+        + Math.round(a.salaryBoost * 100) + '% para siempre</span>');
+      return '<button class="btn ghost inc-opt" data-life="' + a.id + '"'
+        + (puede ? '' : ' disabled') + '>'
+        + '<span class="io-l">' + a.emoji + ' ' + a.label
+        + ' · ' + (a.cost ? money(a.cost) : 'gratis') + '</span>'
+        + '<span class="io-e">' + (usada ? '<span>Ya lo hiciste este mes</span>' : ef.join(''))
+        + '</span></button>';
+    }).join('');
+
+    const body = ui.open('🧑 Tu trabajo y tu vida', '<div class="detail">'
+      + (quemado
+        ? '<div class="cyc dear"><span class="c-em">🔥</span><div>'
+          + '<div class="c-t">Estás quemado</div>'
+          + '<div class="c-d">Tu sueldo rinde un 35 % menos. Tus rentas pasivas, '
+          + 'en cambio, siguen entrando igual: no dependen de cómo estés.</div>'
+          + '</div></div>'
+        : '')
+      + '<div class="stats">'
+      + ui.stat('Sueldo hoy', money(hoy) + '/mes', quemado ? 'r' : '')
+      + ui.stat('Descansado cobrarías', money(pleno) + '/mes')
+      + ui.stat('Energía', Math.round(engine.energy) + '/100', engine.energy < 40 ? 'r' : '')
+      + ui.stat('Felicidad', Math.round(engine.happiness) + '/100',
+        engine.happiness < 40 ? 'r' : '')
+      + '</div>'
+      + '<p style="margin:0;font-size:13px;color:var(--dim)">Tus rentas pasivas son '
+      + '<b style="color:var(--green)">' + money(pasivas) + '/mes</b> y no les afecta nada '
+      + 'de lo de arriba. Esa es toda la diferencia entre cambiar tiempo por dinero y '
+      + 'que tus activos trabajen por ti.</p>'
+      + '<div class="acts">' + acciones + '</div></div>');
+
+    onClick(body, '[data-life]', (b) => {
+      const a = (ctx.lifestyle || []).find(x => x.id === b.dataset.life);
+      const r = engine.doLifestyle(a);
+      ui.toast(r.ok ? a.label : r.reason, r.ok ? 'good' : 'bad');
+      ui.close(); refresh(); save();
+    });
+  }
+
   /* ======================= CICLO ECONÓMICO ========================= */
 
   /**
@@ -193,5 +257,5 @@ export function makePanels(ctx) {
       + '<div class="c-d">' + consejo + '</div></div></div>';
   }
 
-  return { renderQuest, showQuests, showDilemma, showNews, cycleBanner };
+  return { renderQuest, showQuests, showDilemma, showNews, cycleBanner, showLife };
 }

@@ -24,6 +24,7 @@ import { CityScene } from './scenes/CityScene.js';
 import { Ui, money, short, onClick } from './ui/Ui.js';
 import { tierRules, MATERIAL_PLANTS, CIVIC, buildersAt } from './game/rules.js';
 import { URBANIZE_COST, URBANIZE_MATERIALS } from './game/City.js';
+import { OFFLINE_WELLBEING_FLOOR } from './game/rules.js';
 import { bus } from './game/Bus.js';
 import { Incidents, NO_EVENT } from './game/Incidents.js';
 import { Guide } from './ui/Guide.js';
@@ -42,7 +43,7 @@ const loadJSON = (p) => fetch(p, { cache: 'no-cache' }).then(r => r.json());
 
 async function loadAll() {
   const files = ['assets_database', 'profiles', 'events', 'difficulty',
-    'professions', 'tax', 'insurance', 'contracts', 'models', 'school'];
+    'professions', 'tax', 'insurance', 'contracts', 'models', 'school', 'lifestyle'];
   const [atlas, ...rest] = await Promise.all([
     loadJSON('assets/atlas/sprites.json'),
     ...files.map(f => loadJSON(`src/data/${f}.json`)),
@@ -221,6 +222,7 @@ function launch(resumed = false) {
   // Enganche de depuración: permite inspeccionar y forzar estados desde la
   // consola sin tener que jugar media hora para llegar a la situación.
   panels = makePanels({ engine, city, ui, incidents,
+    lifestyle: DATA.lifestyle.actions,
     refresh: renderHud, save });
 
   window.FC = { engine, city, clock, scene: null, ui, game, DATA, incidents, panels };
@@ -259,15 +261,31 @@ function sceneReady(resumed) {
  * a que decidas y el resto deja rastro.
  */
 function runPeriod(i, total) {
+  const antesH = engine.happiness, antesE = engine.energy;
   const snap = engine.endTurn(NO_EVENT);
   engine.actionsUsed = 0;         // aquí el freno son los constructores
-  // al recuperar muchos meses de golpe, los sucesos se aplican en silencio
-  incidents.roll(total > 1);
+  engine.lifestyleUsed = new Set();
+
+  /*
+   * Recuperando meses de golpe, el desgaste se frena en un suelo: estando
+   * fuera el jugador no puede descansar ni salir a cenar, y dejar que siga
+   * bajando seria castigarle por cerrar la pestana. Delante de la pantalla
+   * no hay suelo, porque ahi si puede hacer algo.
+   */
+  if (total > 1) {
+    if (engine.happiness < antesH) {
+      engine.happiness = Math.max(engine.happiness, Math.min(antesH, OFFLINE_WELLBEING_FLOOR));
+    }
+    if (engine.energy < antesE) {
+      engine.energy = Math.max(engine.energy, Math.min(antesE, OFFLINE_WELLBEING_FLOOR));
+    }
+  }
   return snap;
 }
 
 function tick() {
   clock.catchUp();
+  incidents.catchUp();
   const done = city.tickBuilds();
   const before = city.level;
   done.forEach(p => {
@@ -335,6 +353,12 @@ function renderHud() {
   $('#res-mat b').textContent = city.materials;
   $('#res-mat .cap').textContent = '/' + city.materialCap();
   $('#res-mat').classList.toggle('full', city.materialsFull());
+  const wb = $('#res-wb');
+  if (wb) {
+    wb.querySelector('.wb-h').textContent = Math.round(engine.happiness);
+    wb.querySelector('.wb-e').textContent = Math.round(engine.energy);
+    wb.classList.toggle('burn', engine.isBurnout());
+  }
   $('#res-lvl b').textContent = city.level;
   $('#res-lvl .xp i').style.width = Math.min(100, city.xp / city.xpNeeded() * 100) + '%';
 
@@ -582,6 +606,11 @@ function tapEmpty(cell) {
 
 function showPlot(plot) {
   if (plot.kind === 'civic') return showCivic(plot.civicId);
+  // El trabajo cobra al tocarlo, pero si estas quemado abre la ficha: es
+  // el unico sitio donde se explica por que tu sueldo ha caido.
+  if (plot.kind === 'job' && (engine.isBurnout() || !city.pending(plot).ready)) {
+    return panels.showLife();
+  }
   if (plot.kind === 'scenery') return showScenery(plot);
 
   const got = city.pending(plot);

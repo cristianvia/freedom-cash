@@ -434,3 +434,13 @@ html, body {
 .cyc .c-d { font-size: 12px; color: var(--dim); margin-top: 1px; }
 .cyc.cheap { border-color: #24503a; }
 .cyc.dear { border-color: #4a2530; }
+
+/* ============================ BIENESTAR =========================== */
+
+.res.wb { gap: 4px; padding-right: 11px; }
+.res.wb .ic { font-size: 14px; }
+.res.wb b { font-size: 14px; }
+.res.wb .ic + b { margin-right: 4px; }
+/* Quemado: el sueldo cae un 35 % y tiene que verse de un vistazo. */
+.res.wb.burn { border-color: #7a3a2a; }
+.res.wb.burn b { color: var(--red); }

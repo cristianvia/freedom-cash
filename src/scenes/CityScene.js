@@ -26,6 +26,7 @@
 import Phaser from '../../vendor/phaser.js';
 import { CameraControl } from './CameraControl.js';
 import { TerrainLayer } from './TerrainLayer.js';
+import { Traffic } from './Traffic.js';
 import { fmtDuration } from '../game/Clock.js';
 import { MATERIAL_PLANTS, CIVIC } from '../game/rules.js';
 
@@ -74,6 +75,7 @@ export class CityScene extends Phaser.Scene {
     // El azul de fuera del mapa: el mar sigue mas alla de la isla.
     this.cameras.main.setBackgroundColor('#1a4f6b');
     this.terrain = new TerrainLayer(this, this.city);
+    this.traffic = new Traffic(this, this.city);
 
     this.cam = new CameraControl(this);
     this.events.on('city-tap', this.handleTap, this);
@@ -221,7 +223,10 @@ export class CityScene extends Phaser.Scene {
   }
 
   /** Repinta el suelo: se abrio una manzana o se urbanizo cesped. */
-  refreshTerrain() { this.terrain.redraw(); }
+  refreshTerrain() {
+    this.terrain.redraw();
+    this.traffic.rebuild();     // se abrio una manzana: hay calle nueva
+  }
 
   /** Fuerza a redibujar una parcela (tras mejorarla, por ejemplo). */
   refresh(uid) {
@@ -483,9 +488,10 @@ export class CityScene extends Phaser.Scene {
 
   /* ============================= BUCLE ============================= */
 
-  update(time) {
+  update(time, delta) {
     this.cam.update();
     this.terrain.update(time);
+    this.traffic.update(delta);
     if (time - this._overlayAt > OVERLAY_MS) {
       this._overlayAt = time;
       this.syncViews();

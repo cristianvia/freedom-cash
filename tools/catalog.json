@@ -612,6 +612,90 @@
     ],
     "fit": 15.0
    }
+  },
+  {
+   "name": "car_a_dir_e",
+   "src": "car_a",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 0
+  },
+  {
+   "name": "car_a_dir_s",
+   "src": "car_a",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 90
+  },
+  {
+   "name": "car_a_dir_w",
+   "src": "car_a",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 180
+  },
+  {
+   "name": "car_a_dir_n",
+   "src": "car_a",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 270
+  },
+  {
+   "name": "car_b_dir_e",
+   "src": "car_b",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 0
+  },
+  {
+   "name": "car_b_dir_s",
+   "src": "car_b",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 90
+  },
+  {
+   "name": "car_b_dir_w",
+   "src": "car_b",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 180
+  },
+  {
+   "name": "car_b_dir_n",
+   "src": "car_b",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 270
+  },
+  {
+   "name": "car_c_dir_e",
+   "src": "car_c",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 0
+  },
+  {
+   "name": "car_c_dir_s",
+   "src": "car_c",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 90
+  },
+  {
+   "name": "car_c_dir_w",
+   "src": "car_c",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 180
+  },
+  {
+   "name": "car_c_dir_n",
+   "src": "car_c",
+   "kind": "vehicle",
+   "strip_base": false,
+   "rotate": 270
   }
  ]
 }

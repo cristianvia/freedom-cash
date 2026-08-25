@@ -27,6 +27,8 @@
  * ------------------------------------------------------------------
  */
 
+import { INCIDENT_MS, MAX_CATCHUP_INCIDENTS } from './rules.js';
+
 /** Un evento vacío: deja que el mes avance sin que ocurra nada. */
 export const NO_EVENT = { id: '__none', type: 'neutral', title: '', description: '' };
 
@@ -43,7 +45,36 @@ export class Incidents {
     this.bus = bus;
     this.pending = [];   // dilemas esperando decisión
     this.feed = [];      // parte de noticias, lo más nuevo primero
+    this.lastAt = Date.now();
     this._seq = 0;
+  }
+
+  /**
+   * Reloj propio, suelto del mes del motor.
+   *
+   * Atado al mes, ocurría un suceso cada dos horas de reloj y la ciudad
+   * parecía muerta. Acortar el mes para que pasaran más cosas habría
+   * disparado la inflación, que es justo lo que el mes de dos horas evita.
+   * Son dos relojes porque miden dos cosas distintas: la macroeconomía es
+   * lenta, y lo que te pasa a ti no tiene por qué serlo.
+   *
+   * @returns {number} cuántos sucesos se han recuperado
+   */
+  catchUp(now = Date.now()) {
+    let due = Math.floor((now - this.lastAt) / INCIDENT_MS);
+    if (due <= 0) return 0;
+
+    if (due > MAX_CATCHUP_INCIDENTS) {
+      // se tiran los viejos, no los nuevos: al jugador le importa el
+      // estado en que se encuentra la ciudad hoy, no la crónica entera
+      this.lastAt += (due - MAX_CATCHUP_INCIDENTS) * INCIDENT_MS;
+      due = MAX_CATCHUP_INCIDENTS;
+    }
+    for (let i = 0; i < due; i++) {
+      this.lastAt += INCIDENT_MS;
+      this.roll(due > 1);
+    }
+    return due;
   }
 
   /* ============================ SORTEO ============================= */
@@ -172,7 +203,8 @@ export class Incidents {
   }
 
   toJSON() {
-    return { pending: this.pending, feed: this.feed.slice(0, 12), seq: this._seq };
+    return { pending: this.pending, feed: this.feed.slice(0, 12),
+      seq: this._seq, lastAt: this.lastAt };
   }
 
   load(d) {
@@ -180,6 +212,9 @@ export class Incidents {
     this.pending = d.pending || [];
     this.feed = d.feed || [];
     this._seq = d.seq || 0;
+    this.lastAt = d.lastAt ?? Date.now();
+    // un reloj del futuro solo sale de mover la hora del sistema
+    if (this.lastAt > Date.now()) this.lastAt = Date.now();
   }
 }
 

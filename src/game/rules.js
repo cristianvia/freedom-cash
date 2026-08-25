@@ -39,6 +39,31 @@ export const PERIOD_MS = 2 * HOUR;
 export const MAX_CATCHUP_PERIODS = 180;   // ~15 días reales
 
 /**
+ * Cada cuánto pasa algo en tu ciudad.
+ *
+ * Va SUELTO del mes a propósito. Atado al mes, ocurría un suceso cada dos
+ * horas y la ciudad parecía muerta; y acortar el mes para que pasaran más
+ * cosas habría disparado la inflación, que es justo lo que el reloj de dos
+ * horas evita. Son dos relojes distintos porque miden dos cosas distintas:
+ * uno la macroeconomía, que es lenta, y otro lo que te pasa, que no.
+ */
+export const INCIDENT_MS = 22 * MINUTE;
+
+/** Sucesos que se recuperan al volver. Más allá, se descartan los viejos. */
+export const MAX_CATCHUP_INCIDENTS = 12;
+
+/**
+ * Suelo del bienestar mientras estás fuera.
+ *
+ * Estando delante puedes descansar, salir a cenar o ir al gimnasio. Con el
+ * juego cerrado no puedes hacer nada, así que dejar que el desgaste siga
+ * bajando sería castigarte por cerrar la pestaña. El desgaste de los meses
+ * recuperados frena aquí; los sucesos y tus propias decisiones sí pueden
+ * bajarte de este suelo, porque esos los eliges tú.
+ */
+export const OFFLINE_WELLBEING_FLOOR = 35;
+
+/**
  * Escalones. El cobro no se acumula para siempre: cada edificio tiene un
  * almacén de CAP_CYCLES ciclos y cuando se llena, para. Ese tope es todo
  * el diseño de un builder: es lo que te hace volver.
@@ -54,13 +79,24 @@ export const MAX_CATCHUP_PERIODS = 180;   // ~15 días reales
  * compras al subir de escalón es comodidad y volumen, no un multiplicador
  * escondido.
  */
+/*
+ * Los tiempos del arranque son cortos a propósito. Con la primera obra en
+ * dos minutos y el primer cobro a los cinco, el jugador se pasaba los diez
+ * primeros minutos mirando: no llegaba a aprender el bucle porque no le
+ * daba tiempo a repetirlo. Los escalones altos siguen siendo largos, que
+ * es donde el género quiere que esperes.
+ *
+ * Acortar un ciclo NO regala dinero: la renta por tanda sale de la cifra
+ * mensual escalada por cycleMs/PERIOD_MS, así que lo que cambia es cada
+ * cuánto cobras, no cuánto ganas por hora.
+ */
 export const TIERS = [
   null,
-  { buildMs: 30 * SECOND, materials: 2, cycleMs: 5 * MINUTE, capCycles: 3 },
-  { buildMs: 5 * MINUTE, materials: 8, cycleMs: 20 * MINUTE, capCycles: 3 },
-  { buildMs: 30 * MINUTE, materials: 25, cycleMs: 1 * HOUR, capCycles: 3 },
-  { buildMs: 2 * HOUR, materials: 60, cycleMs: 4 * HOUR, capCycles: 3 },
-  { buildMs: 8 * HOUR, materials: 150, cycleMs: 8 * HOUR, capCycles: 3 },
+  { buildMs: 20 * SECOND, materials: 2, cycleMs: 3 * MINUTE, capCycles: 3 },
+  { buildMs: 3 * MINUTE, materials: 8, cycleMs: 10 * MINUTE, capCycles: 3 },
+  { buildMs: 15 * MINUTE, materials: 25, cycleMs: 30 * MINUTE, capCycles: 3 },
+  { buildMs: 1 * HOUR, materials: 60, cycleMs: 2 * HOUR, capCycles: 3 },
+  { buildMs: 4 * HOUR, materials: 150, cycleMs: 6 * HOUR, capCycles: 3 },
 ];
 
 export function tierRules(tier) {
@@ -96,9 +132,9 @@ export const MATERIAL_PLANTS = [
     // imposible de cumplir.
     sprite: 'factorystructure_a',
     cost: 3000,
-    buildMs: 2 * MINUTE,
-    perCycle: 4,
-    cycleMs: 4 * MINUTE,
+    buildMs: 45 * SECOND,
+    perCycle: 3,
+    cycleMs: 90 * SECOND,
     capCycles: 4,
     minLevel: 1,
   },
@@ -107,9 +143,9 @@ export const MATERIAL_PLANTS = [
     name: 'Acería',
     sprite: 'factoryenterence',
     cost: 18000,
-    buildMs: 20 * MINUTE,
+    buildMs: 10 * MINUTE,
     perCycle: 14,
-    cycleMs: 12 * MINUTE,
+    cycleMs: 8 * MINUTE,
     capCycles: 4,
     minLevel: 3,
   },
@@ -118,9 +154,9 @@ export const MATERIAL_PLANTS = [
     name: 'Oficina de Permisos',
     sprite: 'postoffice',
     cost: 60000,
-    buildMs: 1 * HOUR,
+    buildMs: 30 * MINUTE,
     perCycle: 40,
-    cycleMs: 30 * MINUTE,
+    cycleMs: 20 * MINUTE,
     capCycles: 4,
     minLevel: 6,
   },
@@ -150,7 +186,7 @@ export const JOB_BUILDING = {
   id: 'job',
   name: 'Tu trabajo',
   sprite: 'businesscenter',
-  cycleMs: 30 * MINUTE,
+  cycleMs: 12 * MINUTE,
   capCycles: 4,
 };
 

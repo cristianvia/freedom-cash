@@ -63,6 +63,19 @@ export class City {
     engine.ACTIONS_BASE = 9999;
     engine.ACTIONS_MAX = 9999;
 
+    /*
+     * El desgaste estaba calibrado para una partida de doce turnos, no para
+     * un reloj. Con el mes convertido en dos horas salen doce meses al dia:
+     * la felicidad bajaba 36 puntos diarios, sin nada que la repusiera, y en
+     * dos dias de reloj el jugador llegaba a cero -que el motor considera
+     * partida perdida por abandono- sin que nada se lo hubiera dicho.
+     *
+     * Se suaviza el desgaste por mes; lo que lo repone son las acciones de
+     * estilo de vida, que ahora si tienen donde usarse.
+     */
+    engine.WORK_ENERGY_DRAIN = 2;
+    engine.HAPPINESS_DRIFT = 1;
+
     this.layout = new Layout(seed);
     this.cols = this.layout.cols;
     this.rows = this.layout.rows;

@@ -1650,11 +1650,51 @@
    "pageW": 2046,
    "pageH": 1777
   },
-  "car_c": {
+  "car_b_dir_e": {
    "page": "city-0",
    "frame": [
     973,
     1735,
+    43,
+    26
+   ],
+   "anchor": [
+    21.75,
+    18.61
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.54,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_b_dir_s": {
+   "page": "city-0",
+   "frame": [
+    916,
+    1736,
+    43,
+    26
+   ],
+   "anchor": [
+    21.38,
+    18.61
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.54,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_c": {
+   "page": "city-0",
+   "frame": [
+    1018,
+    1736,
     43,
     26
    ],
@@ -1670,11 +1710,51 @@
    "pageW": 2046,
    "pageH": 1777
   },
+  "car_c_dir_e": {
+   "page": "city-0",
+   "frame": [
+    1894,
+    1737,
+    43,
+    26
+   ],
+   "anchor": [
+    21.75,
+    18.73
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.571,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_c_dir_s": {
+   "page": "city-0",
+   "frame": [
+    1939,
+    1737,
+    43,
+    26
+   ],
+   "anchor": [
+    21.38,
+    18.73
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.571,
+   "pageW": 2046,
+   "pageH": 1777
+  },
   "car_a": {
    "page": "city-0",
    "frame": [
-    916,
-    1736,
+    1984,
+    1737,
     43,
     25
    ],
@@ -1690,11 +1770,51 @@
    "pageW": 2046,
    "pageH": 1777
   },
+  "car_a_dir_e": {
+   "page": "city-0",
+   "frame": [
+    493,
+    1739,
+    43,
+    25
+   ],
+   "anchor": [
+    21.75,
+    17.86
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.54,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_a_dir_s": {
+   "page": "city-0",
+   "frame": [
+    538,
+    1739,
+    43,
+    25
+   ],
+   "anchor": [
+    21.38,
+    17.86
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.54,
+   "pageW": 2046,
+   "pageH": 1777
+  },
   "car_e": {
    "page": "city-0",
    "frame": [
-    1018,
-    1736,
+    362,
+    1745,
     42,
     25
    ],
@@ -1713,8 +1833,8 @@
   "car_f": {
    "page": "city-0",
    "frame": [
-    1894,
-    1737,
+    406,
+    1745,
     42,
     25
    ],
@@ -1730,11 +1850,131 @@
    "pageW": 2046,
    "pageH": 1777
   },
+  "car_a_dir_n": {
+   "page": "city-0",
+   "frame": [
+    1501,
+    1749,
+    43,
+    24
+   ],
+   "anchor": [
+    21.75,
+    17.11
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.54,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_a_dir_w": {
+   "page": "city-0",
+   "frame": [
+    1546,
+    1749,
+    43,
+    24
+   ],
+   "anchor": [
+    21.38,
+    17.11
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.54,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_b_dir_n": {
+   "page": "city-0",
+   "frame": [
+    1591,
+    1749,
+    43,
+    24
+   ],
+   "anchor": [
+    21.75,
+    17.11
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.54,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_b_dir_w": {
+   "page": "city-0",
+   "frame": [
+    1636,
+    1749,
+    43,
+    24
+   ],
+   "anchor": [
+    21.38,
+    17.11
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.54,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_c_dir_n": {
+   "page": "city-0",
+   "frame": [
+    1681,
+    1749,
+    43,
+    24
+   ],
+   "anchor": [
+    21.75,
+    17.23
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.571,
+   "pageW": 2046,
+   "pageH": 1777
+  },
+  "car_c_dir_w": {
+   "page": "city-0",
+   "frame": [
+    1726,
+    1749,
+    43,
+    24
+   ],
+   "anchor": [
+    21.38,
+    17.23
+   ],
+   "footprint": [
+    1,
+    1
+   ],
+   "height_world": 1.571,
+   "pageW": 2046,
+   "pageH": 1777
+  },
   "car_d": {
    "page": "city-0",
    "frame": [
-    1938,
-    1737,
+    1771,
+    1749,
     42,
     24
    ],
@@ -1773,7 +2013,7 @@
   "plant": {
    "page": "city-0",
    "frame": [
-    2025,
+    2029,
     35,
     10,
     8
@@ -1793,8 +2033,8 @@
   "rock_a001": {
    "page": "city-0",
    "frame": [
-    2037,
-    35,
+    2029,
+    45,
     6,
     4
    ],
@@ -1813,8 +2053,8 @@
   "rock_c001": {
    "page": "city-0",
    "frame": [
-    2037,
-    41,
+    2041,
+    35,
     4,
     3
    ],
