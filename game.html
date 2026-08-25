@@ -2,291 +2,67 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
-  <title>Freedom Cash · El Juego de la Libertad Financiera</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Freedom Cash · Construye tu libertad</title>
   <meta name="theme-color" content="#0d1017" />
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
-  <!-- añadido a pantalla de inicio: se abre a pantalla completa, como una app -->
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Freedom Cash" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/game.css" />
 </head>
-<body data-mtab="market">
-  <div id="app">
-    <!-- ===== HUD compacto (solo móvil) ===== -->
-    <div id="m-hud">
-      <div class="mh-block mh-ie"><span class="mh-k">IE</span><b id="m-ie">0%</b></div>
-      <div class="mh-block"><span class="mh-k">Caja</span><b id="m-cash">0 €</b></div>
-      <div class="mh-block mh-wb"><span>😊<b id="m-happy">70</b></span><span>⚡<b id="m-energy">80</b></span></div>
-      <div class="mh-block"><span class="mh-k">Acc.</span><b id="m-actions">3</b></div>
-      <div class="mh-block"><span class="mh-k">Edad</span><b id="m-month">28a</b></div>
+<body>
+
+  <!-- La ciudad ocupa la pantalla entera. Todo lo demás flota encima. -->
+  <div id="stage"></div>
+
+  <!-- ===== Recursos: lo único permanentemente visible ===== -->
+  <header id="hud">
+    <div class="res" id="res-cash"><span class="ic">💶</span><b>0</b></div>
+    <div class="res" id="res-mat"><span class="ic">🧱</span><b>0</b><i class="cap">/50</i></div>
+    <div class="res lvl" id="res-lvl">
+      <span class="ic">⭐</span><b>1</b>
+      <span class="xp"><i></i></span>
     </div>
+  </header>
 
-    <!-- ===== IZQUIERDA: Dashboard financiero ===== -->
-    <aside class="col left">
-      <div class="brand">
-        <div class="logo">💸</div>
-        <div class="brand-txt">
-          <h1>Freedom Cash</h1>
-          <small>Libertad Financiera</small>
-        </div>
-      </div>
+  <!-- El Indicador de Emancipación es la identidad del juego: barra fija. -->
+  <button id="ie" aria-label="Indicador de emancipación">
+    <span class="ie-bar"><i></i><u></u></span>
+    <span class="ie-txt"><b>0%</b> hacia la libertad</span>
+  </button>
 
-      <div class="panel freedom" data-tab="hud">
-        <h2>Indicador de Emancipación</h2>
-        <div class="big" id="ie-value">0%</div>
-        <div class="sub">Objetivo: rentas pasivas ≥ <b id="ie-target-sub">120</b>% de tus gastos</div>
-        <div class="progress"><i id="ie-bar"></i><span class="goal" id="ie-goal"></span></div>
-        <div class="goal-note">meta <span id="ie-target-note">120</span>%</div>
-        <canvas id="ie-spark" class="spark" height="52"></canvas>
-      </div>
+  <!-- ===== Acciones: abajo, al alcance del pulgar ===== -->
+  <nav id="dock">
+    <button class="dk" id="dk-shop"><span class="dk-i">🏗️</span><span class="dk-l">Construir</span></button>
+    <button class="dk" id="dk-collect"><span class="dk-i">💰</span><span class="dk-l">Cobrar</span><i class="badge" hidden></i></button>
+    <button class="dk" id="dk-builders"><span class="dk-i">👷</span><span class="dk-l">Obras</span><i class="badge" hidden></i></button>
+    <button class="dk" id="dk-menu"><span class="dk-i">☰</span><span class="dk-l">Más</span></button>
+  </nav>
 
-      <div class="panel" id="panel-cash" data-tab="hud">
-        <h2>Tesorería</h2>
-        <div class="stat">
-          <span class="label"><span class="dot green"></span>Caja disponible</span>
-          <span class="val blue" id="cash">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Cashflow neto / mes</span>
-          <span class="val" id="cashflow">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Colchón (meses)</span>
-          <span class="val" id="cushion">0</span>
-        </div>
-      </div>
-
-      <div class="panel" id="panel-wellbeing" data-tab="life">
-        <h2>Bienestar</h2>
-        <div class="wb-row">
-          <span class="wb-label">😊 Felicidad</span>
-          <div class="wb-bar"><i id="wb-happy"></i></div>
-          <span class="wb-val" id="wb-happy-v">70</span>
-        </div>
-        <div class="wb-row">
-          <span class="wb-label">⚡ Energía</span>
-          <div class="wb-bar"><i id="wb-energy"></i></div>
-          <span class="wb-val" id="wb-energy-v">80</span>
-        </div>
-        <div class="hint" id="wb-hint"></div>
-      </div>
-
-      <div class="panel" id="panel-lifestyle" data-tab="life">
-        <h2>Estilo de vida</h2>
-        <div id="lifestyle"></div>
-      </div>
-
-      <div class="panel" id="panel-gigs" data-tab="life" style="display:none">
-        <h2>Trabajos extra</h2>
-        <div id="gigs"></div>
-      </div>
-
-      <div class="panel" id="panel-vehicle" data-tab="life">
-        <h2>Vehículo</h2>
-        <div class="veh-current" id="veh-current"></div>
-        <button class="btn-ghost btn-sm" id="btn-vehicle" style="width:100%;margin-top:10px">Cambiar vehículo</button>
-      </div>
-
-      <div class="panel" id="panel-flow" data-tab="money">
-        <h2>Flujo mensual</h2>
-        <div class="stat">
-          <span class="label">Sueldo base</span><span class="val" id="salary">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Ingresos pasivos <small style="opacity:.6">(netos)</small></span><span class="val green" id="passive">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Gastos fijos</span><span class="val red" id="expenses">0 €</span>
-        </div>
-        <div class="stat" id="flow-rent-row" style="display:none">
-          <span class="label">Alquiler</span><span class="val red" id="flow-rent">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Coche / transporte</span><span class="val red" id="flow-vehicle">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Seguros</span><span class="val red" id="flow-insurance">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Deuda roja (consumo)</span><span class="val red" id="flow-red">0 €</span>
-        </div>
-        <div class="stat" style="border-top:1px solid var(--line);margin-top:2px;padding-top:10px">
-          <span class="label" style="color:var(--txt)">= Cashflow neto</span><span class="val" id="flow-net">0 €</span>
-        </div>
-      </div>
-
-      <div class="panel" id="panel-debt" data-tab="money">
-        <h2>Deuda: Verde vs Roja</h2>
-        <div class="debtbar"><span class="g" id="db-green"></span><span class="r" id="db-red"></span></div>
-        <div class="stat" style="margin-top:8px">
-          <span class="label"><span class="dot green"></span>Deuda verde (auto-pagada)</span>
-          <span class="val green" id="green-lbl">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label"><span class="dot red"></span>Deuda roja (consumo)</span>
-          <span class="val red" id="red-lbl">0 €</span>
-        </div>
-        <div class="buy-row" style="margin-top:10px">
-          <button class="btn-ghost btn-sm" id="btn-loan" style="flex:1">+ Préstamo 5.000 €</button>
-          <button class="btn-ghost btn-sm" id="btn-repay" style="flex:1">Amortizar roja</button>
-        </div>
-      </div>
-
-      <div class="panel" id="panel-insurance" data-tab="money">
-        <h2>Seguros · Gestión del riesgo</h2>
-        <div id="insurance"></div>
-        <div class="hint" id="ins-hint"></div>
-      </div>
-
-      <div class="panel" id="panel-districts" data-tab="city">
-        <h2>Distritos · Economías de escala</h2>
-        <div id="districts"></div>
-      </div>
-
-      <div class="panel" id="panel-tax" data-tab="money">
-        <h2>Fiscalidad</h2>
-        <div class="tax-ladder" id="tax-ladder"></div>
-        <div class="stat">
-          <span class="label">Estructura</span><span class="val" id="tax-vehicle">Persona física</span>
-        </div>
-        <div class="stat">
-          <span class="label">Renta pasiva bruta</span><span class="val" id="tax-gross">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">= Base imponible</span><span class="val" id="tax-base">0 €</span>
-        </div>
-        <div class="stat">
-          <span class="label">Impuestos / mes <small style="opacity:.6">(tipo efectivo <span id="tax-rate">0</span>%)</small></span>
-          <span class="val red" id="tax-cost">0 €</span>
-        </div>
-        <button class="btn-ghost btn-sm" id="btn-incorporate" style="width:100%;margin-top:10px">
-          Ver estructuras fiscales</button>
-        <div class="hint" id="tax-hint"></div>
-      </div>
-
-      <div class="panel" id="panel-rank" data-tab="money">
-        <h2>Ranking · Carrera a la Libertad</h2>
-        <div id="standings"></div>
-      </div>
-
-      <div class="panel" id="panel-activity" data-tab="money">
-        <h2>Actividad · En vivo</h2>
-        <div id="activity"></div>
-      </div>
-    </aside>
-
-    <!-- ===== CENTRO: Ciudad isométrica + HUD ===== -->
-    <main class="col center">
-      <canvas id="city"></canvas>
-      <div class="hud-top">
-        <div class="chip chip-mes"><span id="hud-month">enero</span><span class="k" id="hud-age">28 años</span></div>
-        <div class="chip"><span class="k">Perfil</span><span id="hud-profile">—</span></div>
-        <div class="chip chip-btn" id="hud-prof-chip" title="Cambiar de profesión"><span class="k">Profesión</span><span id="hud-prof" style="display:none">—</span></div>
-        <div class="chip" id="hud-mode-chip"><span class="k">Modo</span><span id="hud-mode" style="display:none">—</span></div>
-        <div class="chip chip-era" id="hud-era-chip" style="display:none"><span class="k">Era</span><span id="hud-era">1</span></div>
-        <div class="chip chip-activos"><span class="k">Activos</span><span id="hud-assets">0</span></div>
-        <div class="chip chip-rate" id="hud-rate-chip" title="Cómo están los tipos frente a lo que firmaste. Solo afecta a tus hipotecas variables."><span class="k">Tipos</span><span id="hud-rate">0%</span></div>
-        <button class="chip chip-btn" id="btn-view"><span class="chip-ic">🌍</span><span class="chip-txt" id="view-txt"> Vista global</span></button>
-        <button class="chip chip-btn" id="btn-settings" title="Ajustes"><span class="chip-ic">⚙️</span><span class="chip-txt"> Ajustes</span></button>
-        <button class="chip chip-btn" id="btn-ach"><span class="chip-ic">🏅</span><span class="chip-txt" id="ach-txt"> Logros</span></button>
-        <button class="chip chip-btn" id="btn-help"><span class="chip-ic">❓</span><span class="chip-txt"> Cómo jugar</span></button>
-      </div>
-    </main>
-
-    <!-- ===== DERECHA: Marketplace + Portfolio + Turno ===== -->
-    <aside class="col right">
-      <div class="panel cycle-panel" id="panel-cycle" data-tab="market">
-        <div class="cyc-top">
-          <span class="cyc-em" id="cyc-em">🌤️</span>
-          <div class="cyc-h">
-            <h2 id="cyc-label">Recuperación</h2>
-            <span class="cyc-left" id="cyc-left">4 meses</span>
-          </div>
-        </div>
-        <div class="cyc-desc" id="cyc-desc"></div>
-        <div class="cyc-mods" id="cyc-mods"></div>
-      </div>
-
-      <div class="panel contract-panel" id="panel-contract" data-tab="market">
-        <h2>Encargo</h2>
-        <div id="contract"></div>
-      </div>
-
-      <div class="panel" id="panel-market" data-tab="market">
-        <h2>Marketplace · Oportunidades</h2>
-        <div id="market"></div>
-      </div>
-
-      <div class="panel" id="p2p-panel" data-tab="market" style="display:none">
-        <h2>Mercado P2P · Rivales</h2>
-        <div id="p2p"></div>
-      </div>
-
-      <div class="panel" id="panel-portfolio" data-tab="folder">
-        <h2>Tu Portfolio</h2>
-        <div id="merge-box" class="merge-box" style="display:none"></div>
-        <div class="pf-filters" id="pf-filters"></div>
-        <div id="portfolio"><div class="empty">Aún no tienes activos. Compra en el Marketplace.</div></div>
-      </div>
-
-      <div class="panel" id="panel-team" data-tab="folder" style="display:none">
-        <h2>Equipo</h2>
-        <div id="team"></div>
-      </div>
-
-      <div class="actions-bar" id="actions-bar">
-        <div class="ab-top">
-          <span class="ab-k">Acciones de este mes</span>
-          <span class="ab-v"><b id="ab-left">3</b>/<span id="ab-max">3</span></span>
-        </div>
-        <div class="ab-pips" id="ab-pips"></div>
-        <div class="ab-hint" id="ab-hint"></div>
-      </div>
-
-      <div class="turn-bar" id="turn-bar">
-        <button class="btn-primary" id="btn-endturn">Cobrar y pasar de mes ▸</button>
-        <button class="btn-ghost btn-ff" id="btn-fastforward"
-                title="Encadena meses y para en cuanto haya algo que decidir">⏩ Avanzar hasta que pase algo</button>
-      </div>
-    </aside>
-
-    <!-- Notificaciones de evento (siempre visibles) -->
-    <div class="event-toast" id="toast">
-      <div class="et" id="toast-title"></div>
-      <div class="ed" id="toast-desc"></div>
-    </div>
-
-    <!-- ===== Barra de navegación inferior (solo móvil) ===== -->
-    <nav id="m-nav">
-      <button class="m-tab" data-mtab="city"><span class="mt-i">🏙️</span><span class="mt-l">Ciudad</span></button>
-      <button class="m-tab" data-mtab="market"><span class="mt-i">🏪</span><span class="mt-l">Mercado</span></button>
-      <button class="m-tab" data-mtab="life"><span class="mt-i">🎯</span><span class="mt-l">Vida</span></button>
-      <button class="m-tab" data-mtab="money"><span class="mt-i">💰</span><span class="mt-l">Balance</span></button>
-      <button class="m-tab" data-mtab="folder"><span class="mt-i">🧺</span><span class="mt-l">Cartera</span></button>
-    </nav>
+  <!-- ===== Cajón inferior: tienda, fichas, asesores ===== -->
+  <div id="sheet" hidden>
+    <div class="sh-grab"></div>
+    <div class="sh-head"><h2></h2><button class="sh-x" aria-label="Cerrar">✕</button></div>
+    <div class="sh-body"></div>
   </div>
+  <div id="scrim" hidden></div>
 
-  <!-- ===== Modal selección de perfil ===== -->
-  <div class="overlay" id="profile-overlay">
-    <div class="modal">
-      <h2>Elige tu situación de partida</h2>
-      <p class="lead">1/3 · Tu <b>situación económica</b> define cuánto ganas, gastas y tienes ahorrado.
-        Luego elegirás profesión y dificultad. Objetivo: alcanzar un
-        <b>Indicador de Emancipación del 120%</b> con 6 meses de colchón en caja.</p>
-      <div id="resume-slot"></div>
-      <div class="profiles" id="profiles"></div>
-      <div style="text-align:center;margin-top:20px">
-        <button class="btn-ghost" id="btn-leaderboard">🏆 Ver clasificación de la liga</button>
-        <button class="btn-ghost" id="btn-ach-start" style="margin-left:8px">🏅 Logros</button>
-        <button class="btn-ghost" id="btn-settings-start" style="margin-left:8px">⚙️ Ajustes</button>
-      </div>
+  <!-- ===== Avisos flotantes ===== -->
+  <div id="toast" hidden></div>
+
+  <!-- ===== Arranque: elegir perfil ===== -->
+  <div id="onboard">
+    <div class="ob-card">
+      <h1>Freedom Cash</h1>
+      <p class="ob-lead">Construye una ciudad que te pague por vivir.</p>
+      <div class="ob-steps"></div>
     </div>
   </div>
 
-  <script type="module" src="src/main.js"></script>
+  <script src="vendor/phaser.min.js"></script>
+  <script type="module" src="src/boot.js"></script>
 </body>
 </html>

@@ -1,0 +1,287 @@
+/* ==================================================================
+   game.css · Freedom Cash city builder
+   ------------------------------------------------------------------
+   Mobile-first de verdad: la ciudad ocupa la pantalla entera y todo lo
+   demás flota encima. No hay columnas ni pestañas.
+
+   La hoja antigua tenía 847 líneas para sostener tres columnas con
+   dieciocho paneles de texto. Aquí el texto es la excepción: si es un
+   número, es un icono y una cifra; si es una decisión, es un botón
+   grande; si es una explicación, sale una vez y no vuelve.
+
+   Los objetivos táctiles no bajan de 44 px, que es lo que mide un pulgar.
+   ================================================================== */
+
+:root {
+  --bg: #0d1017;
+  --panel: #161c26;
+  --panel-2: #1e2634;
+  --line: #2a3444;
+  --txt: #e6edf6;
+  --dim: #8b9bb0;
+  --green: #4ade80;
+  --red: #f87171;
+  --blue: #38bdf8;
+  --gold: #fbbf24;
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0; padding: 0; height: 100%; overflow: hidden;
+  background: var(--bg); color: var(--txt);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overscroll-behavior: none; touch-action: none;
+  user-select: none; -webkit-user-select: none;
+}
+
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; }
+
+/* El atributo `hidden` del navegador vale display:none, pero cualquier
+   regla nuestra que fije display lo pisa por especificidad. Sin esto, el
+   cajon inferior se declara oculto y se sigue viendo. */
+[hidden] { display: none !important; }
+
+/* ============================ RECURSOS ============================ */
+
+#hud {
+  position: fixed; z-index: 20;
+  top: calc(var(--safe-t) + 8px); left: 8px; right: 8px;
+  display: flex; gap: 8px;
+}
+
+.res {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 12px 7px 9px; min-height: 40px;
+  background: rgba(16, 21, 30, .86);
+  border: 1px solid var(--line); border-radius: 999px;
+  backdrop-filter: blur(8px);
+  font-variant-numeric: tabular-nums;
+}
+.res .ic { font-size: 17px; line-height: 1; }
+.res b { font-size: 15px; font-weight: 700; }
+.res .cap { color: var(--dim); font-style: normal; font-size: 12px; }
+.res.full b { color: var(--gold); }
+
+/* El nivel lleva su propia barra de experiencia, fina, bajo la cifra. */
+.res.lvl { position: relative; padding-right: 14px; }
+.res.lvl .xp {
+  position: absolute; left: 9px; right: 9px; bottom: 4px; height: 3px;
+  background: #0b1220; border-radius: 2px; overflow: hidden;
+}
+.res.lvl .xp i { display: block; height: 100%; width: 0; background: var(--gold); transition: width .3s; }
+
+/* ====================== INDICADOR DE EMANCIPACIÓN ================= */
+/* Es la identidad del juego y la única métrica siempre en pantalla:
+   cuánto cubren tus rentas de lo que te cuesta vivir. */
+
+#ie {
+  position: fixed; z-index: 20;
+  top: calc(var(--safe-t) + 56px); left: 8px; right: 8px;
+  display: flex; align-items: center; gap: 9px;
+  padding: 6px 12px; min-height: 34px;
+  background: rgba(16, 21, 30, .86);
+  border: 1px solid var(--line); border-radius: 999px;
+  backdrop-filter: blur(8px);
+  color: var(--txt); font: inherit; text-align: left; cursor: pointer;
+}
+.ie-bar {
+  position: relative; flex: 1; height: 7px;
+  background: #0b1220; border-radius: 4px; overflow: hidden;
+}
+.ie-bar i {
+  position: absolute; inset: 0 auto 0 0; width: 0;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  border-radius: 4px; transition: width .4s;
+}
+/* La meta se marca en la barra: sin ella, el porcentaje no dice nada. */
+.ie-bar u { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--gold); }
+.ie-txt { font-size: 12px; color: var(--dim); white-space: nowrap; }
+.ie-txt b { color: var(--txt); font-size: 13px; }
+
+/* ============================== DOCK ============================== */
+
+#dock {
+  position: fixed; z-index: 20;
+  left: 8px; right: 8px; bottom: calc(var(--safe-b) + 8px);
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.dk {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; min-height: 56px; padding: 6px 4px;
+  background: rgba(22, 28, 38, .92); color: var(--txt);
+  border: 1px solid var(--line); border-radius: 14px;
+  backdrop-filter: blur(8px); cursor: pointer;
+  font: inherit; transition: transform .1s, background .15s;
+}
+.dk:active { transform: scale(.95); background: var(--panel-2); }
+.dk-i { font-size: 21px; line-height: 1; }
+.dk-l { font-size: 11px; color: var(--dim); }
+.dk .badge {
+  position: absolute; top: 5px; right: 9px; min-width: 19px; height: 19px;
+  display: grid; place-items: center; padding: 0 5px;
+  background: var(--red); color: #fff; border-radius: 999px;
+  font-size: 11px; font-weight: 700; font-style: normal;
+}
+.dk.hot { border-color: var(--gold); }
+.dk.hot .dk-i { animation: nudge 1.4s ease-in-out infinite; }
+@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+/* =========================== CAJÓN INFERIOR ======================= */
+/* Todo lo que antes era un panel de la columna lateral sale de aquí:
+   se desliza desde abajo, tapa media pantalla y se va. */
+
+#scrim {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(4, 7, 12, .55); backdrop-filter: blur(2px);
+}
+#sheet {
+  position: fixed; z-index: 31;
+  left: 0; right: 0; bottom: 0;
+  max-height: 78vh; display: flex; flex-direction: column;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  border-radius: 20px 20px 0 0;
+  padding-bottom: var(--safe-b);
+  animation: rise .22s cubic-bezier(.2, .9, .3, 1);
+  touch-action: pan-y;
+}
+@keyframes rise { from { transform: translateY(100%); } }
+.sh-grab {
+  width: 38px; height: 4px; margin: 9px auto 2px;
+  background: var(--line); border-radius: 2px;
+}
+.sh-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 16px 10px;
+}
+.sh-head h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.sh-x {
+  width: 34px; height: 34px; display: grid; place-items: center;
+  background: var(--panel-2); color: var(--dim);
+  border: 1px solid var(--line); border-radius: 10px;
+  font-size: 15px; cursor: pointer;
+}
+.sh-body { overflow-y: auto; padding: 0 12px 16px; -webkit-overflow-scrolling: touch; }
+
+/* ============================ TARJETAS ============================ */
+/* La tienda: imagen, precio, tiempo y UN botón. Nada de párrafos. */
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+
+.card {
+  display: flex; flex-direction: column;
+  background: var(--panel-2); border: 1px solid var(--line);
+  border-radius: 14px; overflow: hidden;
+}
+.card .pic {
+  height: 92px; display: grid; place-items: center;
+  background: radial-gradient(ellipse at 50% 88%, #232e3f 0%, #131924 72%);
+  overflow: hidden;
+}
+
+/* Las miniaturas salen del MISMO atlas que usa el canvas, recortadas con
+   background-position. Ni un fichero de imagen extra, ni una sola
+   petición de red mas: el atlas ya esta descargado. */
+.thumb { display: block; background-repeat: no-repeat; }
+.card .body { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.card .t { font-size: 13px; font-weight: 600; line-height: 1.25; }
+.card .facts { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--dim); }
+.card .facts b { color: var(--txt); font-weight: 600; }
+.card .facts .g { color: var(--green); }
+.card .facts .r { color: var(--red); }
+.card .go {
+  margin-top: auto; min-height: 38px; padding: 8px;
+  background: var(--blue); color: #05202e;
+  border: 0; border-radius: 10px; cursor: pointer;
+  font: 600 13px/1 system-ui, sans-serif;
+}
+.card .go:disabled { background: #24303f; color: #5b6b80; cursor: not-allowed; }
+.card .go.ghost { background: var(--panel); color: var(--txt); border: 1px solid var(--line); }
+
+/* ============================== FICHA ============================= */
+/* Al tocar un edificio. Máximo tres botones y cuatro cifras. */
+
+.detail { display: flex; flex-direction: column; gap: 12px; }
+.detail .hero { display: flex; gap: 12px; align-items: center; }
+.detail .hero img { width: 96px; height: 96px; object-fit: contain; }
+.detail .hero h3 { margin: 0 0 4px; font-size: 16px; }
+.detail .hero p { margin: 0; font-size: 12px; color: var(--dim); }
+
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.stat {
+  padding: 9px 11px; background: var(--panel-2);
+  border: 1px solid var(--line); border-radius: 11px;
+}
+.stat .k { display: block; font-size: 11px; color: var(--dim); }
+.stat .v { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .v.g { color: var(--green); }
+.stat .v.r { color: var(--red); }
+
+.acts { display: grid; gap: 8px; }
+.btn {
+  min-height: 46px; padding: 12px; width: 100%;
+  border-radius: 12px; border: 0; cursor: pointer;
+  font: 600 14px/1 system-ui, sans-serif;
+  background: var(--blue); color: #05202e;
+}
+.btn.ghost { background: var(--panel-2); color: var(--txt); border: 1px solid var(--line); }
+.btn.danger { background: transparent; color: var(--red); border: 1px solid #4a2530; }
+.btn:disabled { background: #24303f; color: #5b6b80; cursor: not-allowed; }
+
+.empty { padding: 26px 10px; text-align: center; color: var(--dim); font-size: 13px; }
+
+/* ============================== AVISOS ============================ */
+
+#toast {
+  position: fixed; z-index: 40;
+  left: 50%; transform: translateX(-50%);
+  top: calc(var(--safe-t) + 100px);
+  max-width: min(92vw, 420px); padding: 11px 16px;
+  background: rgba(22, 28, 38, .96); border: 1px solid var(--line);
+  border-radius: 12px; font-size: 13px; text-align: center;
+  animation: rise2 .2s ease-out;
+}
+@keyframes rise2 { from { opacity: 0; transform: translate(-50%, -8px); } }
+#toast.good { border-color: #24503a; }
+#toast.bad { border-color: #4a2530; }
+
+/* ============================ ARRANQUE ============================ */
+
+#onboard {
+  position: fixed; inset: 0; z-index: 50;
+  display: grid; place-items: center; padding: 20px;
+  background: radial-gradient(ellipse at 50% 0%, #1b2434 0%, var(--bg) 62%);
+  overflow-y: auto;
+}
+#onboard[hidden] { display: none; }
+.ob-card { width: min(560px, 100%); text-align: center; }
+.ob-card h1 { margin: 0 0 4px; font-size: 30px; letter-spacing: -.5px; }
+.ob-lead { margin: 0 0 22px; color: var(--dim); font-size: 14px; }
+.ob-steps { display: grid; gap: 10px; text-align: left; }
+.ob-opt {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; min-height: 66px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 14px; color: var(--txt); cursor: pointer;
+  font: inherit; text-align: left; transition: border-color .15s, transform .1s;
+}
+.ob-opt:active { transform: scale(.985); }
+.ob-opt .em { font-size: 27px; }
+.ob-opt .tt { font-weight: 700; font-size: 15px; }
+.ob-opt .dd { font-size: 12px; color: var(--dim); margin-top: 2px; }
+
+/* ========================== PANTALLA GRANDE ======================= */
+/* En escritorio no se reparte en columnas: se centra y se limita el
+   ancho, para que sea el mismo juego y no dos interfaces que mantener. */
+
+@media (min-width: 900px) {
+  #hud, #ie { left: 50%; transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); right: auto; }
+  #dock { left: 50%; transform: translateX(-50%); width: min(460px, calc(100vw - 32px)); right: auto; }
+  #sheet { left: 50%; transform: translateX(-50%); width: min(720px, 100vw); border-radius: 20px 20px 0 0; }
+  .cards { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+}

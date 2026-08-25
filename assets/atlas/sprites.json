@@ -3,6 +3,24 @@
  "tile_h_px": 96,
  "tile_world": 15.0,
  "format": "webp",
+ "pages": {
+  "city-0": [
+   2042,
+   2046
+  ],
+  "city-1": [
+   2040,
+   128
+  ],
+  "land": [
+   1153,
+   517
+  ],
+  "nationalstadium": [
+   1121,
+   600
+  ]
+ },
  "sprites": {
   "skyscraper_c": {
    "page": "city-0",
@@ -20,7 +38,9 @@
     3,
     2
    ],
-   "height_world": 50.987
+   "height_world": 50.987,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "skyscraper_a": {
    "page": "city-0",
@@ -38,7 +58,9 @@
     4,
     2
    ],
-   "height_world": 49.697
+   "height_world": 49.697,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "skyscraper_b": {
    "page": "city-0",
@@ -56,7 +78,9 @@
     2,
     2
    ],
-   "height_world": 37.259
+   "height_world": 37.259,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "highlivingbuilding_c": {
    "page": "city-0",
@@ -74,7 +98,9 @@
     2,
     3
    ],
-   "height_world": 31.398
+   "height_world": 31.398,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "highlivingbuilding_a": {
    "page": "city-0",
@@ -92,7 +118,9 @@
     2,
     1
    ],
-   "height_world": 31.409
+   "height_world": 31.409,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "highlivingbuilding_b": {
    "page": "city-0",
@@ -110,7 +138,9 @@
     2,
     1
    ],
-   "height_world": 25.62
+   "height_world": 25.62,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "highlivingbuilding_d": {
    "page": "city-0",
@@ -128,7 +158,9 @@
     1,
     2
    ],
-   "height_world": 24.182
+   "height_world": 24.182,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "factorybuilding_c": {
    "page": "city-0",
@@ -146,7 +178,9 @@
     2,
     2
    ],
-   "height_world": 22.861
+   "height_world": 22.861,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "hospital_a": {
    "page": "city-0",
@@ -164,7 +198,9 @@
     3,
     2
    ],
-   "height_world": 16.051
+   "height_world": 16.051,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "school_a": {
    "page": "city-0",
@@ -182,7 +218,9 @@
     3,
     2
    ],
-   "height_world": 13.977
+   "height_world": 13.977,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "factorybuilding_b": {
    "page": "city-0",
@@ -200,7 +238,9 @@
     2,
     2
    ],
-   "height_world": 22.729
+   "height_world": 22.729,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "gasstation_a": {
    "page": "city-0",
@@ -218,7 +258,9 @@
     3,
     2
    ],
-   "height_world": 7.313
+   "height_world": 7.313,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "road_c_02": {
    "page": "city-0",
@@ -236,7 +278,9 @@
     3,
     1
    ],
-   "height_world": 8.185
+   "height_world": 8.185,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "factorybuilding_a": {
    "page": "city-0",
@@ -254,7 +298,9 @@
     2,
     2
    ],
-   "height_world": 21.533
+   "height_world": 21.533,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "government_a": {
    "page": "city-0",
@@ -272,7 +318,9 @@
     2,
     1
    ],
-   "height_world": 12.324
+   "height_world": 12.324,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "road_c_03": {
    "page": "city-0",
@@ -290,7 +338,9 @@
     1,
     3
    ],
-   "height_world": 7.296
+   "height_world": 7.296,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "bank": {
    "page": "city-0",
@@ -308,7 +358,9 @@
     1,
     1
    ],
-   "height_world": 18.022
+   "height_world": 18.022,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "businesscenter": {
    "page": "city-0",
@@ -326,7 +378,9 @@
     1,
     1
    ],
-   "height_world": 18.025
+   "height_world": 18.025,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "hotel_b": {
    "page": "city-0",
@@ -344,7 +398,9 @@
     1,
     1
    ],
-   "height_world": 17.568
+   "height_world": 17.568,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "antiques": {
    "page": "city-0",
@@ -362,7 +418,9 @@
     1,
     1
    ],
-   "height_world": 17.565
+   "height_world": 17.565,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "factorystructure_a": {
    "page": "city-0",
@@ -380,7 +438,9 @@
     1,
     1
    ],
-   "height_world": 18.744
+   "height_world": 18.744,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "restaurant": {
    "page": "city-0",
@@ -398,7 +458,9 @@
     1,
     1
    ],
-   "height_world": 17.085
+   "height_world": 17.085,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "supermarket_a": {
    "page": "city-0",
@@ -416,7 +478,9 @@
     2,
     1
    ],
-   "height_world": 9.932
+   "height_world": 9.932,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "boutique": {
    "page": "city-0",
@@ -434,7 +498,9 @@
     1,
     1
    ],
-   "height_world": 17.513
+   "height_world": 17.513,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "gasstation_b": {
    "page": "city-0",
@@ -452,7 +518,9 @@
     2,
     2
    ],
-   "height_world": 7.748
+   "height_world": 7.748,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "musicshop": {
    "page": "city-0",
@@ -470,7 +538,9 @@
     1,
     1
    ],
-   "height_world": 16.694
+   "height_world": 16.694,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "policestation": {
    "page": "city-0",
@@ -488,7 +558,9 @@
     1,
     1
    ],
-   "height_world": 13.834
+   "height_world": 13.834,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "postoffice": {
    "page": "city-0",
@@ -506,7 +578,9 @@
     1,
     1
    ],
-   "height_world": 14.864
+   "height_world": 14.864,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "watches": {
    "page": "city-0",
@@ -524,7 +598,9 @@
     1,
     1
    ],
-   "height_world": 15.215
+   "height_world": 15.215,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "supermarket_b": {
    "page": "city-0",
@@ -542,7 +618,9 @@
     2,
     1
    ],
-   "height_world": 7.339
+   "height_world": 7.339,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "park_a": {
    "page": "city-0",
@@ -560,7 +638,9 @@
     3,
     1
    ],
-   "height_world": 3.918
+   "height_world": 3.918,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "road_c_01": {
    "page": "city-0",
@@ -578,7 +658,9 @@
     1,
     1
    ],
-   "height_world": 7.296
+   "height_world": 7.296,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "travel agency": {
    "page": "city-0",
@@ -596,7 +678,9 @@
     1,
     1
    ],
-   "height_world": 13.77
+   "height_world": 13.77,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_05": {
    "page": "city-0",
@@ -614,7 +698,9 @@
     1,
     1
    ],
-   "height_world": 11.129
+   "height_world": 11.129,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "road_c_04": {
    "page": "city-0",
@@ -632,7 +718,9 @@
     1,
     1
    ],
-   "height_world": 7.296
+   "height_world": 7.296,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "factoryenterence": {
    "page": "city-0",
@@ -650,7 +738,9 @@
     2,
     1
    ],
-   "height_world": 11.107
+   "height_world": 11.107,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "factorystructure_b": {
    "page": "city-0",
@@ -668,7 +758,9 @@
     1,
     2
    ],
-   "height_world": 7.026
+   "height_world": 7.026,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "flowers": {
    "page": "city-0",
@@ -686,7 +778,9 @@
     1,
     1
    ],
-   "height_world": 12.071
+   "height_world": 12.071,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_01": {
    "page": "city-0",
@@ -704,7 +798,9 @@
     2,
     1
    ],
-   "height_world": 7.645
+   "height_world": 7.645,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_08": {
    "page": "city-0",
@@ -722,7 +818,9 @@
     1,
     1
    ],
-   "height_world": 8.642
+   "height_world": 8.642,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_09": {
    "page": "city-0",
@@ -740,7 +838,9 @@
     1,
     1
    ],
-   "height_world": 8.577
+   "height_world": 8.577,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_06": {
    "page": "city-0",
@@ -758,7 +858,9 @@
     1,
     1
    ],
-   "height_world": 8.659
+   "height_world": 8.659,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_15": {
    "page": "city-0",
@@ -776,7 +878,9 @@
     1,
     1
    ],
-   "height_world": 9.253
+   "height_world": 9.253,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_07": {
    "page": "city-0",
@@ -794,7 +898,9 @@
     2,
     1
    ],
-   "height_world": 8.212
+   "height_world": 8.212,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "farmbuilding_08": {
    "page": "city-0",
@@ -812,7 +918,9 @@
     1,
     1
    ],
-   "height_world": 8.575
+   "height_world": 8.575,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "farmbuilding_05": {
    "page": "city-0",
@@ -830,7 +938,9 @@
     1,
     1
    ],
-   "height_world": 7.512
+   "height_world": 7.512,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_03": {
    "page": "city-0",
@@ -848,7 +958,9 @@
     1,
     1
    ],
-   "height_world": 6.737
+   "height_world": 6.737,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_10": {
    "page": "city-0",
@@ -866,7 +978,9 @@
     1,
     1
    ],
-   "height_world": 8.411
+   "height_world": 8.411,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_02": {
    "page": "city-0",
@@ -884,7 +998,9 @@
     1,
     1
    ],
-   "height_world": 6.919
+   "height_world": 6.919,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "house_04": {
    "page": "city-0",
@@ -902,7 +1018,9 @@
     1,
     1
    ],
-   "height_world": 6.988
+   "height_world": 6.988,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "parking_area_c": {
    "page": "city-0",
@@ -920,7 +1038,9 @@
     1,
     1
    ],
-   "height_world": 2.648
+   "height_world": 2.648,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "basketballcourt_a": {
    "page": "city-0",
@@ -938,7 +1058,9 @@
     1,
     1
    ],
-   "height_world": 3.709
+   "height_world": 3.709,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "basketballcourt_b": {
    "page": "city-0",
@@ -956,7 +1078,9 @@
     1,
     1
    ],
-   "height_world": 3.709
+   "height_world": 3.709,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "parking_area_d": {
    "page": "city-0",
@@ -974,7 +1098,9 @@
     1,
     1
    ],
-   "height_world": 0.108
+   "height_world": 0.108,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "road_a_10": {
    "page": "city-0",
@@ -992,7 +1118,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "green_c": {
    "page": "city-0",
@@ -1010,7 +1138,9 @@
     1,
     1
    ],
-   "height_world": 0.2
+   "height_world": 0.2,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "parking_area_b": {
    "page": "city-0",
@@ -1028,7 +1158,9 @@
     1,
     1
    ],
-   "height_world": 0.108
+   "height_world": 0.108,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "parking_area_f": {
    "page": "city-0",
@@ -1046,7 +1178,9 @@
     1,
     1
    ],
-   "height_world": 0.108
+   "height_world": 0.108,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "road_a_08": {
    "page": "city-0",
@@ -1064,7 +1198,9 @@
     1,
     1
    ],
-   "height_world": 0.115
+   "height_world": 0.115,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "road_a_09": {
    "page": "city-0",
@@ -1082,7 +1218,9 @@
     1,
     1
    ],
-   "height_world": 0.115
+   "height_world": 0.115,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "cheesemarket": {
    "page": "city-0",
@@ -1100,7 +1238,9 @@
     1,
     1
    ],
-   "height_world": 5.057
+   "height_world": 5.057,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "road_a_01": {
    "page": "city-0",
@@ -1118,7 +1258,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "park_e": {
    "page": "city-0",
@@ -1136,7 +1278,9 @@
     1,
     1
    ],
-   "height_world": 2.25
+   "height_world": 2.25,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "green_a": {
    "page": "city-0",
@@ -1154,7 +1298,9 @@
     1,
     1
    ],
-   "height_world": 0.2
+   "height_world": 0.2,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "jeep_a": {
    "page": "city-0",
@@ -1172,7 +1318,9 @@
     1,
     1
    ],
-   "height_world": 2.108
+   "height_world": 2.108,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "park_g": {
    "page": "city-0",
@@ -1190,7 +1338,9 @@
     1,
     1
    ],
-   "height_world": 2.25
+   "height_world": 2.25,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "jeep_b": {
    "page": "city-0",
@@ -1208,7 +1358,9 @@
     1,
     1
    ],
-   "height_world": 2.108
+   "height_world": 2.108,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "tree": {
    "page": "city-0",
@@ -1226,7 +1378,9 @@
     1,
     1
    ],
-   "height_world": 3.741
+   "height_world": 3.741,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "stone04": {
    "page": "city-0",
@@ -1244,7 +1398,9 @@
     1,
     1
    ],
-   "height_world": 2.829
+   "height_world": 2.829,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "car_b": {
    "page": "city-0",
@@ -1262,7 +1418,9 @@
     1,
     1
    ],
-   "height_world": 1.54
+   "height_world": 1.54,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "car_c": {
    "page": "city-0",
@@ -1280,7 +1438,9 @@
     1,
     1
    ],
-   "height_world": 1.571
+   "height_world": 1.571,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "car_a": {
    "page": "city-0",
@@ -1298,7 +1458,9 @@
     1,
     1
    ],
-   "height_world": 1.54
+   "height_world": 1.54,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "car_e": {
    "page": "city-0",
@@ -1316,7 +1478,9 @@
     1,
     1
    ],
-   "height_world": 1.414
+   "height_world": 1.414,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "car_f": {
    "page": "city-0",
@@ -1334,7 +1498,9 @@
     1,
     1
    ],
-   "height_world": 1.414
+   "height_world": 1.414,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "car_d": {
    "page": "city-0",
@@ -1352,7 +1518,9 @@
     1,
     1
    ],
-   "height_world": 1.381
+   "height_world": 1.381,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "stone02": {
    "page": "city-0",
@@ -1370,7 +1538,9 @@
     1,
     1
    ],
-   "height_world": 1.947
+   "height_world": 1.947,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "plant": {
    "page": "city-0",
@@ -1388,7 +1558,9 @@
     1,
     1
    ],
-   "height_world": 0.609
+   "height_world": 0.609,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "rock_a001": {
    "page": "city-0",
@@ -1406,7 +1578,9 @@
     1,
     1
    ],
-   "height_world": 0.206
+   "height_world": 0.206,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "rock_c001": {
    "page": "city-0",
@@ -1424,7 +1598,9 @@
     1,
     1
    ],
-   "height_world": 0.123
+   "height_world": 0.123,
+   "pageW": 2042,
+   "pageH": 2046
   },
   "park_d": {
    "page": "city-1",
@@ -1442,7 +1618,9 @@
     1,
     1
    ],
-   "height_world": 3.549
+   "height_world": 3.549,
+   "pageW": 2040,
+   "pageH": 128
   },
   "parking_area_e": {
    "page": "city-1",
@@ -1460,7 +1638,9 @@
     1,
     1
    ],
-   "height_world": 0.108
+   "height_world": 0.108,
+   "pageW": 2040,
+   "pageH": 128
   },
   "milk": {
    "page": "city-1",
@@ -1478,7 +1658,9 @@
     1,
     1
    ],
-   "height_world": 7.164
+   "height_world": 7.164,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_11": {
    "page": "city-1",
@@ -1496,7 +1678,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_12": {
    "page": "city-1",
@@ -1514,7 +1698,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_13": {
    "page": "city-1",
@@ -1532,7 +1718,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_07": {
    "page": "city-1",
@@ -1550,7 +1738,9 @@
     1,
     1
    ],
-   "height_world": 0.115
+   "height_world": 0.115,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_02": {
    "page": "city-1",
@@ -1568,7 +1758,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_03": {
    "page": "city-1",
@@ -1586,7 +1778,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_04": {
    "page": "city-1",
@@ -1604,7 +1798,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_05": {
    "page": "city-1",
@@ -1622,7 +1818,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2040,
+   "pageH": 128
   },
   "road_a_06": {
    "page": "city-1",
@@ -1640,7 +1838,9 @@
     1,
     1
    ],
-   "height_world": 0.113
+   "height_world": 0.113,
+   "pageW": 2040,
+   "pageH": 128
   },
   "ice-cream": {
    "page": "city-1",
@@ -1658,7 +1858,9 @@
     1,
     1
    ],
-   "height_world": 5.626
+   "height_world": 5.626,
+   "pageW": 2040,
+   "pageH": 128
   },
   "park_b": {
    "page": "city-1",
@@ -1676,7 +1878,9 @@
     1,
     1
    ],
-   "height_world": 2.516
+   "height_world": 2.516,
+   "pageW": 2040,
+   "pageH": 128
   },
   "park_c": {
    "page": "city-1",
@@ -1694,7 +1898,9 @@
     1,
     1
    ],
-   "height_world": 2.516
+   "height_world": 2.516,
+   "pageW": 2040,
+   "pageH": 128
   },
   "sport": {
    "page": "city-1",
@@ -1712,7 +1918,9 @@
     1,
     1
    ],
-   "height_world": 6.158
+   "height_world": 6.158,
+   "pageW": 2040,
+   "pageH": 128
   },
   "vegetables": {
    "page": "city-1",
@@ -1730,7 +1938,9 @@
     1,
     1
    ],
-   "height_world": 6.185
+   "height_world": 6.185,
+   "pageW": 2040,
+   "pageH": 128
   },
   "caffeeshop": {
    "page": "city-1",
@@ -1748,7 +1958,9 @@
     1,
     1
    ],
-   "height_world": 5.289
+   "height_world": 5.289,
+   "pageW": 2040,
+   "pageH": 128
   },
   "fruitshop": {
    "page": "city-1",
@@ -1766,7 +1978,9 @@
     1,
     1
    ],
-   "height_world": 6.273
+   "height_world": 6.273,
+   "pageW": 2040,
+   "pageH": 128
   },
   "parking_area_a": {
    "page": "city-1",
@@ -1784,7 +1998,9 @@
     1,
     1
    ],
-   "height_world": 0.108
+   "height_world": 0.108,
+   "pageW": 2040,
+   "pageH": 128
   },
   "plants": {
    "page": "city-1",
@@ -1802,7 +2018,9 @@
     1,
     1
    ],
-   "height_world": 5.91
+   "height_world": 5.91,
+   "pageW": 2040,
+   "pageH": 128
   },
   "green_b": {
    "page": "city-1",
@@ -1820,7 +2038,9 @@
     1,
     1
    ],
-   "height_world": 0.2
+   "height_world": 0.2,
+   "pageW": 2040,
+   "pageH": 128
   },
   "park_f": {
    "page": "city-1",
@@ -1838,7 +2058,9 @@
     1,
     1
    ],
-   "height_world": 1.914
+   "height_world": 1.914,
+   "pageW": 2040,
+   "pageH": 128
   },
   "land": {
    "page": "land",
@@ -1857,7 +2079,9 @@
     7
    ],
    "height_world": 0.1,
-   "solo": true
+   "solo": true,
+   "pageW": 1153,
+   "pageH": 517
   },
   "nationalstadium": {
    "page": "nationalstadium",
@@ -1876,7 +2100,9 @@
     4
    ],
    "height_world": 22.2,
-   "solo": true
+   "solo": true,
+   "pageW": 1121,
+   "pageH": 600
   }
  }
 }

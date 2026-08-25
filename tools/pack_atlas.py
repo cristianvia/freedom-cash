@@ -177,6 +177,7 @@ def main():
         }
 
     total = 0
+    page_size = {}
     for key, im in pages:
         # se recorta la pagina a lo realmente usado: una pagina medio vacia
         # ocupa la misma memoria de GPU que una llena
@@ -187,6 +188,7 @@ def main():
             im.save(path, quality=args.quality, method=6)
         else:
             im.save(path, optimize=True)
+        page_size[key] = [im.width, im.height]
         size = os.path.getsize(path)
         total += size
         print("  %-24s %4dx%-4d  %6.1f KB" % (key, im.width, im.height, size / 1024))
@@ -197,8 +199,15 @@ def main():
         "tile_h_px": tile_px // 2,
         "tile_world": manifest[next(iter(manifest))]["tile_world"],
         "format": args.format,
+        # El ancho de cada pagina hace falta para recortar miniaturas con
+        # background-position en la interfaz DOM: sin el, el navegador no
+        # sabe a que escala esta el atlas de fondo.
+        "pages": page_size,
         "sprites": sprites,
     }
+    for name, s_ in sprites.items():
+        s_["pageW"], s_["pageH"] = page_size.get(s_["page"], [PAGE, PAGE])
+
     with open(os.path.join(args.out, "sprites.json"), "w") as f:
         json.dump(out, f, indent=1)
 

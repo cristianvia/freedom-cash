@@ -1,0 +1,217 @@
+{
+ "_nota": "Modelo 3D de cada activo. Generado por tools/build_models_json.py; no editar a mano, se regenera al tocar la escalera de modelos.",
+ "models": {
+  "re_apt_01": {
+   "sprite": "highlivingbuilding_b",
+   "tier": 3
+  },
+  "re_flat_02": {
+   "sprite": "highlivingbuilding_d",
+   "tier": 4
+  },
+  "re_local_03": {
+   "sprite": "skyscraper_a",
+   "tier": 5
+  },
+  "biz_saas_01": {
+   "sprite": "gasstation_b",
+   "tier": 3
+  },
+  "biz_ecom_02": {
+   "sprite": "travel agency",
+   "tier": 2
+  },
+  "biz_vending_03": {
+   "sprite": "boutique",
+   "tier": 2
+  },
+  "fin_etf_09": {
+   "sprite": "postoffice",
+   "tier": 1
+  },
+  "biz_affiliate_10": {
+   "sprite": "musicshop",
+   "tier": 1
+  },
+  "re_parking_11": {
+   "sprite": "house_06",
+   "tier": 1
+  },
+  "fin_reit_01": {
+   "sprite": "skyscraper_c",
+   "tier": 4
+  },
+  "fin_crypto_02": {
+   "sprite": "hospital_a",
+   "tier": 3
+  },
+  "re_trastero_12": {
+   "sprite": "house_09",
+   "tier": 1
+  },
+  "re_nave_13": {
+   "sprite": "skyscraper_a",
+   "tier": 5
+  },
+  "fin_indexado_14": {
+   "sprite": "policestation",
+   "tier": 1
+  },
+  "fin_bonos_15": {
+   "sprite": "school_a",
+   "tier": 2
+  },
+  "biz_vending2_16": {
+   "sprite": "factorybuilding_a",
+   "tier": 4
+  },
+  "biz_foodtruck_17": {
+   "sprite": "sport",
+   "tier": 2
+  },
+  "edu_academia_18": {
+   "sprite": "gasstation_b",
+   "tier": 3
+  },
+  "edu_curso_19": {
+   "sprite": "fruitshop",
+   "tier": 1
+  },
+  "med_consulta_20": {
+   "sprite": "factorybuilding_a",
+   "tier": 4
+  },
+  "med_clinica_21": {
+   "sprite": "highlivingbuilding_a",
+   "tier": 4
+  },
+  "tech_saas_22": {
+   "sprite": "skyscraper_a",
+   "tier": 5
+  },
+  "tech_app_23": {
+   "sprite": "musicshop",
+   "tier": 1
+  },
+  "food_bar_24": {
+   "sprite": "factorybuilding_c",
+   "tier": 4
+  },
+  "food_dark_25": {
+   "sprite": "gasstation_a",
+   "tier": 3
+  },
+  "trade_reformas_26": {
+   "sprite": "gasstation_a",
+   "tier": 3
+  },
+  "trade_taller_27": {
+   "sprite": "skyscraper_b",
+   "tier": 5
+  },
+  "crea_youtube_28": {
+   "sprite": "musicshop",
+   "tier": 1
+  },
+  "crea_agencia_29": {
+   "sprite": "factorybuilding_b",
+   "tier": 4
+  },
+  "re_garaje_30": {
+   "sprite": "house_03",
+   "tier": 1
+  },
+  "fin_monetario_31": {
+   "sprite": "postoffice",
+   "tier": 1
+  },
+  "fin_infl_32": {
+   "sprite": "businesscenter",
+   "tier": 4
+  },
+  "re_solar_33": {
+   "sprite": "house_07",
+   "tier": 2
+  },
+  "biz_lavan_34": {
+   "sprite": "supermarket_b",
+   "tier": 3
+  },
+  "spec_startup_40": {
+   "sprite": "restaurant",
+   "tier": 2
+  },
+  "spec_defi_41": {
+   "sprite": "school_a",
+   "tier": 2
+  },
+  "spec_resto_42": {
+   "sprite": "skyscraper_a",
+   "tier": 5
+  },
+  "spec_turis_43": {
+   "sprite": "highlivingbuilding_b",
+   "tier": 3
+  },
+  "spec_nft_44": {
+   "sprite": "businesscenter",
+   "tier": 4
+  },
+  "spec_franq_45": {
+   "sprite": "businesscenter",
+   "tier": 4
+  },
+  "scam_ponzi_50": {
+   "sprite": "skyscraper_b",
+   "tier": 5
+  },
+  "scam_trading_51": {
+   "sprite": "musicshop",
+   "tier": 1
+  },
+  "scam_preventa_52": {
+   "sprite": "house_04",
+   "tier": 2
+  },
+  "scam_mineria_53": {
+   "sprite": "bank",
+   "tier": 2
+  },
+  "re_trastero_bloque": {
+   "sprite": "house_05",
+   "tier": 2
+  },
+  "re_trastero_centro": {
+   "sprite": "skyscraper_c",
+   "tier": 5
+  },
+  "re_trastero_operador": {
+   "sprite": "skyscraper_a",
+   "tier": 5
+  },
+  "re_parking_planta": {
+   "sprite": "house_10",
+   "tier": 3
+  },
+  "re_parking_subterraneo": {
+   "sprite": "skyscraper_a",
+   "tier": 5
+  },
+  "fin_cartera_global": {
+   "sprite": "skyscraper_c",
+   "tier": 4
+  },
+  "fin_sicav": {
+   "sprite": "skyscraper_c",
+   "tier": 5
+  },
+  "biz_red_webs": {
+   "sprite": "supermarket_a",
+   "tier": 3
+  },
+  "biz_grupo_medios": {
+   "sprite": "skyscraper_b",
+   "tier": 5
+  }
+ }
+}
